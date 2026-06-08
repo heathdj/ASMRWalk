@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 enum AppTab: CaseIterable {
     case history
@@ -271,4 +272,5 @@ private struct RouteBackground: View {
 
 #Preview {
     ContentView()
+        .modelContainer(SampleData.previewContainer)
 }

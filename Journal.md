@@ -41,6 +41,12 @@ There was no recording engine to unit test yet, but that does not mean the found
 
 Stable accessibility identifiers are the test crew's labeled floor marks. They let automation find important controls without depending on fragile screen coordinates or visual styling.
 
+### Phase 2: Giving Every Walk a Filing Cabinet
+
+The app now has a real SwiftData graph. `WalkRecording` is the folder containing a walk's title, date, statistics, mode, optional video URL, and route. Each `LocationPoint` is one timestamped breadcrumb inside that folder. Deleting the folder uses a cascade rule, so its breadcrumbs disappear too instead of becoming database clutter.
+
+`RecordingMode` is stored as a Codable enum rather than a loose string. That turns invalid modes into a compile-time problem instead of a mysterious typo found months later. Sample walks live in an in-memory preview container, letting future screens work with realistic data without quietly adding fake walks to a person's journal.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct ASMR_WalkApp: App {
@@ -13,5 +14,6 @@ struct ASMR_WalkApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [WalkRecording.self, LocationPoint.self])
     }
 }
