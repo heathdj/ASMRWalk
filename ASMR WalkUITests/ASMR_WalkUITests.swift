@@ -8,34 +8,50 @@
 import XCTest
 
 final class ASMR_WalkUITests: XCTestCase {
+    private var app: XCUIApplication!
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
-        // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
-    }
-
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        app = XCUIApplication()
+        app.launch()
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
-        app.launch()
+    func testHistoryIsTheInitialDestination() {
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["No Walks Yet"].exists)
+        XCTAssertTrue(app.staticTexts["Your recorded routes, stats, and videos will appear here."].exists)
+        XCTAssertTrue(app.buttons["Record a Walk"].isEnabled)
+        XCTAssertFalse(app.buttons["More"].isEnabled)
+    }
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+    @MainActor
+    func testWalkTabShowsReadyStateAndControls() {
+        app.tabBars.buttons["Walk"].tap()
+
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["walk.status"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["walk.metrics"].exists)
+        XCTAssertTrue(app.buttons["walk.startButton"].isEnabled)
+        XCTAssertEqual(
+            app.descendants(matching: .any)["walk.metrics"].label,
+            "Elapsed time 0 minutes. Distance 0 miles."
+        )
+    }
+
+    @MainActor
+    func testVideoWalkTabShowsReadyStateAndControls() {
+        app.tabBars.buttons["Video Walk"].tap()
+
+        XCTAssertTrue(app.navigationBars["Video Walk"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["videoWalk.status"].exists)
+        XCTAssertTrue(app.staticTexts["Camera preview will appear here"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["videoWalk.metrics"].exists)
+        XCTAssertTrue(app.buttons["videoWalk.startButton"].isEnabled)
     }
 
     @MainActor
     func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             XCUIApplication().launch()
         }
