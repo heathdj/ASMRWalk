@@ -38,6 +38,8 @@ enum AppTab: CaseIterable {
 
 enum AccessibilityID {
     static let historyEmptyState = "history.emptyState"
+    static let historyList = "history.list"
+    static let recordingDetail = "history.recordingDetail"
     static let walkStatus = "walk.status"
     static let walkMetrics = "walk.metrics"
     static let startWalkButton = "walk.startButton"
@@ -62,33 +64,6 @@ struct ContentView: View {
             }
         }
         .tint(.green)
-    }
-}
-
-private struct HistoryView: View {
-    var body: some View {
-        NavigationStack {
-            ContentUnavailableView {
-                Label("No Walks Yet", systemImage: "map")
-            } description: {
-                Text("Your recorded routes, stats, and videos will appear here.")
-            } actions: {
-                Button("Record a Walk", systemImage: "figure.walk") {
-                    // Tab selection will be wired up with the recording flow.
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .accessibilityIdentifier(AccessibilityID.historyEmptyState)
-            .navigationTitle("History")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("More", systemImage: "ellipsis") {
-                        // History actions will be added with export support.
-                    }
-                    .disabled(true)
-                }
-            }
-        }
     }
 }
 

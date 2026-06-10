@@ -47,6 +47,16 @@ The app now has a real SwiftData graph. `WalkRecording` is the folder containing
 
 `RecordingMode` is stored as a Codable enum rather than a loose string. That turns invalid modes into a compile-time problem instead of a mysterious typo found months later. Sample walks live in an in-memory preview container, letting future screens work with realistic data without quietly adding fake walks to a person's journal.
 
+### A Layered Face for the App
+
+The app now uses an Icon Composer `AppIcon.icon` package instead of relying on the empty legacy app-icon asset set. Think of it less like a printed sticker and more like a tiny stage set: the three artwork layers let iOS apply lighting, depth, Liquid Glass treatments, and appearance variants while Xcode generates compatible icons for older releases.
+
+### Phase 3: Opening the Archive
+
+The archivist finally has a front desk. History now queries SwiftData newest-first, presents each walk with its date, duration, distance, type, and video status, and opens a detail page with a native MapKit route preview. Start and finish markers make the route readable at a glance instead of leaving a mysterious green line floating on the map.
+
+Deleting a recording is deliberately a two-step operation: swipe to request deletion, then confirm before SwiftData removes the walk and cascade-deletes its route points. The code explicitly saves the context and rolls back on failure, because data loss is not a good place to rely on hopeful autosaving.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

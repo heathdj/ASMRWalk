@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import CoreLocation
 import SwiftData
 
 @Model
@@ -30,5 +31,9 @@ final class LocationPoint {
         self.altitude = altitude
         self.horizontalAccuracy = horizontalAccuracy
         self.speed = speed
+    }
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }

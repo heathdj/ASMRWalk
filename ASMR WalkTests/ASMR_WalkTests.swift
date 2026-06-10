@@ -92,6 +92,23 @@ struct WalkRecordingTests {
         #expect(videoWalk.hasVideo)
     }
 
+    @Test("Duration presentation handles minutes and hours")
+    func durationPresentation() {
+        let shortWalk = WalkRecording(title: "Short", duration: 125, mode: .walk)
+        let longWalk = WalkRecording(title: "Long", duration: 3_725, mode: .walk)
+
+        #expect(shortWalk.durationText == "2:05")
+        #expect(longWalk.durationText == "1:02:05")
+    }
+
+    @Test("Location points expose their map coordinate")
+    func locationCoordinate() {
+        let point = makePoint(timestamp: 100)
+
+        #expect(point.coordinate.latitude == point.latitude)
+        #expect(point.coordinate.longitude == point.longitude)
+    }
+
     @Test("Recordings can be inserted, fetched, updated, and deleted")
     func recordingLifecycle() throws {
         let container = try makeContainer()
