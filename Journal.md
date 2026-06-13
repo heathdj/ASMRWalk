@@ -29,6 +29,14 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### The Map That Started Too Far Away
+
+The Walk tab originally opened with an automatic map camera while waiting for Core Location. Automatic framing had no useful coordinates yet, so MapKit showed a broad view of the United States. Route updates also switched the camera back to automatic framing, which could pull the view away from the walker.
+
+The fix was to let `WalkRecorder` preview location updates while the Walk tab is visible, then move the map camera to the first valid coordinate at an 800-meter viewing distance. That is roughly street level without being so close that the user loses context. A native user-location button remains available for recentering after someone pans around.
+
+The lesson: a user-location annotation and a user-focused camera are separate jobs. Showing the blue location marker does not guarantee the camera will frame it usefully.
+
 ### Foundation: Three Clear Doors
 
 The starter project was a single “Hello, world!” screen. The first pass established three top-level destinations: History, Walk, and Video Walk. Each destination now communicates its purpose and current readiness without claiming unfinished recording features work.

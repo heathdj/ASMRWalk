@@ -11,10 +11,8 @@ struct WalkRecorderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @State private var recorder = WalkRecorder()
-    @State private var cameraPosition: MapCameraPosition = .userLocation(
-        followsHeading: false,
-        fallback: .automatic
-    )
+    @State private var cameraPosition: MapCameraPosition = .automatic
+    @State private var hasPositionedCamera = false
 
     var body: some View {
         NavigationStack {
@@ -43,11 +41,26 @@ struct WalkRecorderView: View {
             }
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: recorder.coordinates.count) {
-                guard recorder.coordinates.isEmpty == false else {
+            .onAppear {
+                recorder.startPreviewingLocation()
+            }
+            .onDisappear {
+                recorder.stopPreviewingLocation()
+            }
+            .onChange(of: recorder.latestLocation?.timestamp) {
+                guard hasPositionedCamera == false, let location = recorder.latestLocation else {
                     return
                 }
-                cameraPosition = .automatic
+
+                cameraPosition = .camera(
+                    MapCamera(
+                        centerCoordinate: location.coordinate,
+                        distance: 800,
+                        heading: 0,
+                        pitch: 0
+                    )
+                )
+                hasPositionedCamera = true
             }
             .onChange(of: scenePhase) {
                 if scenePhase != .active, recorder.isRecording {
@@ -67,6 +80,11 @@ struct WalkRecorderView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic))
+        .mapControls {
+            MapUserLocationButton()
+            MapCompass()
+            MapScaleView()
+        }
         .ignoresSafeArea()
     }
 

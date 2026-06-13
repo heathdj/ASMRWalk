@@ -22,6 +22,7 @@ final class WalkRecorder {
     private(set) var latestLocation: CLLocation?
     private(set) var errorMessage: String?
     private(set) var authorizationStatus: CLAuthorizationStatus
+    private(set) var isPreviewingLocation = false
 
     private let locationManager: CLLocationManager
     private var updateTask: Task<Void, Never>?
@@ -41,6 +42,38 @@ final class WalkRecorder {
 
     var recording: WalkRecording? {
         session?.recording
+    }
+
+    func startPreviewingLocation() {
+        guard isPreviewingLocation == false else {
+            return
+        }
+
+        errorMessage = nil
+        authorizationStatus = locationManager.authorizationStatus
+
+        guard authorizationStatus != .denied, authorizationStatus != .restricted else {
+            errorMessage = "Location access is unavailable."
+            return
+        }
+
+        if authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        }
+
+        isPreviewingLocation = true
+        startLocationUpdates()
+    }
+
+    func stopPreviewingLocation() {
+        isPreviewingLocation = false
+
+        guard isRecording == false else {
+            return
+        }
+
+        updateTask?.cancel()
+        updateTask = nil
     }
 
     var coordinates: [CLLocationCoordinate2D] {
@@ -117,7 +150,9 @@ final class WalkRecorder {
         }
 
         phase = .saving
-        updateTask?.cancel()
+        if isPreviewingLocation == false {
+            updateTask?.cancel()
+        }
         clockTask?.cancel()
         session?.updateDuration()
 
@@ -133,7 +168,9 @@ final class WalkRecorder {
     }
 
     func discard() {
-        updateTask?.cancel()
+        if isPreviewingLocation == false {
+            updateTask?.cancel()
+        }
         clockTask?.cancel()
 
         if let recording {
@@ -159,14 +196,18 @@ final class WalkRecorder {
         updateTask = Task {
             do {
                 for try await update in CLLocationUpdate.liveUpdates(.fitness) {
-                    guard Task.isCancelled == false, isRecording else {
+                    guard Task.isCancelled == false, isRecording || isPreviewingLocation else {
                         break
                     }
 
                     if update.authorizationDenied {
                         authorizationStatus = .denied
-                        errorMessage = "Location access was denied. The walk was saved."
-                        stopAndSave()
+                        if isRecording {
+                            errorMessage = "Location access was denied. The walk was saved."
+                            stopAndSave()
+                        } else {
+                            errorMessage = "Location access is unavailable."
+                        }
                         break
                     }
 
@@ -179,7 +220,9 @@ final class WalkRecorder {
                 // Cancellation is expected when a recording stops.
             } catch {
                 errorMessage = "GPS updates stopped: \(error.localizedDescription)"
-                stopAndSave()
+                if isRecording {
+                    stopAndSave()
+                }
             }
         }
     }
@@ -214,11 +257,13 @@ final class WalkRecorder {
     }
 
     private func reset() {
-        updateTask = nil
+        if isPreviewingLocation == false {
+            updateTask = nil
+            latestLocation = nil
+        }
         clockTask = nil
         session = nil
         modelContext = nil
-        latestLocation = nil
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0
         phase = .ready
