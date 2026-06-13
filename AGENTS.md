@@ -11,6 +11,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - `WalkRecording` is the SwiftData root model and owns `LocationPoint` children with a cascade delete rule.
 - Sample recordings are created through `SampleData` and only inserted into in-memory preview/test containers.
 - History UI lives under `Features/History`; it reads with `@Query`, explicitly saves destructive changes, and renders routes with native MapKit SwiftUI content.
+- Foreground GPS recording lives under `Features/Walk`; `WalkRecordingSession` owns filtering and distance calculations, while `WalkRecorder` owns Core Location streaming and SwiftData checkpoints.
 - Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
 - Version 1 will render map overlays in the app instead of burning them into exported video.

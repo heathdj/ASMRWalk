@@ -67,42 +67,6 @@ struct ContentView: View {
     }
 }
 
-private struct WalkRecorderView: View {
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                RouteBackground()
-
-                VStack(spacing: 16) {
-                    RecordingStatusCard(
-                        title: "Ready to walk",
-                        detail: "Your route will stay on this device.",
-                        systemImage: "location.fill"
-                    )
-                    .accessibilityIdentifier(AccessibilityID.walkStatus)
-
-                    Spacer()
-
-                    RecordingMetrics()
-                        .accessibilityIdentifier(AccessibilityID.walkMetrics)
-
-                    Button("Start Walk", systemImage: "figure.walk") {
-                        // GPS recording will be added in the recorder phase.
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .controlSize(.large)
-                    .buttonStyle(.glassProminent)
-                    .accessibilityIdentifier(AccessibilityID.startWalkButton)
-                }
-                .padding()
-            }
-            .navigationTitle("Walk")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
-
 private struct VideoWalkView: View {
     var body: some View {
         NavigationStack {
@@ -130,7 +94,7 @@ private struct VideoWalkView: View {
 
                     Spacer()
 
-                    RecordingMetrics()
+                    RecordingMetrics(duration: 0, distanceMeters: 0)
                         .accessibilityIdentifier(AccessibilityID.videoMetrics)
 
                     Button("Start Video Walk", systemImage: "record.circle") {
@@ -152,7 +116,7 @@ private struct VideoWalkView: View {
     }
 }
 
-private struct RecordingStatusCard: View {
+struct RecordingStatusCard: View {
     let title: String
     let detail: String
     let systemImage: String
@@ -181,16 +145,19 @@ private struct RecordingStatusCard: View {
     }
 }
 
-private struct RecordingMetrics: View {
+struct RecordingMetrics: View {
+    let duration: TimeInterval
+    let distanceMeters: Double
+
     var body: some View {
         HStack(spacing: 12) {
-            MetricView(value: "0:00", label: "TIME")
-            MetricView(value: "0.00", label: "MILES")
+            MetricView(value: duration.timerText, label: "TIME")
+            MetricView(value: distanceMeters.distanceText, label: "DISTANCE")
         }
         .padding()
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Elapsed time 0 minutes. Distance 0 miles.")
+        .accessibilityLabel("Elapsed time \(duration.timerText). Distance \(distanceMeters.distanceText).")
     }
 }
 
@@ -210,38 +177,6 @@ private struct MetricView: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-private struct RouteBackground: View {
-    var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.80, green: 0.90, blue: 0.82),
-                    Color(red: 0.93, green: 0.90, blue: 0.77)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-
-            Path { path in
-                path.move(to: CGPoint(x: 40, y: 640))
-                path.addCurve(
-                    to: CGPoint(x: 350, y: 120),
-                    control1: CGPoint(x: 250, y: 560),
-                    control2: CGPoint(x: 100, y: 250)
-                )
-            }
-            .stroke(.green, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-            .shadow(color: .white.opacity(0.8), radius: 0, x: 0, y: 0)
-
-            Image(systemName: "location.fill")
-                .font(.title)
-                .foregroundStyle(.green)
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
     }
 }
 

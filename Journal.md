@@ -57,6 +57,12 @@ The archivist finally has a front desk. History now queries SwiftData newest-fir
 
 Deleting a recording is deliberately a two-step operation: swipe to request deletion, then confirm before SwiftData removes the walk and cascade-deletes its route points. The code explicitly saves the context and rolls back on failure, because data loss is not a good place to rely on hopeful autosaving.
 
+### Phase 4: Following the Breadcrumbs Live
+
+The Walk tab is now a real foreground GPS recorder. Core Location's async live-update stream feeds a focused recording session, while MapKit draws accepted points as a green route. A draft is saved as soon as recording starts, then checkpointed every ten accepted points or thirty seconds. If the app leaves the foreground, the walk finalizes instead of pretending foreground-only recording can safely continue.
+
+GPS is a noisy storyteller, so the recorder does not believe every sentence. It rejects stale readings, accuracy worse than 50 meters, and movement under three meters. That prevents a stationary phone from slowly wandering across the map and inflating distance totals.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

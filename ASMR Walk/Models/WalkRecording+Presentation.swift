@@ -7,7 +7,17 @@ import Foundation
 
 extension WalkRecording {
     var durationText: String {
-        let totalSeconds = max(0, Int(duration.rounded()))
+        duration.timerText
+    }
+
+    var distanceText: String {
+        distanceMeters.distanceText
+    }
+}
+
+extension TimeInterval {
+    var timerText: String {
+        let totalSeconds = max(0, Int(rounded()))
         let hours = totalSeconds / 3_600
         let minutes = (totalSeconds % 3_600) / 60
         let seconds = totalSeconds % 60
@@ -18,9 +28,11 @@ extension WalkRecording {
 
         return String(format: "%d:%02d", minutes, seconds)
     }
+}
 
+extension Double {
     var distanceText: String {
-        Measurement(value: max(0, distanceMeters), unit: UnitLength.meters)
+        Measurement(value: max(0, self), unit: UnitLength.meters)
             .formatted(.measurement(width: .abbreviated, usage: .road))
     }
 }

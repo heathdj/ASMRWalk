@@ -33,10 +33,9 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["walk.status"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["walk.metrics"].exists)
         XCTAssertTrue(app.buttons["walk.startButton"].isEnabled)
-        XCTAssertEqual(
-            app.descendants(matching: .any)["walk.metrics"].label,
-            "Elapsed time 0 minutes. Distance 0 miles."
-        )
+        let metricsLabel = app.descendants(matching: .any)["walk.metrics"].label
+        XCTAssertTrue(metricsLabel.contains("Elapsed time 0:00"))
+        XCTAssertTrue(metricsLabel.contains("Distance"))
     }
 
     @MainActor
