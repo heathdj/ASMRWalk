@@ -244,6 +244,52 @@ struct WalkRecordingTests {
         #expect(SampleData.recordings.allSatisfy { $0.points.isEmpty == false })
     }
 
+    @Test("Google Maps export includes the route endpoints and walking mode")
+    func googleMapsExport() throws {
+        let recording = WalkRecording(
+            title: "Export Walk",
+            mode: .walk,
+            points: [
+                makePoint(timestamp: 100, latitude: 33.4484, longitude: -112.0740),
+                makePoint(timestamp: 200, latitude: 33.4490, longitude: -112.0728),
+                makePoint(timestamp: 300, latitude: 33.4500, longitude: -112.0710)
+            ]
+        )
+
+        let url = try #require(WalkRouteExport(recording: recording).googleMapsURL)
+        let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        let query = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+
+        #expect(query["origin"] == "33.448400,-112.074000")
+        #expect(query["destination"] == "33.450000,-112.071000")
+        #expect(query["travelmode"] == "walking")
+        #expect(query["waypoints"] == "33.449000,-112.072800")
+    }
+
+    @Test("GPX export preserves every point in time order and escapes its title")
+    func gpxExport() throws {
+        let recording = WalkRecording(
+            title: "Creek & Canal",
+            createdAt: Date(timeIntervalSince1970: 300),
+            mode: .walk,
+            points: [
+                makePoint(timestamp: 200, latitude: 33.4490, longitude: -112.0728),
+                makePoint(timestamp: 100, latitude: 33.4484, longitude: -112.0740)
+            ]
+        )
+
+        let export = WalkRouteExport(recording: recording)
+        let firstPoint = try #require(export.gpxText.range(of: "lat=\"33.448400\""))
+        let secondPoint = try #require(export.gpxText.range(of: "lat=\"33.449000\""))
+
+        #expect(export.gpxText.contains("<name>Creek &amp; Canal</name>"))
+        #expect(export.gpxText.components(separatedBy: "<trkpt ").count - 1 == 2)
+        #expect(firstPoint.lowerBound < secondPoint.lowerBound)
+        #expect(export.gpxFile.filename == "Creek-Canal.gpx")
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
@@ -253,11 +299,15 @@ struct WalkRecordingTests {
         )
     }
 
-    private func makePoint(timestamp: TimeInterval) -> LocationPoint {
+    private func makePoint(
+        timestamp: TimeInterval,
+        latitude: Double = 33.4484,
+        longitude: Double = -112.0740
+    ) -> LocationPoint {
         LocationPoint(
             timestamp: Date(timeIntervalSince1970: timestamp),
-            latitude: 33.4484,
-            longitude: -112.0740,
+            latitude: latitude,
+            longitude: longitude,
             horizontalAccuracy: 5
         )
     }

@@ -40,6 +40,7 @@ enum AccessibilityID {
     static let historyEmptyState = "history.emptyState"
     static let historyList = "history.list"
     static let recordingDetail = "history.recordingDetail"
+    static let exportRecordingButton = "history.exportRecordingButton"
     static let walkStatus = "walk.status"
     static let walkMetrics = "walk.metrics"
     static let startWalkButton = "walk.startButton"

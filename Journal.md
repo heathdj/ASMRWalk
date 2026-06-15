@@ -29,6 +29,14 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### One Route, Two Passports
+
+Phase 5 gave each saved route two ways to leave the app. A Google Maps URL is the lightweight passport: it carries the start, destination, walking mode, and a sampled set of waypoints so another person can quickly open directions. GPX is the full travel journal: it preserves every route point in chronological order, including timestamps and available elevation.
+
+Export generation lives in an immutable `WalkRouteExport` snapshot instead of directly inside the SwiftUI view or SwiftData model. That separation keeps the view focused on presentation, avoids passing SwiftData objects into asynchronous file-transfer work, and makes URL and XML generation easy to verify with fast unit tests.
+
+The gotcha is fidelity. Google Maps URLs are useful but cannot practically carry an unlimited GPS trail, so waypoints are sampled. GPX remains the source of truth when the exact recorded route matters.
+
 ### The Map That Started Too Far Away
 
 The Walk tab originally opened with an automatic map camera while waiting for Core Location. Automatic framing had no useful coordinates yet, so MapKit showed a broad view of the United States. Route updates also switched the camera back to automatic framing, which could pull the view away from the walker.

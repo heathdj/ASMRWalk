@@ -55,7 +55,35 @@ struct RecordingDetailView: View {
         }
         .navigationTitle(recording.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu("Export", systemImage: "square.and.arrow.up") {
+                    if let googleMapsURL = routeExport.googleMapsURL {
+                        ShareLink(
+                            item: googleMapsURL,
+                            subject: Text(recording.title),
+                            message: Text("Walking route from ASMR Walk")
+                        ) {
+                            Label("Google Maps Route", systemImage: "map")
+                        }
+                    }
+
+                    ShareLink(
+                        item: routeExport.gpxFile,
+                        preview: SharePreview(recording.title, icon: Image(systemName: "map"))
+                    ) {
+                        Label("GPX Route File", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    }
+                }
+                .disabled(recording.points.isEmpty)
+                .accessibilityIdentifier(AccessibilityID.exportRecordingButton)
+            }
+        }
         .accessibilityIdentifier(AccessibilityID.recordingDetail)
+    }
+
+    private var routeExport: WalkRouteExport {
+        WalkRouteExport(recording: recording)
     }
 }
 
