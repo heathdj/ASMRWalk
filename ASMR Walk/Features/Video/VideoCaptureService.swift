@@ -1,0 +1,196 @@
+//
+//  VideoCaptureService.swift
+//  ASMR Walk
+//
+
+@preconcurrency import AVFoundation
+import Foundation
+import Observation
+
+@MainActor
+@Observable
+final class VideoCaptureService: NSObject {
+    enum CaptureError: LocalizedError {
+        case permissionDenied
+        case cameraUnavailable
+        case microphoneUnavailable
+        case cannotAddInput
+        case cannotAddOutput
+        case notReady
+
+        var errorDescription: String? {
+            switch self {
+            case .permissionDenied:
+                "Camera and microphone access are required for video walks."
+            case .cameraUnavailable:
+                "The camera is unavailable."
+            case .microphoneUnavailable:
+                "The microphone is unavailable."
+            case .cannotAddInput:
+                "The camera or microphone could not be connected."
+            case .cannotAddOutput:
+                "Video recording could not be configured."
+            case .notReady:
+                "The camera is not ready yet."
+            }
+        }
+    }
+
+    let session = AVCaptureSession()
+
+    private(set) var isReady = false
+    private(set) var isRecording = false
+    private(set) var errorMessage: String?
+
+    private let movieOutput = AVCaptureMovieFileOutput()
+    private var stopContinuation: CheckedContinuation<URL, Error>?
+    private var activeVideoDevice: AVCaptureDevice?
+
+    func prepare() async {
+        guard isReady == false else {
+            return
+        }
+
+        do {
+            guard await Self.requestAccess(for: .video),
+                  await Self.requestAccess(for: .audio) else {
+                throw CaptureError.permissionDenied
+            }
+
+            try Task.checkCancellation()
+            try configureSession()
+            await startSession()
+            try Task.checkCancellation()
+            isReady = true
+            errorMessage = nil
+        } catch is CancellationError {
+            stopSession()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func startRecording() throws {
+        guard isReady, movieOutput.isRecording == false else {
+            throw CaptureError.notReady
+        }
+
+        let url = try Self.makeVideoURL()
+        if let connection = movieOutput.connection(with: .video),
+           let activeVideoDevice {
+            let coordinator = AVCaptureDevice.RotationCoordinator(device: activeVideoDevice, previewLayer: nil)
+            let angle = coordinator.videoRotationAngleForHorizonLevelCapture
+            if connection.isVideoRotationAngleSupported(angle) {
+                connection.videoRotationAngle = angle
+            }
+        }
+
+        movieOutput.startRecording(to: url, recordingDelegate: self)
+        isRecording = true
+        errorMessage = nil
+    }
+
+    func stopRecording() async throws -> URL {
+        guard movieOutput.isRecording else {
+            throw CaptureError.notReady
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            stopContinuation = continuation
+            movieOutput.stopRecording()
+        }
+    }
+
+    func stopSession() {
+        guard session.isRunning else {
+            return
+        }
+
+        let session = session
+        Task { @concurrent in
+            session.stopRunning()
+        }
+    }
+
+    private func configureSession() throws {
+        session.beginConfiguration()
+        defer { session.commitConfiguration() }
+
+        session.sessionPreset = .high
+
+        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            throw CaptureError.cameraUnavailable
+        }
+        guard let microphone = AVCaptureDevice.default(for: .audio) else {
+            throw CaptureError.microphoneUnavailable
+        }
+
+        let cameraInput = try AVCaptureDeviceInput(device: camera)
+        let microphoneInput = try AVCaptureDeviceInput(device: microphone)
+
+        guard session.canAddInput(cameraInput), session.canAddInput(microphoneInput) else {
+            throw CaptureError.cannotAddInput
+        }
+        session.addInput(cameraInput)
+        session.addInput(microphoneInput)
+
+        guard session.canAddOutput(movieOutput) else {
+            throw CaptureError.cannotAddOutput
+        }
+        session.addOutput(movieOutput)
+        activeVideoDevice = camera
+    }
+
+    private func startSession() async {
+        let session = session
+        await Task { @concurrent in
+            session.startRunning()
+        }.value
+    }
+
+    private static func requestAccess(for mediaType: AVMediaType) async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: mediaType) {
+        case .authorized:
+            true
+        case .notDetermined:
+            await AVCaptureDevice.requestAccess(for: mediaType)
+        case .denied, .restricted:
+            false
+        @unknown default:
+            false
+        }
+    }
+
+    private static func makeVideoURL() throws -> URL {
+        let directory = URL.documentsDirectory
+            .appending(path: "Video Walks", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appending(path: "\(UUID().uuidString).mov")
+    }
+
+    private func finishRecording(url: URL, error: Error?) {
+        isRecording = false
+
+        if let error {
+            errorMessage = error.localizedDescription
+            try? FileManager.default.removeItem(at: url)
+            stopContinuation?.resume(throwing: error)
+        } else {
+            stopContinuation?.resume(returning: url)
+        }
+        stopContinuation = nil
+    }
+}
+
+extension VideoCaptureService: AVCaptureFileOutputRecordingDelegate {
+    nonisolated func fileOutput(
+        _ output: AVCaptureFileOutput,
+        didFinishRecordingTo outputFileURL: URL,
+        from connections: [AVCaptureConnection],
+        error: Error?
+    ) {
+        Task { @MainActor [weak self] in
+            self?.finishRecording(url: outputFileURL, error: error)
+        }
+    }
+}

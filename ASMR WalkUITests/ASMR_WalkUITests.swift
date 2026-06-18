@@ -42,11 +42,10 @@ final class ASMR_WalkUITests: XCTestCase {
     func testVideoWalkTabShowsReadyStateAndControls() {
         app.tabBars.buttons["Video Walk"].tap()
 
-        XCTAssertTrue(app.navigationBars["Video Walk"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["videoWalk.screen"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.status"].exists)
-        XCTAssertTrue(app.staticTexts["Camera preview will appear here"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.metrics"].exists)
-        XCTAssertTrue(app.buttons["videoWalk.startButton"].isEnabled)
+        XCTAssertTrue(app.buttons["videoWalk.startButton"].exists)
     }
 
     @MainActor

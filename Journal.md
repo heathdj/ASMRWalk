@@ -29,6 +29,16 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### Two Recorders, One Walk
+
+Phase 6 introduced video walks without tangling camera capture into the GPS recorder. `VideoCaptureService` owns the AVFoundation capture session, camera preview, microphone input, and movie finalization. `WalkRecorder` continues doing the job it already understands: filtering GPS points, measuring distance, and saving SwiftData records. The video screen acts like a film director calling “action” and “cut” for both crews at the same time, then links the finished movie URL to the route before saving.
+
+The movie itself lives in the app's Documents directory while SwiftData stores only its URL. This keeps large binary files out of the database and lets route metadata remain lightweight. Deleting a video walk removes both the SwiftData record and its movie file so abandoned recordings do not quietly consume storage.
+
+Video Walk requests landscape orientation when its tab appears and restores portrait when leaving. Orientation is a scene-level preference, not a normal SwiftUI view modifier, so the app uses `UIWindowScene.requestGeometryUpdate`. The target must support landscape orientations for that request to succeed.
+
+One runtime gotcha remains outside source code: iOS terminates apps that request camera or microphone access without `NSCameraUsageDescription` and `NSMicrophoneUsageDescription`. Those strings must be added to the target's generated Info properties before testing capture on a device.
+
 ### One Route, Two Passports
 
 Phase 5 gave each saved route two ways to leave the app. A Google Maps URL is the lightweight passport: it carries the start, destination, walking mode, and a sampled set of waypoints so another person can quickly open directions. GPX is the full travel journal: it preserves every route point in chronological order, including timestamps and available elevation.

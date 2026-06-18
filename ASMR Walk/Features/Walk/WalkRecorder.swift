@@ -107,7 +107,7 @@ final class WalkRecorder {
         }
     }
 
-    func start(in modelContext: ModelContext) {
+    func start(in modelContext: ModelContext, mode: RecordingMode = .walk) {
         guard phase == .ready else {
             return
         }
@@ -124,7 +124,7 @@ final class WalkRecorder {
             locationManager.requestWhenInUseAuthorization()
         }
 
-        let session = WalkRecordingSession()
+        let session = WalkRecordingSession(mode: mode)
         self.session = session
         self.modelContext = modelContext
         modelContext.insert(session.recording)
@@ -142,6 +142,15 @@ final class WalkRecorder {
         phase = .recording
         startLocationUpdates()
         startClock()
+    }
+
+    func attachVideo(at url: URL) {
+        guard let recording else {
+            return
+        }
+
+        recording.mode = .videoWalk
+        recording.videoURL = url
     }
 
     func stopAndSave() {

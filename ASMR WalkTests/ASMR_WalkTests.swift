@@ -118,6 +118,16 @@ struct WalkRecordingSessionTests {
         #expect(session.recording.durationText == "2:05")
     }
 
+    @Test("A video walk session creates video walk metadata")
+    func createsVideoWalkSession() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let session = WalkRecordingSession(startedAt: start, mode: .videoWalk)
+
+        #expect(session.recording.mode == .videoWalk)
+        #expect(session.recording.title.hasPrefix("Video Walk"))
+        #expect(session.recording.hasVideo == false)
+    }
+
     private func makeLocation(
         latitude: CLLocationDegrees,
         longitude: CLLocationDegrees,

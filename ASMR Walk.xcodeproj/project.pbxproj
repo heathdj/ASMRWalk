@@ -401,7 +401,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ASMR Walk uses the camera to record video walks.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ASMR Walk uses your location while recording to draw and save your walking route.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ASMR Walk uses the microphone to record video walks.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -435,7 +437,9 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ASMR Walk uses the camera to record video walks.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ASMR Walk uses your location while recording to draw and save your walking route.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ASMR Walk uses the microphone to record video walks.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

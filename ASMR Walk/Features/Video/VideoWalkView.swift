@@ -1,0 +1,173 @@
+//
+//  VideoWalkView.swift
+//  ASMR Walk
+//
+
+import MapKit
+import SwiftData
+import SwiftUI
+
+struct VideoWalkView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var camera = VideoCaptureService()
+    @State private var walkRecorder = WalkRecorder()
+    @State private var isStopping = false
+
+    var body: some View {
+        ZStack {
+            CameraPreview(session: camera.session)
+                .ignoresSafeArea()
+
+            LinearGradient(
+                colors: [.black.opacity(0.5), .clear, .black.opacity(0.65)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            HStack(alignment: .bottom, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    statusCard
+                    Spacer()
+                    RecordingMetrics(
+                        duration: walkRecorder.recording?.duration ?? 0,
+                        distanceMeters: walkRecorder.recording?.distanceMeters ?? 0
+                    )
+                    .frame(maxWidth: 360)
+                    .accessibilityIdentifier(AccessibilityID.videoMetrics)
+                }
+
+                Spacer()
+
+                VStack(spacing: 16) {
+                    routeMap
+                    recordingButton
+                }
+                .frame(width: 220)
+            }
+            .padding()
+        }
+        .preferredColorScheme(.dark)
+        .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
+        .task {
+            InterfaceOrientationController.request(.landscape)
+            walkRecorder.startPreviewingLocation()
+            await camera.prepare()
+        }
+        .onDisappear {
+            if walkRecorder.isRecording {
+                stopVideoWalk(stopSessionWhenFinished: true)
+            } else {
+                walkRecorder.stopPreviewingLocation()
+                camera.stopSession()
+            }
+            InterfaceOrientationController.request(.portrait)
+        }
+        .onChange(of: scenePhase) {
+            guard scenePhase != .active, walkRecorder.isRecording else {
+                return
+            }
+            stopVideoWalk()
+        }
+    }
+
+    private var statusCard: some View {
+        RecordingStatusCard(
+            title: statusTitle,
+            detail: statusDetail,
+            systemImage: walkRecorder.isRecording ? "record.circle.fill" : "video.fill"
+        )
+        .frame(maxWidth: 360)
+        .accessibilityIdentifier(AccessibilityID.videoStatus)
+    }
+
+    private var routeMap: some View {
+        Map(initialPosition: .userLocation(followsHeading: false, fallback: .automatic)) {
+            UserAnnotation()
+
+            if walkRecorder.coordinates.count > 1 {
+                MapPolyline(coordinates: walkRecorder.coordinates)
+                    .stroke(.green, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            }
+        }
+        .mapStyle(.standard(elevation: .realistic))
+        .clipShape(.rect(cornerRadius: 20))
+        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .accessibilityLabel("Live walking route")
+    }
+
+    private var recordingButton: some View {
+        Button(
+            walkRecorder.isRecording ? "Stop and Save" : "Start Video Walk",
+            systemImage: walkRecorder.isRecording ? "stop.fill" : "record.circle"
+        ) {
+            if walkRecorder.isRecording {
+                stopVideoWalk()
+            } else {
+                startVideoWalk()
+            }
+        }
+        .font(.headline)
+        .frame(maxWidth: .infinity)
+        .controlSize(.large)
+        .buttonStyle(.glassProminent)
+        .tint(.red)
+        .disabled(camera.isReady == false || isStopping)
+        .accessibilityIdentifier(AccessibilityID.startVideoWalkButton)
+    }
+
+    private var statusTitle: String {
+        if isStopping {
+            return "Saving video walk"
+        }
+        if walkRecorder.isRecording {
+            return "Recording video walk"
+        }
+        return camera.isReady ? "Camera ready" : "Preparing camera"
+    }
+
+    private var statusDetail: String {
+        camera.errorMessage
+            ?? walkRecorder.errorMessage
+            ?? "Video and route recording start together."
+    }
+
+    private func startVideoWalk() {
+        walkRecorder.start(in: modelContext, mode: .videoWalk)
+        guard walkRecorder.isRecording else {
+            return
+        }
+
+        do {
+            try camera.startRecording()
+        } catch {
+            walkRecorder.discard()
+        }
+    }
+
+    private func stopVideoWalk(stopSessionWhenFinished: Bool = false) {
+        guard isStopping == false else {
+            return
+        }
+
+        isStopping = true
+        Task {
+            do {
+                let videoURL = try await camera.stopRecording()
+                walkRecorder.attachVideo(at: videoURL)
+            } catch {
+                // Preserve the GPS recording even if video finalization fails.
+            }
+
+            walkRecorder.stopAndSave()
+            if stopSessionWhenFinished {
+                walkRecorder.stopPreviewingLocation()
+                camera.stopSession()
+            }
+            isStopping = false
+        }
+    }
+}

@@ -15,11 +15,11 @@ final class WalkRecordingSession {
     let recording: WalkRecording
     private(set) var lastAcceptedLocation: CLLocation?
 
-    init(startedAt: Date = .now) {
+    init(startedAt: Date = .now, mode: RecordingMode = .walk) {
         recording = WalkRecording(
-            title: Self.defaultTitle(for: startedAt),
+            title: Self.defaultTitle(for: startedAt, mode: mode),
             createdAt: startedAt,
-            mode: .walk
+            mode: mode
         )
     }
 
@@ -57,7 +57,7 @@ final class WalkRecordingSession {
         recording.duration = max(0, date.timeIntervalSince(recording.createdAt))
     }
 
-    private static func defaultTitle(for date: Date) -> String {
-        "Walk \(date.formatted(date: .abbreviated, time: .shortened))"
+    private static func defaultTitle(for date: Date, mode: RecordingMode) -> String {
+        "\(mode.title) \(date.formatted(date: .abbreviated, time: .shortened))"
     }
 }

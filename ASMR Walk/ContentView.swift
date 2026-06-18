@@ -47,6 +47,7 @@ enum AccessibilityID {
     static let videoStatus = "videoWalk.status"
     static let videoMetrics = "videoWalk.metrics"
     static let startVideoWalkButton = "videoWalk.startButton"
+    static let videoWalkScreen = "videoWalk.screen"
 }
 
 struct ContentView: View {
@@ -65,55 +66,6 @@ struct ContentView: View {
             }
         }
         .tint(.green)
-    }
-}
-
-private struct VideoWalkView: View {
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [.black, .gray.opacity(0.7)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-
-                VStack(spacing: 16) {
-                    RecordingStatusCard(
-                        title: "Camera ready",
-                        detail: "Video and route recording start together.",
-                        systemImage: "video.fill"
-                    )
-                    .accessibilityIdentifier(AccessibilityID.videoStatus)
-
-                    Spacer()
-
-                    Label("Camera preview will appear here", systemImage: "camera.aperture")
-                        .font(.headline)
-                        .foregroundStyle(.white.opacity(0.8))
-
-                    Spacer()
-
-                    RecordingMetrics(duration: 0, distanceMeters: 0)
-                        .accessibilityIdentifier(AccessibilityID.videoMetrics)
-
-                    Button("Start Video Walk", systemImage: "record.circle") {
-                        // Camera and GPS recording will be added in the video phase.
-                    }
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .controlSize(.large)
-                    .buttonStyle(.glassProminent)
-                    .tint(.red)
-                    .accessibilityIdentifier(AccessibilityID.startVideoWalkButton)
-                }
-                .padding()
-            }
-            .navigationTitle("Video Walk")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-        }
     }
 }
 

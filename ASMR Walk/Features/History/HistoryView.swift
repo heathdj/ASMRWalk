@@ -90,10 +90,14 @@ struct HistoryView: View {
             return
         }
 
+        let videoURL = recordingPendingDeletion.videoURL
         modelContext.delete(recordingPendingDeletion)
 
         do {
             try modelContext.save()
+            if let videoURL {
+                try? FileManager.default.removeItem(at: videoURL)
+            }
             self.recordingPendingDeletion = nil
         } catch {
             modelContext.rollback()

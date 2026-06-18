@@ -14,6 +14,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Foreground GPS recording lives under `Features/Walk`; `WalkRecordingSession` owns filtering and distance calculations, while `WalkRecorder` owns Core Location streaming and SwiftData checkpoints.
 - Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
+- `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 
 ## Conventions
@@ -33,4 +34,5 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 s
 - Google Maps URLs cannot preserve every recorded route point; GPX is the fidelity-preserving export.
 - Foreground location recording is the initial scope. Background recording requires more permissions and capabilities.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
+- The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.
