@@ -29,6 +29,14 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### The Video Finally Got a Map Buddy
+
+Phase 7 turned saved video walks from "a movie file with some stats nearby" into an actual review experience. The detail screen now loads the saved movie with `AVPlayer`, observes playback time every half second, and feeds that time into a route map overlay. As the video plays, the blue playback marker advances along the recorded GPS points.
+
+The route sync uses the first accepted GPS point as time zero. That is a practical version-one choice because camera start and GPS start happen in the same user action, but the first usable GPS point may arrive a moment later than the first video frame. For review, that means the map starts moving when trustworthy route data begins rather than pretending noisy or missing GPS exists.
+
+The important engineering pattern here is cleanup: `AVPlayer.addPeriodicTimeObserver` must be paired with `removeTimeObserver`. Forgetting that is like leaving a kitchen timer running after dinner; it may keep calling back into UI that no longer exists.
+
 ### Two Recorders, One Walk
 
 Phase 6 introduced video walks without tangling camera capture into the GPS recorder. `VideoCaptureService` owns the AVFoundation capture session, camera preview, microphone input, and movie finalization. `WalkRecorder` continues doing the job it already understands: filtering GPS points, measuring distance, and saving SwiftData records. The video screen acts like a film director calling “action” and “cut” for both crews at the same time, then links the finished movie URL to the route before saving.

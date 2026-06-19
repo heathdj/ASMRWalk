@@ -11,9 +11,15 @@ struct RecordingDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                RouteMapView(recording: recording)
-                    .frame(height: 300)
-                    .clipShape(.rect(cornerRadius: 24))
+                if recording.hasVideo {
+                    VideoWalkPlaybackView(recording: recording)
+                        .frame(height: 300)
+                        .clipShape(.rect(cornerRadius: 24))
+                } else {
+                    RouteMapView(recording: recording)
+                        .frame(height: 300)
+                        .clipShape(.rect(cornerRadius: 24))
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Label(recording.mode.title, systemImage: recording.mode.systemImage)
@@ -49,6 +55,15 @@ struct RecordingDetailView: View {
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.red.opacity(0.1), in: .rect(cornerRadius: 16))
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Route Review")
+                            .font(.headline)
+
+                        RouteMapView(recording: recording)
+                            .frame(height: 220)
+                            .clipShape(.rect(cornerRadius: 20))
+                    }
                 }
             }
             .padding()

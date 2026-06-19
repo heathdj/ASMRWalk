@@ -197,6 +197,23 @@ struct WalkRecordingTests {
         #expect(videoWalk.hasVideo)
     }
 
+    @Test("Video playback route progress follows recorded point timing")
+    func videoPlaybackRouteProgress() throws {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            points: [
+                makePoint(timestamp: 220, latitude: 33.4500, longitude: -112.0710),
+                makePoint(timestamp: 100, latitude: 33.4484, longitude: -112.0740),
+                makePoint(timestamp: 160, latitude: 33.4490, longitude: -112.0728)
+            ]
+        )
+
+        #expect(try #require(recording.playbackPoint(at: 0)).latitude == 33.4484)
+        #expect(try #require(recording.playbackPoint(at: 65)).latitude == 33.4490)
+        #expect(try #require(recording.playbackPoint(at: 500)).latitude == 33.4500)
+    }
+
     @Test("Duration presentation handles minutes and hours")
     func durationPresentation() {
         let shortWalk = WalkRecording(title: "Short", duration: 125, mode: .walk)
