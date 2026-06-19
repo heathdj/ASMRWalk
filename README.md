@@ -46,7 +46,7 @@ ASMR Walk/
 
 Open the project in Xcode and select the `ASMR Walk` scheme.
 
-Before running camera recording, confirm the app target includes these generated Info properties:
+Before running recording features, confirm the app target includes these generated Info properties:
 
 - `Privacy - Location When In Use Usage Description`
 - `Privacy - Camera Usage Description`
@@ -59,6 +59,8 @@ ASMR Walk uses the camera and microphone to record video walks.
 ```
 
 iOS will terminate the app if camera or microphone capture is requested without those usage-description keys.
+
+See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
 ## Running
 

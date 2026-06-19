@@ -41,10 +41,19 @@ final class VideoCaptureService: NSObject {
     private(set) var isReady = false
     private(set) var isRecording = false
     private(set) var errorMessage: String?
+    private(set) var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+    private(set) var microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
     private let movieOutput = AVCaptureMovieFileOutput()
     private var stopContinuation: CheckedContinuation<URL, Error>?
     private var activeVideoDevice: AVCaptureDevice?
+
+    var isPermissionDenied: Bool {
+        cameraAuthorizationStatus == .denied
+            || cameraAuthorizationStatus == .restricted
+            || microphoneAuthorizationStatus == .denied
+            || microphoneAuthorizationStatus == .restricted
+    }
 
     func prepare() async {
         guard isReady == false else {
@@ -52,11 +61,18 @@ final class VideoCaptureService: NSObject {
         }
 
         do {
+            cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+            microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+
             guard await Self.requestAccess(for: .video),
                   await Self.requestAccess(for: .audio) else {
+                cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+                microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
                 throw CaptureError.permissionDenied
             }
 
+            cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+            microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
             try Task.checkCancellation()
             try configureSession()
             await startSession()
@@ -88,6 +104,10 @@ final class VideoCaptureService: NSObject {
         movieOutput.startRecording(to: url, recordingDelegate: self)
         isRecording = true
         errorMessage = nil
+    }
+
+    func report(_ error: Error) {
+        errorMessage = error.localizedDescription
     }
 
     func stopRecording() async throws -> URL {

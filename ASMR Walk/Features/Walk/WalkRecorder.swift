@@ -40,6 +40,10 @@ final class WalkRecorder {
         phase == .recording
     }
 
+    var isLocationAccessDenied: Bool {
+        authorizationStatus == .denied || authorizationStatus == .restricted
+    }
+
     var recording: WalkRecording? {
         session?.recording
     }
@@ -81,10 +85,9 @@ final class WalkRecorder {
     }
 
     var statusTitle: String {
-        switch authorizationStatus {
-        case .denied, .restricted:
+        if isLocationAccessDenied {
             "Location access needed"
-        default:
+        } else {
             isRecording ? "Recording walk" : "Ready to walk"
         }
     }

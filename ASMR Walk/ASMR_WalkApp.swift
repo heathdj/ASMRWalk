@@ -12,7 +12,7 @@ import SwiftData
 struct ASMR_WalkApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
         }
         .modelContainer(for: [WalkRecording.self, LocationPoint.self])
     }

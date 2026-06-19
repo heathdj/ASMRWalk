@@ -13,6 +13,7 @@ final class ASMR_WalkUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        app.launchArguments.append("--skip-startup-splash")
         app.launch()
     }
 
@@ -51,7 +52,9 @@ final class ASMR_WalkUITests: XCTestCase {
     @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
+            let app = XCUIApplication()
+            app.launchArguments.append("--skip-startup-splash")
+            app.launch()
         }
     }
 }

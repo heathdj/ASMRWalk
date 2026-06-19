@@ -37,12 +37,14 @@ enum AppTab: CaseIterable {
 }
 
 enum AccessibilityID {
+    static let startupSplash = "startup.splash"
     static let historyEmptyState = "history.emptyState"
     static let historyList = "history.list"
     static let recordingDetail = "history.recordingDetail"
     static let exportRecordingButton = "history.exportRecordingButton"
     static let videoPlayback = "history.videoPlayback"
     static let videoRouteOverlay = "history.videoRouteOverlay"
+    static let openSettingsButton = "permissions.openSettings"
     static let walkStatus = "walk.status"
     static let walkMetrics = "walk.metrics"
     static let startWalkButton = "walk.startButton"

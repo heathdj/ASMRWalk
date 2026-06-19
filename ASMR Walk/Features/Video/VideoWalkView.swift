@@ -6,9 +6,11 @@
 import MapKit
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct VideoWalkView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var camera = VideoCaptureService()
@@ -31,6 +33,9 @@ struct VideoWalkView: View {
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     statusCard
+                    if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
+                        openSettingsButton
+                    }
                     Spacer()
                     RecordingMetrics(
                         duration: walkRecorder.recording?.duration ?? 0,
@@ -115,8 +120,18 @@ struct VideoWalkView: View {
         .controlSize(.large)
         .buttonStyle(.glassProminent)
         .tint(.red)
-        .disabled(camera.isReady == false || isStopping)
+        .disabled(camera.isReady == false || camera.isPermissionDenied || walkRecorder.isLocationAccessDenied || isStopping)
         .accessibilityIdentifier(AccessibilityID.startVideoWalkButton)
+    }
+
+    private var openSettingsButton: some View {
+        Button("Open Privacy Settings", systemImage: "gear") {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                openURL(url)
+            }
+        }
+        .buttonStyle(.glass)
+        .accessibilityIdentifier(AccessibilityID.openSettingsButton)
     }
 
     private var statusTitle: String {
@@ -145,6 +160,7 @@ struct VideoWalkView: View {
             try camera.startRecording()
         } catch {
             walkRecorder.discard()
+            camera.report(error)
         }
     }
 

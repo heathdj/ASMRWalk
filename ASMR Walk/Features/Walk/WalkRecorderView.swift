@@ -6,9 +6,11 @@
 import MapKit
 import SwiftData
 import SwiftUI
+import UIKit
 
 struct WalkRecorderView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @State private var recorder = WalkRecorder()
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -26,6 +28,10 @@ struct WalkRecorderView: View {
                         systemImage: recorder.isRecording ? "location.fill.viewfinder" : "location.fill"
                     )
                     .accessibilityIdentifier(AccessibilityID.walkStatus)
+
+                    if recorder.isLocationAccessDenied {
+                        openSettingsButton(label: "Open Location Settings")
+                    }
 
                     Spacer()
 
@@ -104,7 +110,17 @@ struct WalkRecorderView: View {
         .controlSize(.large)
         .buttonStyle(.glassProminent)
         .tint(recorder.isRecording ? .red : .green)
-        .disabled(recorder.phase == .saving)
+        .disabled(recorder.phase == .saving || recorder.isLocationAccessDenied)
         .accessibilityIdentifier(AccessibilityID.startWalkButton)
+    }
+
+    private func openSettingsButton(label: String) -> some View {
+        Button(label, systemImage: "gear") {
+            if let url = URL(string: UIApplication.openSettingsURLString) {
+                openURL(url)
+            }
+        }
+        .buttonStyle(.glass)
+        .accessibilityIdentifier(AccessibilityID.openSettingsButton)
     }
 }

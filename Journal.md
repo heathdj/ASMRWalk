@@ -29,6 +29,18 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### Release Polish Is Mostly About Bad Days
+
+Phase 8 was less about adding shiny new screens and more about making the app behave well when the day goes sideways. If location, camera, or microphone access is blocked, the recording buttons now stop pretending they can work and the app gives the user a direct route to Settings. Video start failures are surfaced instead of disappearing silently.
+
+This is the boring-but-important App Store work: every permission prompt, denied state, interrupted recording, and missing setup path needs a graceful answer. A good release candidate is not just the happy path; it is the unhappy path with decent manners.
+
+### A Launch Screen, Not a Waiting Room
+
+The app already uses Xcode's generated native launch screen, which is the part iOS and App Store review care about before SwiftUI starts running. We added a very short branded SwiftUI startup screen after launch for a more polished first impression, but kept it under a second so it does not turn into a fake loading delay.
+
+The practical lesson: the native launch screen and the in-app splash are different layers. The native launch screen must exist for system startup behavior; the in-app splash is product polish and should get out of the user's way quickly.
+
 ### The Video Finally Got a Map Buddy
 
 Phase 7 turned saved video walks from "a movie file with some stats nearby" into an actual review experience. The detail screen now loads the saved movie with `AVPlayer`, observes playback time every half second, and feeds that time into a route map overlay. As the video plays, the blue playback marker advances along the recorded GPS points.
