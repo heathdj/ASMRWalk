@@ -31,7 +31,9 @@ As features grow, recording services, models, and feature views should move into
 
 ### Device Testing: The Camera Tells the Truth
 
-The simulator was polite. The iPhone was honest. Real device testing showed that asking the Video Walk tab to appear in landscape was not enough; the movie file still needed explicit rotation metadata when recording started. `VideoCaptureService` now receives the current interface orientation and writes the matching `videoRotationAngle` onto the movie output connection, so a landscape recording should play back as landscape instead of sideways portrait.
+The simulator was polite. The iPhone was honest. Real device testing showed that asking the Video Walk tab to appear in landscape was not enough; the camera preview and movie file both needed explicit AVFoundation rotation. The app now uses one fixed Video Walk capture orientation and applies its `videoRotationAngle` to both the `AVCaptureVideoPreviewLayer` and the movie output connection, so the preview and saved file agree instead of fighting over portrait defaults.
+
+The second lesson was that "please rotate this scene" is not the same as "this screen does not support portrait." The Video Walk tab now temporarily changes the app-supported orientation mask to landscape-right while it is visible, then restores portrait for the rest of the app. Think of it as putting a one-way turnstile at the camera door: once you enter Video Walk, portrait is no longer an allowed direction.
 
 The same pass tightened the camera lifecycle. A stale capture session can behave like an old TV paused on the last frame, so the video tab now refreshes its capture pipeline before preparing the preview. Stopping a recording also verifies the `.mov` file actually exists before SwiftData gets a video URL. If finalization fails, the app discards that incomplete video walk instead of filing a broken record in history.
 

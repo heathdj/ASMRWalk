@@ -15,7 +15,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
-- Video capture writes orientation metadata when recording starts; the tab orientation alone is not enough to guarantee landscape playback.
+- Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 

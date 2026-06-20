@@ -10,6 +10,8 @@ import SwiftData
 
 @main
 struct ASMR_WalkApp: App {
+    @UIApplicationDelegateAdaptor(AppOrientationDelegate.self) private var appOrientationDelegate
+
     var body: some Scene {
         WindowGroup {
             RootView()

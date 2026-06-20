@@ -100,7 +100,7 @@ final class VideoCaptureService: NSObject {
         if let connection = movieOutput.connection(with: .video),
            let activeVideoDevice {
             let coordinator = AVCaptureDevice.RotationCoordinator(device: activeVideoDevice, previewLayer: nil)
-            let sceneAngle = Self.videoRotationAngle(for: orientation)
+            let sceneAngle = InterfaceOrientationController.videoRotationAngle(for: orientation)
             let angle = orientation.isLandscape ? sceneAngle : coordinator.videoRotationAngleForHorizonLevelCapture
             if connection.isVideoRotationAngleSupported(angle) {
                 connection.videoRotationAngle = angle
@@ -213,21 +213,6 @@ final class VideoCaptureService: NSObject {
             .appending(path: "Video Walks", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appending(path: "\(UUID().uuidString).mov")
-    }
-
-    private static func videoRotationAngle(for orientation: UIInterfaceOrientation) -> CGFloat {
-        switch orientation {
-        case .landscapeLeft:
-            180
-        case .portrait:
-            90
-        case .portraitUpsideDown:
-            270
-        case .landscapeRight, .unknown:
-            0
-        @unknown default:
-            0
-        }
     }
 
     private func finishRecording(url: URL, error: Error?) {

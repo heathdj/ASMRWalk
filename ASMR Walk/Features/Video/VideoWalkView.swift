@@ -21,7 +21,12 @@ struct VideoWalkView: View {
 
     var body: some View {
         ZStack {
-            CameraPreview(session: camera.session)
+            CameraPreview(
+                session: camera.session,
+                videoRotationAngle: InterfaceOrientationController.videoRotationAngle(
+                    for: InterfaceOrientationController.videoWalkOrientation
+                )
+            )
                 .ignoresSafeArea()
 
             LinearGradient(
@@ -62,7 +67,7 @@ struct VideoWalkView: View {
         .preferredColorScheme(.dark)
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .task {
-            InterfaceOrientationController.request(.landscape)
+            InterfaceOrientationController.lockVideoWalkLandscape()
             walkRecorder.startPreviewingLocation()
             camera.refreshPreview()
             await camera.prepare()
@@ -75,7 +80,7 @@ struct VideoWalkView: View {
                 walkRecorder.stopPreviewingLocation()
                 camera.stopSession()
             }
-            InterfaceOrientationController.request(.portrait)
+            InterfaceOrientationController.restoreDefaultOrientation()
         }
         .onChange(of: scenePhase) {
             guard scenePhase != .active, walkRecorder.isRecording else {
@@ -181,7 +186,7 @@ struct VideoWalkView: View {
         }
 
         do {
-            try camera.startRecording(orientation: InterfaceOrientationController.currentInterfaceOrientation)
+            try camera.startRecording(orientation: InterfaceOrientationController.videoWalkOrientation)
             UIApplication.shared.isIdleTimerDisabled = true
         } catch {
             walkRecorder.discard()
