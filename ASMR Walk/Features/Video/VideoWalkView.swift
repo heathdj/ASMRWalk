@@ -16,6 +16,8 @@ struct VideoWalkView: View {
     @State private var camera = VideoCaptureService()
     @State private var walkRecorder = WalkRecorder()
     @State private var isStopping = false
+    @State private var isShowingShortRecordingConfirmation = false
+    @State private var shouldStopSessionAfterShortConfirmation = false
 
     var body: some View {
         ZStack {
@@ -32,7 +34,9 @@ struct VideoWalkView: View {
 
             HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
-                    statusCard
+                    if shouldShowStatusCard {
+                        statusCard
+                    }
                     if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
                         openSettingsButton
                     }
@@ -60,11 +64,13 @@ struct VideoWalkView: View {
         .task {
             InterfaceOrientationController.request(.landscape)
             walkRecorder.startPreviewingLocation()
+            camera.refreshPreview()
             await camera.prepare()
         }
         .onDisappear {
+            UIApplication.shared.isIdleTimerDisabled = false
             if walkRecorder.isRecording {
-                stopVideoWalk(stopSessionWhenFinished: true)
+                stopVideoWalk(stopSessionWhenFinished: true, confirmShortRecording: false)
             } else {
                 walkRecorder.stopPreviewingLocation()
                 camera.stopSession()
@@ -75,7 +81,19 @@ struct VideoWalkView: View {
             guard scenePhase != .active, walkRecorder.isRecording else {
                 return
             }
-            stopVideoWalk()
+            stopVideoWalk(confirmShortRecording: false)
+        }
+        .confirmationDialog("Save Short Video Walk?", isPresented: $isShowingShortRecordingConfirmation) {
+            Button("Save Video Walk") {
+                walkRecorder.saveFinishedRecording()
+                cleanupAfterShortRecordingDecision()
+            }
+            Button("Discard Video Walk", role: .destructive) {
+                walkRecorder.discard()
+                cleanupAfterShortRecordingDecision()
+            }
+        } message: {
+            Text("This video walk is shorter than 10 seconds.")
         }
     }
 
@@ -89,9 +107,15 @@ struct VideoWalkView: View {
         .accessibilityIdentifier(AccessibilityID.videoStatus)
     }
 
+    private var shouldShowStatusCard: Bool {
+        walkRecorder.isRecording == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
+    }
+
     private var routeMap: some View {
         Map(initialPosition: .userLocation(followsHeading: false, fallback: .automatic)) {
-            UserAnnotation()
+            UserAnnotation {
+                FacingLocationIndicator(headingDegrees: walkRecorder.headingDegrees)
+            }
 
             if walkRecorder.coordinates.count > 1 {
                 MapPolyline(coordinates: walkRecorder.coordinates)
@@ -157,14 +181,19 @@ struct VideoWalkView: View {
         }
 
         do {
-            try camera.startRecording()
+            try camera.startRecording(orientation: InterfaceOrientationController.currentInterfaceOrientation)
+            UIApplication.shared.isIdleTimerDisabled = true
         } catch {
             walkRecorder.discard()
             camera.report(error)
+            UIApplication.shared.isIdleTimerDisabled = false
         }
     }
 
-    private func stopVideoWalk(stopSessionWhenFinished: Bool = false) {
+    private func stopVideoWalk(
+        stopSessionWhenFinished: Bool = false,
+        confirmShortRecording: Bool = true
+    ) {
         guard isStopping == false else {
             return
         }
@@ -174,16 +203,43 @@ struct VideoWalkView: View {
             do {
                 let videoURL = try await camera.stopRecording()
                 walkRecorder.attachVideo(at: videoURL)
+                UIApplication.shared.isIdleTimerDisabled = false
             } catch {
-                // Preserve the GPS recording even if video finalization fails.
+                UIApplication.shared.isIdleTimerDisabled = false
+                camera.report(error)
+                walkRecorder.discard()
+                if stopSessionWhenFinished {
+                    walkRecorder.stopPreviewingLocation()
+                    camera.stopSession()
+                }
+                isStopping = false
+                return
             }
 
-            walkRecorder.stopAndSave()
-            if stopSessionWhenFinished {
-                walkRecorder.stopPreviewingLocation()
-                camera.stopSession()
+            guard walkRecorder.finishRecording() else {
+                isStopping = false
+                return
+            }
+
+            if confirmShortRecording, walkRecorder.isShortRecording {
+                shouldStopSessionAfterShortConfirmation = stopSessionWhenFinished
+                isShowingShortRecordingConfirmation = true
+            } else {
+                walkRecorder.saveFinishedRecording()
+                if stopSessionWhenFinished {
+                    walkRecorder.stopPreviewingLocation()
+                    camera.stopSession()
+                }
             }
             isStopping = false
         }
+    }
+
+    private func cleanupAfterShortRecordingDecision() {
+        if shouldStopSessionAfterShortConfirmation {
+            walkRecorder.stopPreviewingLocation()
+            camera.stopSession()
+        }
+        shouldStopSessionAfterShortConfirmation = false
     }
 }

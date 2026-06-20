@@ -6,6 +6,7 @@
 @preconcurrency import AVFoundation
 import Foundation
 import Observation
+import UIKit
 
 @MainActor
 @Observable
@@ -17,6 +18,7 @@ final class VideoCaptureService: NSObject {
         case cannotAddInput
         case cannotAddOutput
         case notReady
+        case outputFileMissing
 
         var errorDescription: String? {
             switch self {
@@ -32,11 +34,13 @@ final class VideoCaptureService: NSObject {
                 "Video recording could not be configured."
             case .notReady:
                 "The camera is not ready yet."
+            case .outputFileMissing:
+                "The video file was not written correctly."
             }
         }
     }
 
-    let session = AVCaptureSession()
+    private(set) var session = AVCaptureSession()
 
     private(set) var isReady = false
     private(set) var isRecording = false
@@ -44,7 +48,7 @@ final class VideoCaptureService: NSObject {
     private(set) var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
     private(set) var microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
-    private let movieOutput = AVCaptureMovieFileOutput()
+    private var movieOutput = AVCaptureMovieFileOutput()
     private var stopContinuation: CheckedContinuation<URL, Error>?
     private var activeVideoDevice: AVCaptureDevice?
 
@@ -56,7 +60,7 @@ final class VideoCaptureService: NSObject {
     }
 
     func prepare() async {
-        guard isReady == false else {
+        guard isReady == false || session.isRunning == false else {
             return
         }
 
@@ -74,6 +78,7 @@ final class VideoCaptureService: NSObject {
             cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
             microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
             try Task.checkCancellation()
+            resetCapturePipeline()
             try configureSession()
             await startSession()
             try Task.checkCancellation()
@@ -86,7 +91,7 @@ final class VideoCaptureService: NSObject {
         }
     }
 
-    func startRecording() throws {
+    func startRecording(orientation: UIInterfaceOrientation = .landscapeRight) throws {
         guard isReady, movieOutput.isRecording == false else {
             throw CaptureError.notReady
         }
@@ -95,9 +100,12 @@ final class VideoCaptureService: NSObject {
         if let connection = movieOutput.connection(with: .video),
            let activeVideoDevice {
             let coordinator = AVCaptureDevice.RotationCoordinator(device: activeVideoDevice, previewLayer: nil)
-            let angle = coordinator.videoRotationAngleForHorizonLevelCapture
+            let sceneAngle = Self.videoRotationAngle(for: orientation)
+            let angle = orientation.isLandscape ? sceneAngle : coordinator.videoRotationAngleForHorizonLevelCapture
             if connection.isVideoRotationAngleSupported(angle) {
                 connection.videoRotationAngle = angle
+            } else if connection.isVideoRotationAngleSupported(sceneAngle) {
+                connection.videoRotationAngle = sceneAngle
             }
         }
 
@@ -122,7 +130,10 @@ final class VideoCaptureService: NSObject {
     }
 
     func stopSession() {
+        isReady = false
+
         guard session.isRunning else {
+            resetCapturePipeline()
             return
         }
 
@@ -130,6 +141,16 @@ final class VideoCaptureService: NSObject {
         Task { @concurrent in
             session.stopRunning()
         }
+        resetCapturePipeline()
+    }
+
+    func refreshPreview() {
+        guard isRecording == false else {
+            return
+        }
+
+        isReady = false
+        resetCapturePipeline()
     }
 
     private func configureSession() throws {
@@ -161,6 +182,12 @@ final class VideoCaptureService: NSObject {
         activeVideoDevice = camera
     }
 
+    private func resetCapturePipeline() {
+        activeVideoDevice = nil
+        movieOutput = AVCaptureMovieFileOutput()
+        session = AVCaptureSession()
+    }
+
     private func startSession() async {
         let session = session
         await Task { @concurrent in
@@ -188,6 +215,21 @@ final class VideoCaptureService: NSObject {
         return directory.appending(path: "\(UUID().uuidString).mov")
     }
 
+    private static func videoRotationAngle(for orientation: UIInterfaceOrientation) -> CGFloat {
+        switch orientation {
+        case .landscapeLeft:
+            180
+        case .portrait:
+            90
+        case .portraitUpsideDown:
+            270
+        case .landscapeRight, .unknown:
+            0
+        @unknown default:
+            0
+        }
+    }
+
     private func finishRecording(url: URL, error: Error?) {
         isRecording = false
 
@@ -195,6 +237,9 @@ final class VideoCaptureService: NSObject {
             errorMessage = error.localizedDescription
             try? FileManager.default.removeItem(at: url)
             stopContinuation?.resume(throwing: error)
+        } else if FileManager.default.fileExists(atPath: url.path) == false {
+            errorMessage = CaptureError.outputFileMissing.localizedDescription
+            stopContinuation?.resume(throwing: CaptureError.outputFileMissing)
         } else {
             stopContinuation?.resume(returning: url)
         }

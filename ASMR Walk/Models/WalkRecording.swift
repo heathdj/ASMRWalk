@@ -8,6 +8,8 @@ import SwiftData
 
 @Model
 final class WalkRecording {
+    static let shortRecordingThreshold: TimeInterval = 10
+
     #Unique<WalkRecording>([\.id])
     #Index<WalkRecording>([\.createdAt])
 
@@ -44,6 +46,10 @@ final class WalkRecording {
 
     var hasVideo: Bool {
         videoURL != nil
+    }
+
+    var isShortRecording: Bool {
+        duration < Self.shortRecordingThreshold
     }
 
     var pointsInTimeOrder: [LocationPoint] {

@@ -197,6 +197,16 @@ struct WalkRecordingTests {
         #expect(videoWalk.hasVideo)
     }
 
+    @Test("Short recordings use a 10 second save confirmation threshold")
+    func shortRecordingThreshold() {
+        let shortWalk = WalkRecording(title: "Short Walk", duration: 9.9, mode: .walk)
+        let tenSecondWalk = WalkRecording(title: "Ten Second Walk", duration: 10, mode: .walk)
+
+        #expect(WalkRecording.shortRecordingThreshold == 10)
+        #expect(shortWalk.isShortRecording)
+        #expect(tenSecondWalk.isShortRecording == false)
+    }
+
     @Test("Video playback route progress follows recorded point timing")
     func videoPlaybackRouteProgress() throws {
         let recording = WalkRecording(

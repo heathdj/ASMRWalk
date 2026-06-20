@@ -29,6 +29,16 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### Device Testing: The Camera Tells the Truth
+
+The simulator was polite. The iPhone was honest. Real device testing showed that asking the Video Walk tab to appear in landscape was not enough; the movie file still needed explicit rotation metadata when recording started. `VideoCaptureService` now receives the current interface orientation and writes the matching `videoRotationAngle` onto the movie output connection, so a landscape recording should play back as landscape instead of sideways portrait.
+
+The same pass tightened the camera lifecycle. A stale capture session can behave like an old TV paused on the last frame, so the video tab now refreshes its capture pipeline before preparing the preview. Stopping a recording also verifies the `.mov` file actually exists before SwiftData gets a video URL. If finalization fails, the app discards that incomplete video walk instead of filing a broken record in history.
+
+One user-comfort rule is intentionally narrow: the idle timer is disabled only while video recording is active. GPS-only walks can let the screen sleep because they do not need a live camera preview burning battery. Short recordings also got a human checkpoint. If a user stops a walk or video walk before 10 seconds, the app asks whether to save or discard it rather than silently cluttering history with accidental taps.
+
+The map learned one more trick too: while the Walk and Video Walk tabs preview location, Core Location heading updates feed a custom user annotation. The marker points roughly where the phone is facing, which makes the live map feel closer to Apple Maps and less like a dot floating without context.
+
 ### Release Polish Is Mostly About Bad Days
 
 Phase 8 was less about adding shiny new screens and more about making the app behave well when the day goes sideways. If location, camera, or microphone access is blocked, the recording buttons now stop pretending they can work and the app gives the user a direct route to Settings. Video start failures are surfaced instead of disappearing silently.

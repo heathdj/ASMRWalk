@@ -15,6 +15,8 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
+- Video capture writes orientation metadata when recording starts; the tab orientation alone is not enough to guarantee landscape playback.
+- `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 
 ## Conventions
@@ -24,6 +26,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Keep recording state in dedicated observable types, not inside large SwiftUI views.
 - Use standard SwiftUI controls first so the interface follows the iOS 26 Liquid Glass system automatically.
 - Store video files in app-managed storage and persist only their URLs.
+- Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
 
 ## Build And Run
 
@@ -35,4 +38,6 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 s
 - Foreground location recording is the initial scope. Background recording requires more permissions and capabilities.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
+- Disable the idle timer only while video recording is active, not for GPS-only walks.
+- Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.

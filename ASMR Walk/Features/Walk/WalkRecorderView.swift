@@ -15,6 +15,7 @@ struct WalkRecorderView: View {
     @State private var recorder = WalkRecorder()
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasPositionedCamera = false
+    @State private var isShowingShortRecordingConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -73,12 +74,24 @@ struct WalkRecorderView: View {
                     recorder.stopAndSave()
                 }
             }
+            .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
+                Button("Save Walk") {
+                    recorder.saveFinishedRecording()
+                }
+                Button("Discard Walk", role: .destructive) {
+                    recorder.discard()
+                }
+            } message: {
+                Text("This walk is shorter than 10 seconds.")
+            }
         }
     }
 
     private var liveMap: some View {
         Map(position: $cameraPosition) {
-            UserAnnotation()
+            UserAnnotation {
+                FacingLocationIndicator(headingDegrees: recorder.headingDegrees)
+            }
 
             if recorder.coordinates.count > 1 {
                 MapPolyline(coordinates: recorder.coordinates)
@@ -100,7 +113,7 @@ struct WalkRecorderView: View {
             systemImage: recorder.isRecording ? "stop.fill" : "figure.walk"
         ) {
             if recorder.isRecording {
-                recorder.stopAndSave()
+                stopWalk()
             } else {
                 recorder.start(in: modelContext)
             }
@@ -112,6 +125,15 @@ struct WalkRecorderView: View {
         .tint(recorder.isRecording ? .red : .green)
         .disabled(recorder.phase == .saving || recorder.isLocationAccessDenied)
         .accessibilityIdentifier(AccessibilityID.startWalkButton)
+    }
+
+    private func stopWalk() {
+        if recorder.isShortRecording {
+            recorder.finishRecording()
+            isShowingShortRecordingConfirmation = true
+        } else {
+            recorder.stopAndSave()
+        }
     }
 
     private func openSettingsButton(label: String) -> some View {

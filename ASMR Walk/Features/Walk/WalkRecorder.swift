@@ -10,7 +10,7 @@ import SwiftData
 
 @MainActor
 @Observable
-final class WalkRecorder {
+final class WalkRecorder: NSObject {
     enum Phase: Equatable {
         case ready
         case recording
@@ -20,6 +20,7 @@ final class WalkRecorder {
     private(set) var phase: Phase = .ready
     private(set) var session: WalkRecordingSession?
     private(set) var latestLocation: CLLocation?
+    private(set) var headingDegrees: CLLocationDirection?
     private(set) var errorMessage: String?
     private(set) var authorizationStatus: CLAuthorizationStatus
     private(set) var isPreviewingLocation = false
@@ -34,10 +35,20 @@ final class WalkRecorder {
     init(locationManager: CLLocationManager = CLLocationManager()) {
         self.locationManager = locationManager
         authorizationStatus = locationManager.authorizationStatus
+        super.init()
+        self.locationManager.delegate = self
     }
 
     var isRecording: Bool {
         phase == .recording
+    }
+
+    var currentDuration: TimeInterval {
+        recording?.duration ?? 0
+    }
+
+    var isShortRecording: Bool {
+        recording?.isShortRecording ?? (currentDuration < WalkRecording.shortRecordingThreshold)
     }
 
     var isLocationAccessDenied: Bool {
@@ -67,6 +78,7 @@ final class WalkRecorder {
 
         isPreviewingLocation = true
         startLocationUpdates()
+        startHeadingUpdatesIfAvailable()
     }
 
     func stopPreviewingLocation() {
@@ -78,6 +90,7 @@ final class WalkRecorder {
 
         updateTask?.cancel()
         updateTask = nil
+        stopHeadingUpdatesIfIdle()
     }
 
     var coordinates: [CLLocationCoordinate2D] {
@@ -144,6 +157,7 @@ final class WalkRecorder {
 
         phase = .recording
         startLocationUpdates()
+        startHeadingUpdatesIfAvailable()
         startClock()
     }
 
@@ -157,8 +171,17 @@ final class WalkRecorder {
     }
 
     func stopAndSave() {
-        guard phase == .recording else {
+        guard finishRecording() else {
             return
+        }
+
+        saveFinishedRecording()
+    }
+
+    @discardableResult
+    func finishRecording() -> Bool {
+        guard phase == .recording else {
+            return false
         }
 
         phase = .saving
@@ -167,6 +190,14 @@ final class WalkRecorder {
         }
         clockTask?.cancel()
         session?.updateDuration()
+        stopHeadingUpdatesIfIdle()
+        return true
+    }
+
+    func saveFinishedRecording() {
+        guard phase == .saving else {
+            return
+        }
 
         do {
             try modelContext?.save()
@@ -175,6 +206,7 @@ final class WalkRecorder {
             phase = .recording
             errorMessage = "Unable to save walk: \(error.localizedDescription)"
             startLocationUpdates()
+            startHeadingUpdatesIfAvailable()
             startClock()
         }
     }
@@ -184,6 +216,10 @@ final class WalkRecorder {
             updateTask?.cancel()
         }
         clockTask?.cancel()
+
+        if let videoURL = recording?.videoURL {
+            try? FileManager.default.removeItem(at: videoURL)
+        }
 
         if let recording {
             modelContext?.delete(recording)
@@ -239,6 +275,23 @@ final class WalkRecorder {
         }
     }
 
+    private func startHeadingUpdatesIfAvailable() {
+        guard CLLocationManager.headingAvailable() else {
+            headingDegrees = nil
+            return
+        }
+
+        locationManager.startUpdatingHeading()
+    }
+
+    private func stopHeadingUpdatesIfIdle() {
+        guard isRecording == false, isPreviewingLocation == false else {
+            return
+        }
+
+        locationManager.stopUpdatingHeading()
+    }
+
     private func startClock() {
         clockTask?.cancel()
         clockTask = Task {
@@ -272,6 +325,7 @@ final class WalkRecorder {
         if isPreviewingLocation == false {
             updateTask = nil
             latestLocation = nil
+            headingDegrees = nil
         }
         clockTask = nil
         session = nil
@@ -279,5 +333,18 @@ final class WalkRecorder {
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0
         phase = .ready
+    }
+}
+
+extension WalkRecorder: CLLocationManagerDelegate {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        Task { @MainActor [weak self] in
+            guard newHeading.headingAccuracy >= 0 else {
+                return
+            }
+
+            let trueHeading = newHeading.trueHeading
+            self?.headingDegrees = trueHeading >= 0 ? trueHeading : newHeading.magneticHeading
+        }
     }
 }
