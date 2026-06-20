@@ -27,6 +27,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Use standard SwiftUI controls first so the interface follows the iOS 26 Liquid Glass system automatically.
 - Store video files in app-managed storage and persist only their URLs.
 - Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
+- Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 
 ## Build And Run
 
@@ -35,6 +36,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 s
 ## Gotchas
 
 - Google Maps URLs cannot preserve every recorded route point; GPX is the fidelity-preserving export.
+- GPX exports include plugin-friendly extensions for duration, mode, video presence, accuracy, and optional speed while remaining readable by generic GPX tools.
 - Foreground location recording is the initial scope. Background recording requires more permissions and capabilities.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.

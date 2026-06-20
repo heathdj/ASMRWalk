@@ -29,6 +29,12 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### GPX Learned to Speak Plugin
+
+The original GPX export was a clean walking trail: coordinates, elevation, and timestamps. That is enough for generic map apps, but an FCP/Motion importer needs a little more context to sync a route to a finished walk or video. The export now keeps standard GPX as the main dish and puts ASMR Walk-specific details in `<extensions>`, which is the GPX-approved side pocket for app metadata.
+
+Those extensions include the recording ID, duration, mode, `hasVideo`, horizontal accuracy, and speed when the phone captured it. The deliberate omission is the local video URL. A sandbox file path from an iPhone is useless on a Mac and leaks private implementation details, so the export says "this recording has video" without pretending the Mac can open the app's private file.
+
 ### Device Testing: The Camera Tells the Truth
 
 The simulator was polite. The iPhone was honest. Real device testing showed that asking the Video Walk tab to appear in landscape was not enough; the camera preview and movie file both needed explicit AVFoundation rotation. The app now uses one fixed Video Walk capture orientation and applies its `videoRotationAngle` to both the `AVCaptureVideoPreviewLayer` and the movie output connection, so the preview and saved file agree instead of fighting over portrait defaults.

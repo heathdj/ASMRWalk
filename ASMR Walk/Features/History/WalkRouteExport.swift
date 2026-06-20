@@ -13,22 +13,34 @@ struct WalkRouteExport {
         let latitude: Double
         let longitude: Double
         let altitude: Double?
+        let horizontalAccuracy: Double
+        let speed: Double?
     }
 
+    let recordingID: UUID
     let title: String
     let createdAt: Date
+    let duration: TimeInterval
+    let mode: RecordingMode
+    let hasVideo: Bool
     let points: [Point]
 
     @MainActor
     init(recording: WalkRecording) {
+        recordingID = recording.id
         title = recording.title
         createdAt = recording.createdAt
+        duration = recording.duration
+        mode = recording.mode
+        hasVideo = recording.hasVideo
         points = recording.pointsInTimeOrder.map {
             Point(
                 timestamp: $0.timestamp,
                 latitude: $0.latitude,
                 longitude: $0.longitude,
-                altitude: $0.altitude
+                altitude: $0.altitude,
+                horizontalAccuracy: $0.horizontalAccuracy,
+                speed: $0.speed
             )
         }
     }
@@ -71,6 +83,7 @@ struct WalkRouteExport {
                 details += "<ele>\(altitude.formatted(.number.precision(.fractionLength(2))))</ele>"
             }
             details += "<time>\(point.timestamp.ISO8601Format())</time>"
+            details += point.extensionsXML
 
             return "<trkpt lat=\"\(point.latitude.coordinateText)\" lon=\"\(point.longitude.coordinateText)\">\(details)</trkpt>"
         }
@@ -78,12 +91,18 @@ struct WalkRouteExport {
 
         return """
         <?xml version="1.0" encoding="UTF-8"?>
-        <gpx version="1.1" creator="ASMR Walk" xmlns="http://www.topografix.com/GPX/1/1">
+        <gpx version="1.1" creator="ASMR Walk" xmlns="http://www.topografix.com/GPX/1/1" xmlns:asmrwalk="https://asmrwalk.app/gpx/1">
         <metadata><name>\(title.xmlEscaped)</name><time>\(createdAt.ISO8601Format())</time></metadata>
-        <trk><name>\(title.xmlEscaped)</name><trkseg>
+        <trk><name>\(title.xmlEscaped)</name>\(trackExtensionsXML)<trkseg>
         \(trackPoints)
         </trkseg></trk>
         </gpx>
+        """
+    }
+
+    private var trackExtensionsXML: String {
+        """
+        <extensions><asmrwalk:recordingID>\(recordingID.uuidString.xmlEscaped)</asmrwalk:recordingID><asmrwalk:durationSeconds>\(duration.gpxNumberText)</asmrwalk:durationSeconds><asmrwalk:recordingMode>\(mode.rawValue.xmlEscaped)</asmrwalk:recordingMode><asmrwalk:hasVideo>\(hasVideo ? "true" : "false")</asmrwalk:hasVideo></extensions>
         """
     }
 
@@ -138,11 +157,23 @@ private extension WalkRouteExport.Point {
     var coordinateText: String {
         "\(latitude.coordinateText),\(longitude.coordinateText)"
     }
+
+    var extensionsXML: String {
+        var values = "<asmrwalk:horizontalAccuracyMeters>\(horizontalAccuracy.gpxNumberText)</asmrwalk:horizontalAccuracyMeters>"
+        if let speed {
+            values += "<asmrwalk:speedMetersPerSecond>\(speed.gpxNumberText)</asmrwalk:speedMetersPerSecond>"
+        }
+        return "<extensions>\(values)</extensions>"
+    }
 }
 
 private extension Double {
     var coordinateText: String {
         formatted(.number.locale(Locale(identifier: "en_US_POSIX")).precision(.fractionLength(6)))
+    }
+
+    var gpxNumberText: String {
+        formatted(.number.locale(Locale(identifier: "en_US_POSIX")).precision(.fractionLength(0...3)))
     }
 }
 

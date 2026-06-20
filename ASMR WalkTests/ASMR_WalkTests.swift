@@ -327,6 +327,37 @@ struct WalkRecordingTests {
         #expect(export.gpxFile.filename == "Creek-Canal.gpx")
     }
 
+    @Test("GPX export includes ASMR Walk extensions for importer sync and diagnostics")
+    func gpxExportExtensions() throws {
+        let recordingID = try #require(UUID(uuidString: "3B278DC8-F7C6-4A01-8B55-C627DD6F00E1"))
+        let recording = WalkRecording(
+            id: recordingID,
+            title: "Video Export",
+            createdAt: Date(timeIntervalSince1970: 300),
+            duration: 142.75,
+            mode: .videoWalk,
+            videoURL: URL(filePath: "/private/var/mobile/Containers/Data/Application/video.mov"),
+            points: [
+                makePoint(timestamp: 100, horizontalAccuracy: 4.25, speed: 1.5),
+                makePoint(timestamp: 120, latitude: 33.4490, longitude: -112.0728, horizontalAccuracy: 8)
+            ]
+        )
+
+        let gpxText = WalkRouteExport(recording: recording).gpxText
+
+        #expect(gpxText.contains("xmlns:asmrwalk=\"https://asmrwalk.app/gpx/1\""))
+        #expect(gpxText.contains("<asmrwalk:recordingID>\(recordingID.uuidString)</asmrwalk:recordingID>"))
+        #expect(gpxText.contains("<asmrwalk:durationSeconds>142.75</asmrwalk:durationSeconds>"))
+        #expect(gpxText.contains("<asmrwalk:recordingMode>videoWalk</asmrwalk:recordingMode>"))
+        #expect(gpxText.contains("<asmrwalk:hasVideo>true</asmrwalk:hasVideo>"))
+        #expect(gpxText.contains("<asmrwalk:horizontalAccuracyMeters>4.25</asmrwalk:horizontalAccuracyMeters>"))
+        #expect(gpxText.contains("<asmrwalk:horizontalAccuracyMeters>8</asmrwalk:horizontalAccuracyMeters>"))
+        #expect(gpxText.contains("<asmrwalk:speedMetersPerSecond>1.5</asmrwalk:speedMetersPerSecond>"))
+        #expect(gpxText.components(separatedBy: "<asmrwalk:speedMetersPerSecond>").count - 1 == 1)
+        #expect(gpxText.contains("video.mov") == false)
+        #expect(gpxText.contains("/private/var/mobile") == false)
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
@@ -339,13 +370,16 @@ struct WalkRecordingTests {
     private func makePoint(
         timestamp: TimeInterval,
         latitude: Double = 33.4484,
-        longitude: Double = -112.0740
+        longitude: Double = -112.0740,
+        horizontalAccuracy: Double = 5,
+        speed: Double? = nil
     ) -> LocationPoint {
         LocationPoint(
             timestamp: Date(timeIntervalSince1970: timestamp),
             latitude: latitude,
             longitude: longitude,
-            horizontalAccuracy: 5
+            horizontalAccuracy: horizontalAccuracy,
+            speed: speed
         )
     }
 }
