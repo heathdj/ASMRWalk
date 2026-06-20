@@ -20,6 +20,7 @@ final class WalkRecording {
     var distanceMeters: Double
     var mode: RecordingMode
     var videoURL: URL?
+    var videoAssetIdentifier: String?
 
     @Relationship(deleteRule: .cascade, inverse: \LocationPoint.recording)
     var points: [LocationPoint]
@@ -32,6 +33,7 @@ final class WalkRecording {
         distanceMeters: Double = 0,
         mode: RecordingMode,
         videoURL: URL? = nil,
+        videoAssetIdentifier: String? = nil,
         points: [LocationPoint] = []
     ) {
         self.id = id
@@ -41,11 +43,12 @@ final class WalkRecording {
         self.distanceMeters = distanceMeters
         self.mode = mode
         self.videoURL = videoURL
+        self.videoAssetIdentifier = videoAssetIdentifier
         self.points = points
     }
 
     var hasVideo: Bool {
-        videoURL != nil
+        videoAssetIdentifier != nil || videoURL != nil
     }
 
     var isShortRecording: Bool {

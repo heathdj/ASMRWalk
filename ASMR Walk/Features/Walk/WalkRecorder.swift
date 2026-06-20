@@ -170,6 +170,16 @@ final class WalkRecorder: NSObject {
         recording.videoURL = url
     }
 
+    func attachPhotoLibraryVideo(assetIdentifier: String) {
+        guard let recording else {
+            return
+        }
+
+        recording.mode = .videoWalk
+        recording.videoAssetIdentifier = assetIdentifier
+        recording.videoURL = nil
+    }
+
     func stopAndSave() {
         guard finishRecording() else {
             return

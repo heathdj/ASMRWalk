@@ -80,7 +80,7 @@ struct WalkRouteExport {
         let trackPoints = points.map { point in
             var details = ""
             if let altitude = point.altitude {
-                details += "<ele>\(altitude.formatted(.number.precision(.fractionLength(2))))</ele>"
+                details += "<ele>\(altitude.gpxNumberText)</ele>"
             }
             details += "<time>\(point.timestamp.ISO8601Format())</time>"
             details += point.extensionsXML

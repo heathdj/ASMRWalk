@@ -12,6 +12,7 @@ enum AppTab: CaseIterable {
     case history
     case walk
     case videoWalk
+    case settings
 
     var title: String {
         switch self {
@@ -21,6 +22,8 @@ enum AppTab: CaseIterable {
             "Walk"
         case .videoWalk:
             "Video Walk"
+        case .settings:
+            "Settings"
         }
     }
 
@@ -32,6 +35,8 @@ enum AppTab: CaseIterable {
             "figure.walk"
         case .videoWalk:
             "video.fill"
+        case .settings:
+            "gearshape.fill"
         }
     }
 }
@@ -52,9 +57,16 @@ enum AccessibilityID {
     static let videoMetrics = "videoWalk.metrics"
     static let startVideoWalkButton = "videoWalk.startButton"
     static let videoWalkScreen = "videoWalk.screen"
+    static let videoRecordingIndicator = "videoWalk.recordingIndicator"
+    static let settingsScreen = "settings.screen"
+    static let themePicker = "settings.themePicker"
+    static let aboutButton = "settings.aboutButton"
+    static let aboutSheet = "settings.aboutSheet"
 }
 
 struct ContentView: View {
+    @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
+
     var body: some View {
         TabView {
             Tab(AppTab.history.title, systemImage: AppTab.history.systemImage) {
@@ -68,8 +80,17 @@ struct ContentView: View {
             Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage) {
                 VideoWalkView()
             }
+
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage) {
+                SettingsView()
+            }
         }
         .tint(.green)
+        .preferredColorScheme(selectedTheme.colorScheme)
+    }
+
+    private var selectedTheme: AppTheme {
+        AppTheme(rawValue: appThemeRawValue) ?? .system
     }
 }
 

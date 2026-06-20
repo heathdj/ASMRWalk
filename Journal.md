@@ -29,6 +29,16 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### Videos Move Into the Family Album
+
+Storing videos only inside the app sandbox is fragile. It works until an update, migration, cleanup, or reinstall changes the furniture. The new preferred path treats Photos as the long-term video home: when a video walk finishes, the app asks Photos to import the `.mov`, then stores the Photos asset identifier on the `WalkRecording`. Later playback asks Photos for an `AVPlayerItem` using that identifier.
+
+The old sandbox URL remains as a fallback for existing recordings and for cases where Photos saving fails, but it is no longer the preferred source of truth. There is one important runtime trap: iOS will not even let an app ask for Photos access unless the target has the right usage descriptions. The code checks for those keys first so a missing setting becomes a normal error instead of a crash.
+
+### Settings Give the App a Dimmer Switch
+
+The app now has a Settings tab with a three-position theme picker: System, Light, and Dark. System is the default because most people have already told iOS what they prefer. The app stores the choice in `@AppStorage`, and the root tab view applies the selected color scheme so the setting affects the whole interface instead of just the settings screen.
+
 ### GPX Learned to Speak Plugin
 
 The original GPX export was a clean walking trail: coordinates, elevation, and timestamps. That is enough for generic map apps, but an FCP/Motion importer needs a little more context to sync a route to a finished walk or video. The export now keeps standard GPX as the main dish and puts ASMR Walk-specific details in `<extensions>`, which is the GPX-approved side pocket for app metadata.

@@ -50,6 +50,20 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testSettingsTabShowsThemeAndAbout() {
+        app.tabBars.buttons["Settings"].tap()
+
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.themePicker"].exists)
+
+        app.buttons["settings.aboutButton"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 2))
+        let emailPredicate = NSPredicate(format: "label CONTAINS %@", "heathdj@me.com")
+        XCTAssertTrue(app.descendants(matching: .any).matching(emailPredicate).firstMatch.exists)
+    }
+
+    @MainActor
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()

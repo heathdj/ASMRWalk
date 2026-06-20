@@ -16,8 +16,10 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
 - Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
+- New video walks should save finished `.mov` files into Photos and store the resulting `PHAsset.localIdentifier`; legacy sandbox `videoURL` remains as fallback.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
+- App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
 
 ## Conventions
 
@@ -39,6 +41,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 s
 - GPX exports include plugin-friendly extensions for duration, mode, video presence, accuracy, and optional speed while remaining readable by generic GPX tools.
 - Foreground location recording is the initial scope. Background recording requires more permissions and capabilities.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
+- Photos save/playback needs `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
 - Disable the idle timer only while video recording is active, not for GPS-only walks.
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.

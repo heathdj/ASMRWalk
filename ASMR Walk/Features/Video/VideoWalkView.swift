@@ -41,6 +41,8 @@ struct VideoWalkView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if shouldShowStatusCard {
                         statusCard
+                    } else if walkRecorder.isRecording {
+                        recordingIndicator
                     }
                     if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
                         openSettingsButton
@@ -64,7 +66,6 @@ struct VideoWalkView: View {
             }
             .padding()
         }
-        .preferredColorScheme(.dark)
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .task {
             InterfaceOrientationController.lockVideoWalkLandscape()
@@ -114,6 +115,19 @@ struct VideoWalkView: View {
 
     private var shouldShowStatusCard: Bool {
         walkRecorder.isRecording == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
+    }
+
+    private var recordingIndicator: some View {
+        Circle()
+            .fill(.green)
+            .frame(width: 14, height: 14)
+            .overlay {
+                Circle()
+                    .stroke(.white.opacity(0.9), lineWidth: 2)
+            }
+            .shadow(radius: 2)
+            .accessibilityLabel("Camera recording")
+            .accessibilityIdentifier(AccessibilityID.videoRecordingIndicator)
     }
 
     private var routeMap: some View {
@@ -207,7 +221,14 @@ struct VideoWalkView: View {
         Task {
             do {
                 let videoURL = try await camera.stopRecording()
-                walkRecorder.attachVideo(at: videoURL)
+                do {
+                    let assetIdentifier = try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: videoURL)
+                    walkRecorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
+                    try? FileManager.default.removeItem(at: videoURL)
+                } catch {
+                    walkRecorder.attachVideo(at: videoURL)
+                    camera.report(error)
+                }
                 UIApplication.shared.isIdleTimerDisabled = false
             } catch {
                 UIApplication.shared.isIdleTimerDisabled = false

@@ -7,16 +7,17 @@
 
 import Foundation
 import CoreLocation
+import SwiftUI
 import SwiftData
 import Testing
 @testable import ASMR_Walk
 
 @MainActor
 struct ASMR_WalkTests {
-    @Test("The app exposes its three primary destinations")
+    @Test("The app exposes its primary destinations")
     func primaryDestinations() {
-        #expect(AppTab.allCases.count == 3)
-        #expect(AppTab.allCases == [.history, .walk, .videoWalk])
+        #expect(AppTab.allCases.count == 4)
+        #expect(AppTab.allCases == [.history, .walk, .videoWalk, .settings])
     }
 
     @Test(
@@ -24,7 +25,8 @@ struct ASMR_WalkTests {
         arguments: [
             (AppTab.history, "History", "clock.arrow.circlepath"),
             (AppTab.walk, "Walk", "figure.walk"),
-            (AppTab.videoWalk, "Video Walk", "video.fill")
+            (AppTab.videoWalk, "Video Walk", "video.fill"),
+            (AppTab.settings, "Settings", "gearshape.fill")
         ]
     )
     func destinationPresentation(tab: AppTab, title: String, systemImage: String) {
@@ -39,6 +41,24 @@ struct ASMR_WalkTests {
 
         #expect(Set(titles).count == titles.count)
         #expect(Set(systemImages).count == systemImages.count)
+    }
+
+    @Test("Theme choices map to the expected app color scheme")
+    func appThemePresentation() {
+        #expect(AppTheme.system.title == "System")
+        #expect(AppTheme.system.colorScheme == nil)
+        #expect(AppTheme.light.colorScheme == .light)
+        #expect(AppTheme.dark.colorScheme == .dark)
+    }
+
+    @Test("About info exposes app metadata and support contact")
+    func aboutInfo() {
+        let info = AboutInfo.current
+
+        #expect(info.appName.isEmpty == false)
+        #expect(info.version.isEmpty == false)
+        #expect(info.build.isEmpty == false)
+        #expect(info.contactEmail == "heathdj@me.com")
     }
 }
 
@@ -358,6 +378,19 @@ struct WalkRecordingTests {
         #expect(gpxText.contains("/private/var/mobile") == false)
     }
 
+    @Test("GPX export uses POSIX-safe number formatting for elevation")
+    func gpxExportElevationFormatting() {
+        let recording = WalkRecording(
+            title: "Elevation Export",
+            mode: .walk,
+            points: [
+                makePoint(timestamp: 100, altitude: 331.25)
+            ]
+        )
+
+        #expect(WalkRouteExport(recording: recording).gpxText.contains("<ele>331.25</ele>"))
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
         return try ModelContainer(
@@ -371,6 +404,7 @@ struct WalkRecordingTests {
         timestamp: TimeInterval,
         latitude: Double = 33.4484,
         longitude: Double = -112.0740,
+        altitude: Double? = nil,
         horizontalAccuracy: Double = 5,
         speed: Double? = nil
     ) -> LocationPoint {
@@ -378,6 +412,7 @@ struct WalkRecordingTests {
             timestamp: Date(timeIntervalSince1970: timestamp),
             latitude: latitude,
             longitude: longitude,
+            altitude: altitude,
             horizontalAccuracy: horizontalAccuracy,
             speed: speed
         )
