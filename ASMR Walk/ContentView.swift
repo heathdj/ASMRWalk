@@ -8,7 +8,7 @@
 import SwiftUI
 import SwiftData
 
-enum AppTab: CaseIterable {
+enum AppTab: CaseIterable, Hashable {
     case history
     case walk
     case videoWalk
@@ -42,7 +42,6 @@ enum AppTab: CaseIterable {
 }
 
 enum AccessibilityID {
-    static let startupSplash = "startup.splash"
     static let historyEmptyState = "history.emptyState"
     static let historyList = "history.list"
     static let recordingDetail = "history.recordingDetail"
@@ -60,28 +59,33 @@ enum AccessibilityID {
     static let videoRecordingIndicator = "videoWalk.recordingIndicator"
     static let settingsScreen = "settings.screen"
     static let themePicker = "settings.themePicker"
+    static let startRecordingDestinationPicker = "settings.startRecordingDestinationPicker"
     static let aboutButton = "settings.aboutButton"
     static let aboutSheet = "settings.aboutSheet"
 }
 
 struct ContentView: View {
     @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
+    @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
+    @State private var selectedTab: AppTab = .history
 
     var body: some View {
-        TabView {
-            Tab(AppTab.history.title, systemImage: AppTab.history.systemImage) {
-                HistoryView()
+        TabView(selection: $selectedTab) {
+            Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
+                HistoryView {
+                    selectedTab = selectedStartRecordingDestination.tab
+                }
             }
 
-            Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage) {
+            Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
                 WalkRecorderView()
             }
 
-            Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage) {
+            Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
                 VideoWalkView()
             }
 
-            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage) {
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
                 SettingsView()
             }
         }
@@ -91,6 +95,10 @@ struct ContentView: View {
 
     private var selectedTheme: AppTheme {
         AppTheme(rawValue: appThemeRawValue) ?? .system
+    }
+
+    private var selectedStartRecordingDestination: StartRecordingDestination {
+        StartRecordingDestination(rawValue: startRecordingDestinationRawValue) ?? .walk
     }
 }
 

@@ -51,6 +51,15 @@ struct ASMR_WalkTests {
         #expect(AppTheme.dark.colorScheme == .dark)
     }
 
+    @Test("Start recording destination defaults to GPS walk and maps to the expected tab")
+    func startRecordingDestinationPresentation() {
+        #expect(StartRecordingDestination.walk.title == "GPS Walk")
+        #expect(StartRecordingDestination.walk.tab == .walk)
+        #expect(StartRecordingDestination.videoWalk.title == "Video Walk")
+        #expect(StartRecordingDestination.videoWalk.tab == .videoWalk)
+        #expect(StartRecordingDestination(rawValue: StartRecordingDestination.walk.rawValue) == .walk)
+    }
+
     @Test("About info exposes app metadata and support contact")
     func aboutInfo() {
         let info = AboutInfo.current

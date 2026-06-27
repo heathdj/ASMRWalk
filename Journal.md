@@ -39,6 +39,8 @@ The old sandbox URL remains as a fallback for existing recordings and for cases 
 
 The app now has a Settings tab with a three-position theme picker: System, Light, and Dark. System is the default because most people have already told iOS what they prefer. The app stores the choice in `@AppStorage`, and the root tab view applies the selected color scheme so the setting affects the whole interface instead of just the settings screen.
 
+Settings now also decides where the History empty-state recording button sends the user. The default is GPS Walk, which keeps the simple path simple, but people who mostly record video walks can switch that button to open Video Walk instead. The important fix is that the button now does real navigation rather than looking useful and doing nothing.
+
 ### GPX Learned to Speak Plugin
 
 The original GPX export was a clean walking trail: coordinates, elevation, and timestamps. That is enough for generic map apps, but an FCP/Motion importer needs a little more context to sync a route to a finished walk or video. The export now keeps standard GPX as the main dish and puts ASMR Walk-specific details in `<extensions>`, which is the GPX-approved side pocket for app metadata.
@@ -65,9 +67,9 @@ This is the boring-but-important App Store work: every permission prompt, denied
 
 ### A Launch Screen, Not a Waiting Room
 
-The app already uses Xcode's generated native launch screen, which is the part iOS and App Store review care about before SwiftUI starts running. We added a very short branded SwiftUI startup screen after launch for a more polished first impression, but kept it under a second so it does not turn into a fake loading delay.
+The app uses Xcode's generated native launch screen, which is the part iOS and App Store review care about before SwiftUI starts running. The earlier SwiftUI splash screen was removed rather than shortened. Startup now goes straight to the app once SwiftUI is ready, and the static native launch screen carries the brand moment without pretending to load.
 
-The practical lesson: the native launch screen and the in-app splash are different layers. The native launch screen must exist for system startup behavior; the in-app splash is product polish and should get out of the user's way quickly.
+The practical lesson: the native launch screen and the in-app splash are different layers. The native launch screen must exist for system startup behavior; an in-app splash should only exist when real initialization work needs a transitional UI.
 
 ### The Video Finally Got a Map Buddy
 

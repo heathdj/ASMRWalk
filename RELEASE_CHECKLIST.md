@@ -23,7 +23,8 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Run a clean Release build.
 - [ ] Run unit tests.
 - [ ] Run UI tests.
-- [ ] Confirm launch screen and in-app startup splash both appear correctly.
+- [ ] Confirm the native launch screen appears correctly.
+- [ ] Confirm there is no artificial in-app splash delay after launch.
 - [ ] Confirm Settings tab opens.
 - [ ] Confirm Light, Dark, and System theme settings apply app-wide.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
@@ -38,6 +39,7 @@ Run these on a physical iPhone before submission:
 - [ ] Background the app during a walk and confirm the foreground-only recording behavior is acceptable.
 - [ ] Confirm Walk map opens near the user's current location at street level.
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
+- [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
 - [ ] Open Video Walk and confirm the tab is landscape-only, never portrait.
 - [ ] Start and save a video walk.
 - [ ] Stop a video walk before 10 seconds and confirm Save/Discard behavior.

@@ -38,3 +38,41 @@ enum AppTheme: String, CaseIterable, Identifiable {
         }
     }
 }
+
+enum StartRecordingDestination: String, CaseIterable, Identifiable {
+    case walk
+    case videoWalk
+
+    static let storageKey = "startRecordingDestination"
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .walk:
+            "GPS Walk"
+        case .videoWalk:
+            "Video Walk"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .walk:
+            "figure.walk"
+        case .videoWalk:
+            "video.fill"
+        }
+    }
+
+    var tab: AppTab {
+        switch self {
+        case .walk:
+            .walk
+        case .videoWalk:
+            .videoWalk
+        }
+    }
+}
