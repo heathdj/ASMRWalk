@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage(AppTheme.storageKey) private var selectedThemeRawValue = AppTheme.system.rawValue
+    @AppStorage(StartRecordingDestination.storageKey) private var selectedStartDestinationRawValue = StartRecordingDestination.walk.rawValue
     @State private var isShowingAbout = false
 
     var body: some View {
@@ -21,6 +22,16 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier(AccessibilityID.themePicker)
+                }
+
+                Section("Recording") {
+                    Picker("Record button opens", selection: $selectedStartDestinationRawValue) {
+                        ForEach(StartRecordingDestination.allCases) { destination in
+                            Label(destination.title, systemImage: destination.systemImage)
+                                .tag(destination.rawValue)
+                        }
+                    }
+                    .accessibilityIdentifier(AccessibilityID.startRecordingDestinationPicker)
                 }
 
                 Section("About") {

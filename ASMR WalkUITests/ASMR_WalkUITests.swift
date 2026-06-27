@@ -13,7 +13,6 @@ final class ASMR_WalkUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments.append("--skip-startup-splash")
         app.launch()
     }
 
@@ -23,7 +22,17 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No Walks Yet"].exists)
         XCTAssertTrue(app.staticTexts["Your recorded routes, stats, and videos will appear here."].exists)
         XCTAssertTrue(app.buttons["Record a Walk"].isEnabled)
-        XCTAssertFalse(app.buttons["More"].isEnabled)
+        XCTAssertFalse(app.tabBars.buttons["More"].exists)
+    }
+
+    @MainActor
+    func testHistoryEmptyStateRecordButtonOpensDefaultWalkTab() {
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 2))
+
+        app.buttons["Record a Walk"].tap()
+
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["walk.status"].exists)
     }
 
     @MainActor
@@ -56,6 +65,7 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["settings.themePicker"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.startRecordingDestinationPicker"].exists)
 
         app.buttons["settings.aboutButton"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 2))
@@ -67,7 +77,6 @@ final class ASMR_WalkUITests: XCTestCase {
     func testLaunchPerformance() throws {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()
-            app.launchArguments.append("--skip-startup-splash")
             app.launch()
         }
     }

@@ -9,10 +9,15 @@ import SwiftUI
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \WalkRecording.createdAt, order: .reverse) private var recordings: [WalkRecording]
+    let startRecording: () -> Void
 
     @State private var recordingPendingDeletion: WalkRecording?
     @State private var deletionErrorMessage = ""
     @State private var isShowingDeletionError = false
+
+    init(startRecording: @escaping () -> Void = {}) {
+        self.startRecording = startRecording
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,7 +57,7 @@ struct HistoryView: View {
             Text("Your recorded routes, stats, and videos will appear here.")
         } actions: {
             Button("Record a Walk", systemImage: "figure.walk") {
-                // Tab selection will be wired up with the recording flow.
+                startRecording()
             }
             .buttonStyle(.borderedProminent)
         }

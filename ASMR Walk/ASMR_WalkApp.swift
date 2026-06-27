@@ -14,7 +14,7 @@ struct ASMR_WalkApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            ContentView()
         }
         .modelContainer(for: [WalkRecording.self, LocationPoint.self])
     }

@@ -86,6 +86,8 @@ The unit test suite covers:
 
 UI tests cover the main tab surfaces and launch behavior. Camera and microphone flows should be validated on a real device after privacy keys are configured.
 
+The app uses a native static launch screen configured through the target Info settings. It does not show an artificial SwiftUI splash screen after launch.
+
 ## Current Limitations
 
 - Background walking recording is not implemented yet.

@@ -20,6 +20,8 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
+- Startup should go directly from the native static launch screen to `ContentView`; do not reintroduce an artificial SwiftUI splash delay.
+- The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
 
 ## Conventions
 
