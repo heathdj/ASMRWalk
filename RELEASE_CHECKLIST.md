@@ -12,6 +12,7 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
+  - [ ] `NSLocationAlwaysAndWhenInUseUsageDescription`
   - [ ] `NSCameraUsageDescription`
   - [ ] `NSMicrophoneUsageDescription`
   - [ ] `NSPhotoLibraryAddUsageDescription`
@@ -27,6 +28,7 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Confirm there is no artificial in-app splash delay after launch.
 - [ ] Confirm Settings tab opens.
 - [ ] Confirm Light, Dark, and System theme settings apply app-wide.
+- [ ] Confirm Background GPS Recording defaults off.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
 ## Device Validation
@@ -37,6 +39,8 @@ Run these on a physical iPhone before submission:
 - [ ] Stop a GPS-only walk before 10 seconds and confirm Save/Discard behavior.
 - [ ] Deny location permission and confirm the app shows a Settings recovery button.
 - [ ] Background the app during a walk and confirm the foreground-only recording behavior is acceptable.
+- [ ] Enable Background GPS Recording, grant Always location permission, lock the screen during a GPS walk, and confirm the route continues.
+- [ ] Enable Background GPS Recording but deny Always location permission, then confirm the app explains the permission requirement and does not pretend to record in the background.
 - [ ] Confirm Walk map opens near the user's current location at street level.
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
 - [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
@@ -60,8 +64,8 @@ Run these on a physical iPhone before submission:
 
 ## App Store Connect
 
-- [ ] Complete privacy nutrition labels for location, camera, microphone, Photos, and user-generated content.
-- [ ] Confirm the app does not claim background recording in metadata.
+- [ ] Complete privacy nutrition labels for foreground/background location, camera, microphone, Photos, and user-generated content.
+- [ ] Confirm the app describes background GPS recording as optional and user-enabled.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
 - [ ] Mention that video walks are saved to the user's Photos library.
@@ -69,10 +73,9 @@ Run these on a physical iPhone before submission:
 
 ## Known Version 1 Scope
 
-- Foreground recording only.
 - No iCloud sync.
 - No Apple Watch support.
 - No HealthKit workout integration.
-- No background route recording.
+- Background route recording is GPS-only and opt-in.
 - No burned-in video map overlay export.
 - No delete-from-Photos management for videos saved to the user's Photos library.
