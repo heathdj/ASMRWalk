@@ -60,6 +60,12 @@ struct ASMR_WalkTests {
         #expect(StartRecordingDestination(rawValue: StartRecordingDestination.walk.rawValue) == .walk)
     }
 
+    @Test("Background GPS recording is opt-in")
+    func backgroundGPSRecordingDefault() {
+        #expect(BackgroundGPSRecording.defaultValue == false)
+        #expect(BackgroundGPSRecording.storageKey == "backgroundGPSRecordingEnabled")
+    }
+
     @Test("About info exposes app metadata and support contact")
     func aboutInfo() {
         let info = AboutInfo.current

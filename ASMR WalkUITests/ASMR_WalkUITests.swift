@@ -66,6 +66,7 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["settings.screen"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["settings.themePicker"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["settings.startRecordingDestinationPicker"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["settings.backgroundGPSRecordingToggle"].exists)
 
         app.buttons["settings.aboutButton"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 2))

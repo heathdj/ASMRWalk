@@ -8,6 +8,7 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage(AppTheme.storageKey) private var selectedThemeRawValue = AppTheme.system.rawValue
     @AppStorage(StartRecordingDestination.storageKey) private var selectedStartDestinationRawValue = StartRecordingDestination.walk.rawValue
+    @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
     @State private var isShowingAbout = false
 
     var body: some View {
@@ -24,7 +25,7 @@ struct SettingsView: View {
                     .accessibilityIdentifier(AccessibilityID.themePicker)
                 }
 
-                Section("Recording") {
+                Section {
                     Picker("Record button opens", selection: $selectedStartDestinationRawValue) {
                         ForEach(StartRecordingDestination.allCases) { destination in
                             Label(destination.title, systemImage: destination.systemImage)
@@ -32,6 +33,13 @@ struct SettingsView: View {
                         }
                     }
                     .accessibilityIdentifier(AccessibilityID.startRecordingDestinationPicker)
+
+                    Toggle("Background GPS Recording", isOn: $isBackgroundGPSRecordingEnabled)
+                        .accessibilityIdentifier(AccessibilityID.backgroundGPSRecordingToggle)
+                } header: {
+                    Text("Recording")
+                } footer: {
+                    Text("When enabled, GPS-only walks can continue while the app is backgrounded or the screen is locked. Always location permission is required.")
                 }
 
                 Section("About") {

@@ -76,3 +76,8 @@ enum StartRecordingDestination: String, CaseIterable, Identifiable {
         }
     }
 }
+
+enum BackgroundGPSRecording {
+    static let storageKey = "backgroundGPSRecordingEnabled"
+    static let defaultValue = false
+}

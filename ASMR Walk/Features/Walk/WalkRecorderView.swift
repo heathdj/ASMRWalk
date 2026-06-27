@@ -12,6 +12,7 @@ struct WalkRecorderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
     @State private var recorder = WalkRecorder()
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasPositionedCamera = false
@@ -49,10 +50,14 @@ struct WalkRecorderView: View {
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
                 recorder.startPreviewingLocation()
             }
             .onDisappear {
                 recorder.stopPreviewingLocation()
+            }
+            .onChange(of: isBackgroundGPSRecordingEnabled) {
+                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
             }
             .onChange(of: recorder.latestLocation?.timestamp) {
                 guard hasPositionedCamera == false, let location = recorder.latestLocation else {
@@ -70,7 +75,7 @@ struct WalkRecorderView: View {
                 hasPositionedCamera = true
             }
             .onChange(of: scenePhase) {
-                if scenePhase != .active, recorder.isRecording {
+                if scenePhase != .active, recorder.isRecording, recorder.canContinueInBackground == false {
                     recorder.stopAndSave()
                 }
             }
@@ -115,7 +120,10 @@ struct WalkRecorderView: View {
             if recorder.isRecording {
                 stopWalk()
             } else {
-                recorder.start(in: modelContext)
+                recorder.start(
+                    in: modelContext,
+                    allowsBackgroundRecording: isBackgroundGPSRecordingEnabled
+                )
             }
         }
         .font(.headline)

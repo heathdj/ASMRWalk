@@ -60,6 +60,7 @@ enum AccessibilityID {
     static let settingsScreen = "settings.screen"
     static let themePicker = "settings.themePicker"
     static let startRecordingDestinationPicker = "settings.startRecordingDestinationPicker"
+    static let backgroundGPSRecordingToggle = "settings.backgroundGPSRecordingToggle"
     static let aboutButton = "settings.aboutButton"
     static let aboutSheet = "settings.aboutSheet"
 }

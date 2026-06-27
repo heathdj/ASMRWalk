@@ -9,5 +9,11 @@
 		<key>UIImageName</key>
 		<string>LaunchLogo</string>
 	</dict>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>ASMR Walk uses background location only when you enable background GPS recording for walks.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+	</array>
 </dict>
 </plist>

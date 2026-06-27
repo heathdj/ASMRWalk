@@ -41,6 +41,8 @@ The app now has a Settings tab with a three-position theme picker: System, Light
 
 Settings now also decides where the History empty-state recording button sends the user. The default is GPS Walk, which keeps the simple path simple, but people who mostly record video walks can switch that button to open Video Walk instead. The important fix is that the button now does real navigation rather than looking useful and doing nothing.
 
+Background GPS recording is deliberately behind a switch. When it is off, ASMR Walk keeps the original foreground-only behavior and saves if the app leaves the foreground. When it is on, the Walk recorder asks for Always location permission and keeps a GPS-only walk alive in the background only if iOS grants that permission. Video stays foreground-only because background camera capture is a different level of complexity and App Store scrutiny.
+
 ### GPX Learned to Speak Plugin
 
 The original GPX export was a clean walking trail: coordinates, elevation, and timestamps. That is enough for generic map apps, but an FCP/Motion importer needs a little more context to sync a route to a finished walk or video. The export now keeps standard GPX as the main dish and puts ASMR Walk-specific details in `<extensions>`, which is the GPX-approved side pocket for app metadata.
