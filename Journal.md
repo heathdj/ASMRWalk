@@ -141,6 +141,22 @@ The Walk tab is now a real foreground GPS recorder. Core Location's async live-u
 
 GPS is a noisy storyteller, so the recorder does not believe every sentence. It rejects stale readings, accuracy worse than 50 meters, and movement under three meters. That prevents a stationary phone from slowly wandering across the map and inflating distance totals.
 
+### The Launch Logo Learned About Safe Areas
+
+The first native launch screen used the plist-only `UILaunchScreen` shortcut: point iOS at a background color and an image, then let the system draw it. That worked until device testing showed the logo could grow past the launch screen's safe area. The shortcut is convenient, but it is a blunt instrument.
+
+The fix moved startup presentation into `Launch Screen.storyboard`, where Auto Layout can do the job it was built for. The logo is now an aspect-fit image view centered in the safe area, with maximum width and height constraints. Think of it like giving the hiker a marked campsite instead of saying "stand somewhere near the middle." On different iPhones, notches, and orientations, the constraints keep the artwork contained.
+
+The lesson: launch screens are static, but they still need layout rules. A carefully resized PNG can pass on one device and fail on another; constraints travel better.
+
+### The Dock Gets a Remote Control
+
+DockKit support adds a new kind of input to Video Walk: the camera accessory can now ask the app to do camera things. `DockKitAccessoryService` listens for dock state and accessory events, then hands only the two useful commands to the video screen. Camera shutter is the big red button from across the room: start recording if idle, stop if already rolling. Camera zoom nudges the active `AVCaptureDevice` zoom factor up or down in small, clamped steps.
+
+Everything else deliberately does nothing for now. That is not neglect; it is choosing a clean first contract. The Insta360 Flow 2 Pro can send more events than ASMR Walk currently needs, and silently ignoring unsupported inputs is better than inventing half-working behavior.
+
+One practical gotcha: the local SDK in this development environment does not expose the `DockKit` module, so the service is wrapped in `#if canImport(DockKit)`. The app still builds here, while a DockKit-capable Xcode/iPhone pair gets the real accessory stream. Hardware features are like stage lighting: the wiring can be clean, but you still test with the actual rig before opening night.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
