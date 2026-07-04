@@ -15,6 +15,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
 - AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
+- `DockKitAccessoryService` owns DockKit accessory state and event streams for Video Walk; camera shutter toggles recording, camera zoom adjusts `VideoCaptureService`, and other accessory events intentionally no-op for now.
 - Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
 - New video walks should save finished `.mov` files into Photos and store the resulting `PHAsset.localIdentifier`; legacy sandbox `videoURL` remains as fallback.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
@@ -46,6 +47,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 s
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - Photos save/playback needs `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
 - Background GPS recording needs `NSLocationAlwaysAndWhenInUseUsageDescription` and `UIBackgroundModes` containing `location`.
+- DockKit support is guarded with `#if canImport(DockKit)` so local SDKs without the framework still build; real accessory behavior must be verified on an iPhone and SDK that expose DockKit.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
 - Disable the idle timer only while video recording is active, not for GPS-only walks.
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.

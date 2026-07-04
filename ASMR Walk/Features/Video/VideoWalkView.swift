@@ -14,6 +14,7 @@ struct VideoWalkView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var camera = VideoCaptureService()
+    @State private var dockKitAccessory = DockKitAccessoryService()
     @State private var walkRecorder = WalkRecorder()
     @State private var isStopping = false
     @State private var isShowingShortRecordingConfirmation = false
@@ -71,10 +72,15 @@ struct VideoWalkView: View {
             InterfaceOrientationController.lockVideoWalkLandscape()
             walkRecorder.startPreviewingLocation()
             camera.refreshPreview()
+            dockKitAccessory.start(
+                shutterAction: handleDockKitShutter,
+                zoomAction: camera.updateZoomFromDockKitAccessory
+            )
             await camera.prepare()
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
+            dockKitAccessory.stop()
             if walkRecorder.isRecording {
                 stopVideoWalk(stopSessionWhenFinished: true, confirmShortRecording: false)
             } else {
@@ -206,6 +212,18 @@ struct VideoWalkView: View {
             walkRecorder.discard()
             camera.report(error)
             UIApplication.shared.isIdleTimerDisabled = false
+        }
+    }
+
+    private func handleDockKitShutter() {
+        guard camera.isReady, camera.isPermissionDenied == false, walkRecorder.isLocationAccessDenied == false else {
+            return
+        }
+
+        if walkRecorder.isRecording {
+            stopVideoWalk()
+        } else {
+            startVideoWalk()
         }
     }
 

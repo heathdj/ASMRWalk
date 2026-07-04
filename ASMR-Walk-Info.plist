@@ -2,18 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIColorName</key>
-		<string>LaunchBackground</string>
-		<key>UIImageName</key>
-		<string>LaunchLogo</string>
-	</dict>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>ASMR Walk uses background location only when you enable background GPS recording for walks.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>Launch Screen</string>
 </dict>
 </plist>

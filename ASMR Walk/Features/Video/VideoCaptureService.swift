@@ -129,6 +129,27 @@ final class VideoCaptureService: NSObject {
         }
     }
 
+    func updateZoomFromDockKitAccessory(factor: Double) {
+        guard isReady, let activeVideoDevice else {
+            return
+        }
+
+        let zoomDirection = factor >= 0 ? 1.0 : -1.0
+        let zoomStep = 0.2
+        let minimumZoomFactor = max(activeVideoDevice.minAvailableVideoZoomFactor, 1.0)
+        let maximumZoomFactor = min(activeVideoDevice.maxAvailableVideoZoomFactor, 10.0)
+        let requestedZoomFactor = activeVideoDevice.videoZoomFactor + (zoomDirection * zoomStep)
+        let nextZoomFactor = min(max(requestedZoomFactor, minimumZoomFactor), maximumZoomFactor)
+
+        do {
+            try activeVideoDevice.lockForConfiguration()
+            activeVideoDevice.videoZoomFactor = nextZoomFactor
+            activeVideoDevice.unlockForConfiguration()
+        } catch {
+            report(error)
+        }
+    }
+
     func stopSession() {
         isReady = false
 
