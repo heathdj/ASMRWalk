@@ -25,12 +25,15 @@ final class WalkRecorder: NSObject {
     private(set) var authorizationStatus: CLAuthorizationStatus
     private(set) var isPreviewingLocation = false
     private(set) var isBackgroundRecordingEnabled = BackgroundGPSRecording.defaultValue
+    private(set) var currentDuration: TimeInterval = 0
+    private(set) var currentDistanceMeters: Double = 0
+    private(set) var coordinates: [CLLocationCoordinate2D] = []
 
     private let locationManager: CLLocationManager
     private var updateTask: Task<Void, Never>?
     private var clockTask: Task<Void, Never>?
     private var backgroundActivitySession: CLBackgroundActivitySession?
-    private var modelContext: ModelContext?
+    private var persistence: WalkRecordingPersistence?
     private var acceptedPointsSinceSave = 0
     private var secondsSinceSave = 0
 
@@ -45,10 +48,6 @@ final class WalkRecorder: NSObject {
         phase == .recording
     }
 
-    var currentDuration: TimeInterval {
-        recording?.duration ?? 0
-    }
-
     var isShortRecording: Bool {
         recording?.isShortRecording ?? (currentDuration < WalkRecording.shortRecordingThreshold)
     }
@@ -61,8 +60,8 @@ final class WalkRecorder: NSObject {
         isRecording && isBackgroundRecordingEnabled && authorizationStatus == .authorizedAlways
     }
 
-    var recording: WalkRecording? {
-        session?.recording
+    var recording: WalkRecordingSnapshot? {
+        session?.snapshot
     }
 
     func setBackgroundRecordingEnabled(_ isEnabled: Bool) {
@@ -109,10 +108,6 @@ final class WalkRecorder: NSObject {
         stopHeadingUpdatesIfIdle()
     }
 
-    var coordinates: [CLLocationCoordinate2D] {
-        recording?.pointsInTimeOrder.map(\.coordinate) ?? []
-    }
-
     var statusTitle: String {
         if isLocationAccessDenied {
             "Location access needed"
@@ -152,7 +147,7 @@ final class WalkRecorder: NSObject {
         in modelContext: ModelContext,
         mode: RecordingMode = .walk,
         allowsBackgroundRecording: Bool = false
-    ) {
+    ) async {
         guard phase == .ready else {
             return
         }
@@ -174,16 +169,16 @@ final class WalkRecorder: NSObject {
         }
 
         let session = WalkRecordingSession(mode: mode)
+        let persistence = WalkRecordingPersistence(modelContainer: modelContext.container)
         self.session = session
-        self.modelContext = modelContext
-        modelContext.insert(session.recording)
+        self.persistence = persistence
+        syncLiveSnapshot()
 
         do {
-            try modelContext.save()
+            try await persistence.save(session.snapshot)
         } catch {
-            modelContext.rollback()
             self.session = nil
-            self.modelContext = nil
+            self.persistence = nil
             errorMessage = "Unable to start recording: \(error.localizedDescription)"
             return
         }
@@ -196,30 +191,19 @@ final class WalkRecorder: NSObject {
     }
 
     func attachVideo(at url: URL) {
-        guard let recording else {
-            return
-        }
-
-        recording.mode = .videoWalk
-        recording.videoURL = url
+        session?.attachVideo(at: url)
     }
 
     func attachPhotoLibraryVideo(assetIdentifier: String) {
-        guard let recording else {
-            return
-        }
-
-        recording.mode = .videoWalk
-        recording.videoAssetIdentifier = assetIdentifier
-        recording.videoURL = nil
+        session?.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
     }
 
-    func stopAndSave() {
+    func stopAndSave() async {
         guard finishRecording() else {
             return
         }
 
-        saveFinishedRecording()
+        await saveFinishedRecording()
     }
 
     @discardableResult
@@ -234,19 +218,25 @@ final class WalkRecorder: NSObject {
         }
         clockTask?.cancel()
         session?.updateDuration()
+        syncLiveSnapshot()
         stopBackgroundActivitySession()
         configureBackgroundLocationUpdates()
         stopHeadingUpdatesIfIdle()
         return true
     }
 
-    func saveFinishedRecording() {
+    func saveFinishedRecording() async {
         guard phase == .saving else {
             return
         }
 
+        guard let persistence, let snapshot = session?.snapshot else {
+            reset()
+            return
+        }
+
         do {
-            try modelContext?.save()
+            try await persistence.save(snapshot)
             reset()
         } catch {
             phase = .recording
@@ -258,7 +248,7 @@ final class WalkRecorder: NSObject {
         }
     }
 
-    func discard() {
+    func discard() async {
         if isPreviewingLocation == false {
             updateTask?.cancel()
         }
@@ -270,22 +260,22 @@ final class WalkRecorder: NSObject {
             try? FileManager.default.removeItem(at: videoURL)
         }
 
-        if let recording {
-            modelContext?.delete(recording)
-            try? modelContext?.save()
+        if let recordingID = recording?.id {
+            try? await persistence?.deleteRecording(id: recordingID)
         }
 
         reset()
     }
 
-    func accept(_ location: CLLocation, now: Date = .now) {
+    func accept(_ location: CLLocation, now: Date = .now) async {
         latestLocation = location
         guard let session, session.accept(location, now: now) else {
             return
         }
 
         acceptedPointsSinceSave += 1
-        checkpointIfNeeded()
+        syncLiveSnapshot()
+        await checkpointIfNeeded()
     }
 
     private func startLocationUpdates() {
@@ -303,7 +293,7 @@ final class WalkRecorder: NSObject {
                         configureBackgroundLocationUpdates()
                         if isRecording {
                             errorMessage = "Location access was denied. The walk was saved."
-                            stopAndSave()
+                            await stopAndSave()
                         } else {
                             errorMessage = "Location access is unavailable."
                         }
@@ -313,7 +303,7 @@ final class WalkRecorder: NSObject {
                     if let location = update.location {
                         authorizationStatus = locationManager.authorizationStatus
                         configureBackgroundLocationUpdates()
-                        accept(location)
+                        await accept(location)
                     }
                 }
             } catch is CancellationError {
@@ -321,7 +311,7 @@ final class WalkRecorder: NSObject {
             } catch {
                 errorMessage = "GPS updates stopped: \(error.localizedDescription)"
                 if isRecording {
-                    stopAndSave()
+                    await stopAndSave()
                 }
             }
         }
@@ -382,19 +372,37 @@ final class WalkRecorder: NSObject {
                     break
                 }
                 session?.updateDuration()
+                syncLiveSnapshot()
                 secondsSinceSave += 1
-                checkpointIfNeeded()
+                await checkpointIfNeeded()
             }
         }
     }
 
-    private func checkpointIfNeeded() {
+    private func syncLiveSnapshot() {
+        guard let snapshot = session?.snapshot else {
+            currentDuration = 0
+            currentDistanceMeters = 0
+            coordinates = []
+            return
+        }
+
+        currentDuration = snapshot.duration
+        currentDistanceMeters = snapshot.distanceMeters
+        coordinates = snapshot.points.map(\.coordinate)
+    }
+
+    private func checkpointIfNeeded() async {
         guard acceptedPointsSinceSave >= 10 || secondsSinceSave >= 30 else {
             return
         }
 
+        guard let persistence, let snapshot = session?.snapshot else {
+            return
+        }
+
         do {
-            try modelContext?.save()
+            try await persistence.save(snapshot)
             acceptedPointsSinceSave = 0
             secondsSinceSave = 0
         } catch {
@@ -410,7 +418,8 @@ final class WalkRecorder: NSObject {
         }
         clockTask = nil
         session = nil
-        modelContext = nil
+        persistence = nil
+        syncLiveSnapshot()
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0
         configureBackgroundLocationUpdates()
