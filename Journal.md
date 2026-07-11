@@ -157,6 +157,12 @@ Everything else deliberately does nothing for now. That is not neglect; it is ch
 
 One practical gotcha: the local SDK in this development environment does not expose the `DockKit` module, so the service is wrapped in `#if canImport(DockKit)`. The app still builds here, while a DockKit-capable Xcode/iPhone pair gets the real accessory stream. Hardware features are like stage lighting: the wiring can be clean, but you still test with the actual rig before opening night.
 
+### A First-Run Tour, Not a Toll Booth
+
+Onboarding now introduces the three main rooms before dropping someone into the app: Walk for a GPS-only route, Video Walk for camera-plus-route recording, and History for replay, review, and GPX export. It is intentionally a guided tour rather than a permission gauntlet. No system prompts fire just because a page appeared; people should understand the front door before iOS starts asking for keys.
+
+The completion flag lives in `@AppStorage`, which makes the root view choose between the onboarding tour and the normal tab shell without inventing a new persistence layer. Settings includes a "Show Onboarding Again" button because future-you will absolutely want to revisit the tour during testing, demos, and copy tweaks. Think of it as leaving the museum map at the front desk instead of throwing it away after the first visit.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
