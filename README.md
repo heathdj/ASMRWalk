@@ -40,8 +40,9 @@ ASMR Walk/
 ## Requirements
 
 - Xcode with iOS 26 SDK support.
-- iOS 26 simulator or device.
+- iOS 26 iPhone simulator or physical iPhone.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
+- Version 1 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
 
 ## Setup
 
@@ -67,7 +68,7 @@ See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 ## Running
 
 1. Open the project in Xcode.
-2. Select an iPhone simulator or device.
+2. Select an iPhone simulator or physical iPhone.
 3. Run the `ASMR Walk` scheme.
 4. For simulator route testing, choose a simulated location or GPX route in Xcode.
 

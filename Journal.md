@@ -205,6 +205,12 @@ The important pattern is ownership. A tab-specific view can own rich controls fo
 
 The banner eventually became the single scoreboard too. Walk and Video Walk no longer carry their own time-and-distance cards while recording; duplicating those numbers made the screens busier and created two places to keep visually consistent. Video recordings also get the same right-side stop treatment in the banner, with the actual camera cleanup still delegated back to `VideoWalkView` where the video file is finalized.
 
+### Choosing the Pocket-Sized Release
+
+ASMR Walk kept describing itself as an iPhone app, but the Xcode target was still advertising iPad support. That little checkbox is not a harmless decoration; it invites iPad layouts, multitasking behavior, orientation coverage, screenshots, and review expectations. Shipping iPad support without doing the work would be like printing "all-terrain vehicle" on a bicycle.
+
+Version 1 now draws a clean line: iPhone only. The app can focus on the device that actually matches the walking, camera, DockKit, and one-handed recording story. iPad can still become a real product decision later, but it should arrive with adaptive layouts and testing, not as an accidental build setting.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

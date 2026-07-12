@@ -27,6 +27,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
 - Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode.
 - Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
+- Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
 
 ## Conventions
 
@@ -42,7 +43,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 
 ## Build And Run
 
-Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iOS 26 simulator or device. Location and camera recording must ultimately be verified on a physical iPhone.
+Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone iOS 26 simulator or physical iPhone. Location and camera recording must ultimately be verified on a physical iPhone.
 
 ## Gotchas
 
