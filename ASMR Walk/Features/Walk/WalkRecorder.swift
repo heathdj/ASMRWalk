@@ -64,17 +64,21 @@ final class WalkRecorder: NSObject {
         session?.snapshot
     }
 
-    func setBackgroundRecordingEnabled(_ isEnabled: Bool) {
+    func setBackgroundRecordingEnabled(_ isEnabled: Bool, requestAuthorization: Bool = true) {
         isBackgroundRecordingEnabled = isEnabled
 
-        if isEnabled {
+        if isEnabled, requestAuthorization {
             requestAlwaysAuthorizationIfPossible()
         }
 
         configureBackgroundLocationUpdates()
     }
 
-    func startPreviewingLocation() {
+    func refreshAuthorizationStatus() {
+        authorizationStatus = locationManager.authorizationStatus
+    }
+
+    func startPreviewingLocation(requestAuthorization: Bool = true) {
         guard isPreviewingLocation == false else {
             return
         }
@@ -87,8 +91,12 @@ final class WalkRecorder: NSObject {
             return
         }
 
-        if authorizationStatus == .notDetermined {
+        if authorizationStatus == .notDetermined, requestAuthorization {
             locationManager.requestWhenInUseAuthorization()
+        }
+
+        guard authorizationStatus != .notDetermined else {
+            return
         }
 
         isPreviewingLocation = true

@@ -8,6 +8,9 @@ import Foundation
 import Photos
 
 enum PhotoLibraryVideoStore {
+    static let saveAccessExplanation = "ASMR Walk saves finished video walks to Photos so they remain available outside the app."
+    static let readAccessExplanation = "ASMR Walk reads saved video walks from Photos so you can play them with your route."
+
     enum StoreError: LocalizedError {
         case missingAddUsageDescription
         case missingReadUsageDescription
@@ -23,7 +26,7 @@ enum PhotoLibraryVideoStore {
             case .missingReadUsageDescription:
                 "Photo Library read permission is not configured."
             case .accessDenied:
-                "Photo Library access is required to save and play video walks."
+                "Photo Library access was not available. The video walk was kept in the app instead."
             case .creationFailed:
                 "The video could not be saved to Photos."
             case .assetNotFound:
@@ -32,6 +35,10 @@ enum PhotoLibraryVideoStore {
                 "The saved video could not be prepared for playback."
             }
         }
+    }
+
+    static func authorizationStatus(for accessLevel: PHAccessLevel) -> PHAuthorizationStatus {
+        PHPhotoLibrary.authorizationStatus(for: accessLevel)
     }
 
     static func saveVideoToPhotoLibrary(from fileURL: URL) async throws -> String {

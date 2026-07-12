@@ -59,6 +59,15 @@ final class VideoCaptureService: NSObject {
             || microphoneAuthorizationStatus == .restricted
     }
 
+    var needsPermissionRequest: Bool {
+        cameraAuthorizationStatus == .notDetermined || microphoneAuthorizationStatus == .notDetermined
+    }
+
+    func refreshAuthorizationStatus() {
+        cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    }
+
     func prepare() async {
         guard isReady == false || session.isRunning == false else {
             return
@@ -116,6 +125,10 @@ final class VideoCaptureService: NSObject {
 
     func report(_ error: Error) {
         errorMessage = error.localizedDescription
+    }
+
+    func reportMessage(_ message: String) {
+        errorMessage = message
     }
 
     func stopRecording() async throws -> URL {

@@ -75,6 +75,12 @@ struct ASMR_WalkTests {
         #expect(info.build.isEmpty == false)
         #expect(info.contactEmail == "heathdj@me.com")
     }
+
+    @Test("Photos permission explanations describe app intent")
+    func photoLibraryPermissionExplanations() {
+        #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
+        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
+    }
 }
 
 @MainActor

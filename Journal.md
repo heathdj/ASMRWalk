@@ -217,6 +217,12 @@ The first video recording indicator was just a tiny green dot. It was technicall
 
 That pulse is deliberately small. No timers, no glowing blur, no animated shadows; just one SwiftUI circle changing size inside a fixed 14-point box. Compared with live camera capture, GPS, and MapKit, this is pocket change, but it gives the user a visible heartbeat that says the video is rolling.
 
+### Ask at the Door, Not on the Sidewalk
+
+Opening a tab used to be enough to make iOS ask for camera, microphone, or location access. That is technically easy and socially clumsy. Permissions are a conversation, and the user should know which button started it.
+
+The recording tabs now refresh permission status on appear without prompting. The actual requests happen when the user starts a walk or video walk. Photos access follows the same rule: saving a finished video explains that ASMR Walk stores video walks in Photos before the Photos request appears, and playback explains that it needs to read saved videos from Photos. The pattern is simple: looking around is free; committing to the feature asks for the keys.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -71,15 +71,16 @@ struct VideoWalkView: View {
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
             InterfaceOrientationController.lockVideoWalkLandscape()
+            camera.refreshAuthorizationStatus()
             if coordinator.activeMode != .walk {
-                walkRecorder.startPreviewingLocation()
+                walkRecorder.refreshAuthorizationStatus()
+                walkRecorder.startPreviewingLocation(requestAuthorization: false)
             }
             camera.refreshPreview()
             dockKitAccessory.start(
                 shutterAction: handleDockKitShutter,
                 zoomAction: camera.updateZoomFromDockKitAccessory
             )
-            await camera.prepare()
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
@@ -95,10 +96,12 @@ struct VideoWalkView: View {
             InterfaceOrientationController.restoreDefaultOrientation()
         }
         .onChange(of: scenePhase) {
-            guard scenePhase != .active, isRecordingVideoWalk else {
-                return
+            if scenePhase == .active {
+                camera.refreshAuthorizationStatus()
+                walkRecorder.refreshAuthorizationStatus()
+            } else if isRecordingVideoWalk {
+                stopVideoWalk(confirmShortRecording: false)
             }
-            stopVideoWalk(confirmShortRecording: false)
         }
         .onChange(of: stopRequestID, initial: true) {
             guard stopRequestID != nil, isRecordingVideoWalk else {
@@ -201,12 +204,27 @@ struct VideoWalkView: View {
         if isRecordingVideoWalk {
             return "Recording video walk"
         }
-        return camera.isReady ? "Camera ready" : "Preparing camera"
+        if camera.needsPermissionRequest {
+            return "Ready when you are"
+        }
+        return camera.isReady ? "Camera ready" : "Ready to record"
     }
 
     private var statusDetail: String {
         if isBlockedByWalk {
             return "Finish the active GPS walk before starting a video walk."
+        }
+
+        if camera.needsPermissionRequest, walkRecorder.authorizationStatus == .notDetermined {
+            return "Starting a video walk asks for camera, microphone, and location access."
+        }
+
+        if camera.needsPermissionRequest {
+            return "Starting a video walk asks for camera and microphone access."
+        }
+
+        if walkRecorder.authorizationStatus == .notDetermined {
+            return "Starting a video walk asks for location access to save your route."
         }
 
         return camera.errorMessage
@@ -245,7 +263,7 @@ struct VideoWalkView: View {
     }
 
     private var isRecordingButtonDisabled: Bool {
-        isStopping || (isBlockedByWalk == false && (camera.isReady == false || camera.isPermissionDenied || walkRecorder.isLocationAccessDenied))
+        isStopping || (isBlockedByWalk == false && (camera.isPermissionDenied || walkRecorder.isLocationAccessDenied))
     }
 
     private static var shouldShowRecordingIndicatorForUITests: Bool {
@@ -258,6 +276,11 @@ struct VideoWalkView: View {
 
     private func startVideoWalk() {
         Task {
+            await camera.prepare()
+            guard camera.isReady else {
+                return
+            }
+
             let didStartRecording = await coordinator.start(in: modelContext, mode: .videoWalk)
             guard didStartRecording else {
                 return
@@ -304,9 +327,11 @@ struct VideoWalkView: View {
             do {
                 let videoURL = try await camera.stopRecording()
                 do {
+                    camera.reportMessage(PhotoLibraryVideoStore.saveAccessExplanation)
                     let assetIdentifier = try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: videoURL)
                     walkRecorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
                     try? FileManager.default.removeItem(at: videoURL)
+                    camera.reportMessage("Video walk saved to Photos.")
                 } catch {
                     walkRecorder.attachVideo(at: videoURL)
                     camera.report(error)

@@ -39,6 +39,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
 - Starting a second recording mode while another is active should route the user back to the active recorder, not create another `WalkRecorder`.
 - Recording stop controls and live time/distance belong in the app-level active recording banner, not duplicated inside the Walk and Video Walk tabs.
+- Permission prompts should follow explicit user intent; opening a tab may refresh authorization status but must not request camera, microphone, location, or Photos access.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 
 ## Build And Run

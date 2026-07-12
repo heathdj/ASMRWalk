@@ -47,15 +47,16 @@ struct WalkRecorderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 if isBlockedByVideoWalk == false {
-                    recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
-                    recorder.startPreviewingLocation()
+                    recorder.refreshAuthorizationStatus()
+                    recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
+                    recorder.startPreviewingLocation(requestAuthorization: false)
                 }
             }
             .onDisappear {
                 recorder.stopPreviewingLocation()
             }
             .onChange(of: isBackgroundGPSRecordingEnabled) {
-                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
+                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
             }
             .onChange(of: recorder.latestLocation?.timestamp) {
                 guard hasPositionedCamera == false, let location = recorder.latestLocation else {
@@ -73,7 +74,9 @@ struct WalkRecorderView: View {
                 hasPositionedCamera = true
             }
             .onChange(of: scenePhase) {
-                if scenePhase != .active, isRecordingWalk, recorder.canContinueInBackground == false {
+                if scenePhase == .active {
+                    recorder.refreshAuthorizationStatus()
+                } else if isRecordingWalk, recorder.canContinueInBackground == false {
                     Task {
                         await coordinator.stopAndSave()
                     }
