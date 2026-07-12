@@ -187,6 +187,14 @@ The DockKit zoom event does not send "positive means in, negative means out." It
 
 The camera service now compares the factor against `1.0`, so zoom-out events step the camera back toward its minimum zoom factor.
 
+### One Recording Captain
+
+QA found a serious loophole hiding in plain sight: GPS Walk and Video Walk each brought their own `WalkRecorder` to the party. That meant a GPS walk could keep running, the user could switch tabs, and Video Walk could start a second route recorder. Two captains were steering the same ship, and neither knew the other had grabbed the wheel.
+
+`RecordingCoordinator` is now the single bouncer at the recording door. The tab shell owns it, both recording screens share its one `WalkRecorder`, and the coordinator remembers which mode is active until the recording is saved or discarded. If someone tries to start Video Walk during a GPS walk, the button becomes "Go to Walk" instead of pretending a second recording can begin. The reverse path works the same way for Video Walk.
+
+The subtle bit is the short-recording dialog. A recording is still considered active while the app asks whether to save or discard it, because that dialog is not a finished state. Treating "waiting for a decision" as idle would reopen the same bug through a side door.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

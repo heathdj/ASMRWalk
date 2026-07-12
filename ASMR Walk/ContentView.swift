@@ -74,23 +74,36 @@ struct ContentView: View {
     @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
     @State private var selectedTab: AppTab = .history
+    @State private var recordingCoordinator: RecordingCoordinator
+
+    init(recordingCoordinator: RecordingCoordinator? = nil) {
+        _recordingCoordinator = State(initialValue: recordingCoordinator ?? RecordingCoordinator(activeMode: Self.launchActiveRecordingMode))
+    }
 
     var body: some View {
         Group {
-            if hasCompletedOnboarding {
+            if hasCompletedOnboarding || Self.shouldSkipOnboardingForUITests {
                 TabView(selection: $selectedTab) {
                     Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
                         HistoryView {
-                            selectedTab = selectedStartRecordingDestination.tab
+                            selectedTab = recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab
                         }
                     }
 
                     Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
-                        WalkRecorderView()
+                        WalkRecorderView(coordinator: recordingCoordinator) {
+                            if let activeTab = recordingCoordinator.activeTab {
+                                selectedTab = activeTab
+                            }
+                        }
                     }
 
                     Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
-                        VideoWalkView()
+                        VideoWalkView(coordinator: recordingCoordinator) {
+                            if let activeTab = recordingCoordinator.activeTab {
+                                selectedTab = activeTab
+                            }
+                        }
                     }
 
                     Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
@@ -111,6 +124,29 @@ struct ContentView: View {
 
     private var selectedStartRecordingDestination: StartRecordingDestination {
         StartRecordingDestination(rawValue: startRecordingDestinationRawValue) ?? .walk
+    }
+
+    private static var launchActiveRecordingMode: RecordingMode? {
+        #if DEBUG
+        switch ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] {
+        case RecordingMode.walk.rawValue:
+            return .walk
+        case RecordingMode.videoWalk.rawValue:
+            return .videoWalk
+        default:
+            return nil
+        }
+        #else
+        return nil
+        #endif
+    }
+
+    private static var shouldSkipOnboardingForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] == "1"
+        #else
+        false
+        #endif
     }
 }
 

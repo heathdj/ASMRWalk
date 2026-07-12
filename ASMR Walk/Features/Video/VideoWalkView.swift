@@ -15,7 +15,8 @@ struct VideoWalkView: View {
 
     @State private var camera = VideoCaptureService()
     @State private var dockKitAccessory = DockKitAccessoryService()
-    @State private var walkRecorder = WalkRecorder()
+    let coordinator: RecordingCoordinator
+    let showActiveRecording: () -> Void
     @State private var isStopping = false
     @State private var isShowingShortRecordingConfirmation = false
     @State private var shouldStopSessionAfterShortConfirmation = false
@@ -42,7 +43,7 @@ struct VideoWalkView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if shouldShowStatusCard {
                         statusCard
-                    } else if walkRecorder.isRecording {
+                    } else if isRecordingVideoWalk {
                         recordingIndicator
                     }
                     if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
@@ -68,10 +69,12 @@ struct VideoWalkView: View {
             .padding()
         }
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
-        .toolbarVisibility(walkRecorder.isRecording ? .hidden : .visible, for: .tabBar)
+        .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
             InterfaceOrientationController.lockVideoWalkLandscape()
-            walkRecorder.startPreviewingLocation()
+            if coordinator.activeMode != .walk {
+                walkRecorder.startPreviewingLocation()
+            }
             camera.refreshPreview()
             dockKitAccessory.start(
                 shutterAction: handleDockKitShutter,
@@ -82,16 +85,18 @@ struct VideoWalkView: View {
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
             dockKitAccessory.stop()
-            if walkRecorder.isRecording {
+            if isRecordingVideoWalk {
                 stopVideoWalk(stopSessionWhenFinished: true, confirmShortRecording: false)
             } else {
-                walkRecorder.stopPreviewingLocation()
+                if coordinator.activeMode == nil {
+                    walkRecorder.stopPreviewingLocation()
+                }
                 camera.stopSession()
             }
             InterfaceOrientationController.restoreDefaultOrientation()
         }
         .onChange(of: scenePhase) {
-            guard scenePhase != .active, walkRecorder.isRecording else {
+            guard scenePhase != .active, isRecordingVideoWalk else {
                 return
             }
             stopVideoWalk(confirmShortRecording: false)
@@ -99,13 +104,13 @@ struct VideoWalkView: View {
         .confirmationDialog("Save Short Video Walk?", isPresented: $isShowingShortRecordingConfirmation) {
             Button("Save Video Walk") {
                 Task {
-                    await walkRecorder.saveFinishedRecording()
+                    await coordinator.saveFinishedRecording()
                     cleanupAfterShortRecordingDecision()
                 }
             }
             Button("Discard Video Walk", role: .destructive) {
                 Task {
-                    await walkRecorder.discard()
+                    await coordinator.discard()
                     cleanupAfterShortRecordingDecision()
                 }
             }
@@ -118,14 +123,14 @@ struct VideoWalkView: View {
         RecordingStatusCard(
             title: statusTitle,
             detail: statusDetail,
-            systemImage: walkRecorder.isRecording ? "record.circle.fill" : "video.fill"
+            systemImage: isBlockedByWalk ? "figure.walk" : isRecordingVideoWalk ? "record.circle.fill" : "video.fill"
         )
         .frame(maxWidth: 360)
         .accessibilityIdentifier(AccessibilityID.videoStatus)
     }
 
     private var shouldShowStatusCard: Bool {
-        walkRecorder.isRecording == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
+        isRecordingVideoWalk == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
     }
 
     private var recordingIndicator: some View {
@@ -160,11 +165,13 @@ struct VideoWalkView: View {
 
     private var recordingButton: some View {
         Button(
-            walkRecorder.isRecording ? "Stop and Save" : "Start Video Walk",
-            systemImage: walkRecorder.isRecording ? "stop.fill" : "record.circle"
+            recordingButtonTitle,
+            systemImage: recordingButtonSystemImage
         ) {
-            if walkRecorder.isRecording {
+            if isRecordingVideoWalk {
                 stopVideoWalk()
+            } else if isBlockedByWalk {
+                showActiveRecording()
             } else {
                 startVideoWalk()
             }
@@ -174,7 +181,7 @@ struct VideoWalkView: View {
         .controlSize(.large)
         .buttonStyle(.glassProminent)
         .tint(.red)
-        .disabled(camera.isReady == false || camera.isPermissionDenied || walkRecorder.isLocationAccessDenied || isStopping)
+        .disabled(isRecordingButtonDisabled)
         .accessibilityIdentifier(AccessibilityID.startVideoWalkButton)
     }
 
@@ -192,22 +199,65 @@ struct VideoWalkView: View {
         if isStopping {
             return "Saving video walk"
         }
-        if walkRecorder.isRecording {
+        if isBlockedByWalk {
+            return "GPS walk recording"
+        }
+        if isRecordingVideoWalk {
             return "Recording video walk"
         }
         return camera.isReady ? "Camera ready" : "Preparing camera"
     }
 
     private var statusDetail: String {
-        camera.errorMessage
+        if isBlockedByWalk {
+            return "Finish the active GPS walk before starting a video walk."
+        }
+
+        return camera.errorMessage
             ?? walkRecorder.errorMessage
             ?? "Video and route recording start together."
     }
 
+    private var walkRecorder: WalkRecorder {
+        coordinator.recorder
+    }
+
+    private var isRecordingVideoWalk: Bool {
+        coordinator.activeMode == .videoWalk && walkRecorder.isRecording
+    }
+
+    private var isBlockedByWalk: Bool {
+        coordinator.blockingMode(for: .videoWalk) == .walk
+    }
+
+    private var recordingButtonTitle: String {
+        if isRecordingVideoWalk {
+            return "Stop and Save"
+        }
+        if isBlockedByWalk {
+            return "Go to Walk"
+        }
+        return "Start Video Walk"
+    }
+
+    private var recordingButtonSystemImage: String {
+        if isRecordingVideoWalk {
+            return "stop.fill"
+        }
+        if isBlockedByWalk {
+            return "figure.walk"
+        }
+        return "record.circle"
+    }
+
+    private var isRecordingButtonDisabled: Bool {
+        isStopping || (isBlockedByWalk == false && (camera.isReady == false || camera.isPermissionDenied || walkRecorder.isLocationAccessDenied))
+    }
+
     private func startVideoWalk() {
         Task {
-            await walkRecorder.start(in: modelContext, mode: .videoWalk)
-            guard walkRecorder.isRecording else {
+            let didStartRecording = await coordinator.start(in: modelContext, mode: .videoWalk)
+            guard didStartRecording else {
                 return
             }
 
@@ -215,7 +265,7 @@ struct VideoWalkView: View {
                 try camera.startRecording(orientation: InterfaceOrientationController.videoWalkOrientation)
                 UIApplication.shared.isIdleTimerDisabled = true
             } catch {
-                await walkRecorder.discard()
+                await coordinator.discard()
                 camera.report(error)
                 UIApplication.shared.isIdleTimerDisabled = false
             }
@@ -223,11 +273,16 @@ struct VideoWalkView: View {
     }
 
     private func handleDockKitShutter() {
+        if isBlockedByWalk {
+            showActiveRecording()
+            return
+        }
+
         guard camera.isReady, camera.isPermissionDenied == false, walkRecorder.isLocationAccessDenied == false else {
             return
         }
 
-        if walkRecorder.isRecording {
+        if isRecordingVideoWalk {
             stopVideoWalk()
         } else {
             startVideoWalk()
@@ -258,7 +313,7 @@ struct VideoWalkView: View {
             } catch {
                 UIApplication.shared.isIdleTimerDisabled = false
                 camera.report(error)
-                await walkRecorder.discard()
+                await coordinator.discard()
                 if stopSessionWhenFinished {
                     walkRecorder.stopPreviewingLocation()
                     camera.stopSession()
@@ -267,7 +322,7 @@ struct VideoWalkView: View {
                 return
             }
 
-            guard walkRecorder.finishRecording() else {
+            guard coordinator.finishRecording() else {
                 isStopping = false
                 return
             }
@@ -276,7 +331,7 @@ struct VideoWalkView: View {
                 shouldStopSessionAfterShortConfirmation = stopSessionWhenFinished
                 isShowingShortRecordingConfirmation = true
             } else {
-                await walkRecorder.saveFinishedRecording()
+                await coordinator.saveFinishedRecording()
                 if stopSessionWhenFinished {
                     walkRecorder.stopPreviewingLocation()
                     camera.stopSession()

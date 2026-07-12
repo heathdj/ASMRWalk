@@ -182,6 +182,43 @@ struct WalkRecordingSessionTests {
 }
 
 @MainActor
+struct RecordingCoordinatorTests {
+    @Test("A GPS walk blocks a second video walk from starting")
+    func gpsWalkBlocksVideoWalk() {
+        let coordinator = RecordingCoordinator(activeMode: .walk)
+
+        #expect(coordinator.hasActiveRecording)
+        #expect(coordinator.canStart(.walk))
+        #expect(coordinator.canStart(.videoWalk) == false)
+        #expect(coordinator.blockingMode(for: .videoWalk) == .walk)
+        #expect(coordinator.activeTab == .walk)
+    }
+
+    @Test("A video walk blocks a second GPS walk from starting")
+    func videoWalkBlocksGPSWalk() {
+        let coordinator = RecordingCoordinator(activeMode: .videoWalk)
+
+        #expect(coordinator.hasActiveRecording)
+        #expect(coordinator.canStart(.videoWalk))
+        #expect(coordinator.canStart(.walk) == false)
+        #expect(coordinator.blockingMode(for: .walk) == .videoWalk)
+        #expect(coordinator.activeTab == .videoWalk)
+    }
+
+    @Test("An idle coordinator allows either recording mode")
+    func idleCoordinatorAllowsAnyMode() {
+        let coordinator = RecordingCoordinator()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(coordinator.canStart(.walk))
+        #expect(coordinator.canStart(.videoWalk))
+        #expect(coordinator.blockingMode(for: .walk) == nil)
+        #expect(coordinator.blockingMode(for: .videoWalk) == nil)
+        #expect(coordinator.activeTab == nil)
+    }
+}
+
+@MainActor
 struct WalkRecordingTests {
     @Test("A new walk stores its metadata and defaults")
     func recordingMetadata() {

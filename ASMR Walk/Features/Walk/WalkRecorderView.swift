@@ -13,7 +13,8 @@ struct WalkRecorderView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
-    @State private var recorder = WalkRecorder()
+    let coordinator: RecordingCoordinator
+    let showActiveRecording: () -> Void
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasPositionedCamera = false
     @State private var isShowingShortRecordingConfirmation = false
@@ -25,9 +26,9 @@ struct WalkRecorderView: View {
 
                 VStack(spacing: 16) {
                     RecordingStatusCard(
-                        title: recorder.statusTitle,
-                        detail: recorder.statusDetail,
-                        systemImage: recorder.isRecording ? "location.fill.viewfinder" : "location.fill"
+                        title: statusTitle,
+                        detail: statusDetail,
+                        systemImage: isBlockedByVideoWalk ? "video.fill" : recorder.isRecording ? "location.fill.viewfinder" : "location.fill"
                     )
                     .accessibilityIdentifier(AccessibilityID.walkStatus)
 
@@ -50,8 +51,10 @@ struct WalkRecorderView: View {
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
-                recorder.startPreviewingLocation()
+                if isBlockedByVideoWalk == false {
+                    recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
+                    recorder.startPreviewingLocation()
+                }
             }
             .onDisappear {
                 recorder.stopPreviewingLocation()
@@ -75,21 +78,21 @@ struct WalkRecorderView: View {
                 hasPositionedCamera = true
             }
             .onChange(of: scenePhase) {
-                if scenePhase != .active, recorder.isRecording, recorder.canContinueInBackground == false {
+                if scenePhase != .active, isRecordingWalk, recorder.canContinueInBackground == false {
                     Task {
-                        await recorder.stopAndSave()
+                        await coordinator.stopAndSave()
                     }
                 }
             }
             .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
                 Button("Save Walk") {
                     Task {
-                        await recorder.saveFinishedRecording()
+                        await coordinator.saveFinishedRecording()
                     }
                 }
                 Button("Discard Walk", role: .destructive) {
                     Task {
-                        await recorder.discard()
+                        await coordinator.discard()
                     }
                 }
             } message: {
@@ -120,15 +123,18 @@ struct WalkRecorderView: View {
 
     private var recordingButton: some View {
         Button(
-            recorder.isRecording ? "Stop and Save" : "Start Walk",
-            systemImage: recorder.isRecording ? "stop.fill" : "figure.walk"
+            recordingButtonTitle,
+            systemImage: recordingButtonSystemImage
         ) {
-            if recorder.isRecording {
+            if isRecordingWalk {
                 stopWalk()
+            } else if isBlockedByVideoWalk {
+                showActiveRecording()
             } else {
                 Task {
-                    await recorder.start(
+                    await coordinator.start(
                         in: modelContext,
+                        mode: .walk,
                         allowsBackgroundRecording: isBackgroundGPSRecordingEnabled
                     )
                 }
@@ -138,9 +144,53 @@ struct WalkRecorderView: View {
         .frame(maxWidth: .infinity)
         .controlSize(.large)
         .buttonStyle(.glassProminent)
-        .tint(recorder.isRecording ? .red : .green)
-        .disabled(recorder.phase == .saving || recorder.isLocationAccessDenied)
+        .tint(isRecordingWalk ? .red : .green)
+        .disabled(isRecordingButtonDisabled)
         .accessibilityIdentifier(AccessibilityID.startWalkButton)
+    }
+
+    private var recorder: WalkRecorder {
+        coordinator.recorder
+    }
+
+    private var isRecordingWalk: Bool {
+        coordinator.activeMode == .walk && recorder.isRecording
+    }
+
+    private var isBlockedByVideoWalk: Bool {
+        coordinator.blockingMode(for: .walk) == .videoWalk
+    }
+
+    private var statusTitle: String {
+        isBlockedByVideoWalk ? "Video walk recording" : recorder.statusTitle
+    }
+
+    private var statusDetail: String {
+        isBlockedByVideoWalk ? "Finish the active video walk before starting a GPS walk." : recorder.statusDetail
+    }
+
+    private var recordingButtonTitle: String {
+        if isRecordingWalk {
+            return "Stop and Save"
+        }
+        if isBlockedByVideoWalk {
+            return "Go to Video Walk"
+        }
+        return "Start Walk"
+    }
+
+    private var recordingButtonSystemImage: String {
+        if isRecordingWalk {
+            return "stop.fill"
+        }
+        if isBlockedByVideoWalk {
+            return "video.fill"
+        }
+        return "figure.walk"
+    }
+
+    private var isRecordingButtonDisabled: Bool {
+        recorder.phase == .saving || (isRecordingWalk == false && isBlockedByVideoWalk == false && recorder.isLocationAccessDenied)
     }
 
     private func stopWalk() {
@@ -149,7 +199,7 @@ struct WalkRecorderView: View {
             isShowingShortRecordingConfirmation = true
         } else {
             Task {
-                await recorder.stopAndSave()
+                await coordinator.stopAndSave()
             }
         }
     }

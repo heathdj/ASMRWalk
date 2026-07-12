@@ -59,6 +59,21 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testVideoWalkStartRoutesToActiveGPSWalk() {
+        app.terminate()
+        app.launchEnvironment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] = "1"
+        app.launchEnvironment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] = "walk"
+        app.launch()
+
+        app.tabBars.buttons["Video Walk"].tap()
+
+        XCTAssertTrue(app.buttons["Go to Walk"].waitForExistence(timeout: 2))
+        app.buttons["Go to Walk"].tap()
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.buttons["walk.startButton"].label, "Start Walk")
+    }
+
+    @MainActor
     func testSettingsTabShowsThemeAndAbout() {
         app.tabBars.buttons["Settings"].tap()
 
