@@ -17,7 +17,6 @@ struct WalkRecorderView: View {
     let showActiveRecording: () -> Void
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasPositionedCamera = false
-    @State private var isShowingShortRecordingConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -38,13 +37,9 @@ struct WalkRecorderView: View {
 
                     Spacer()
 
-                    RecordingMetrics(
-                        duration: recorder.currentDuration,
-                        distanceMeters: recorder.currentDistanceMeters
-                    )
-                    .accessibilityIdentifier(AccessibilityID.walkMetrics)
-
-                    recordingButton
+                    if isRecordingWalk == false {
+                        recordingButton
+                    }
                 }
                 .padding()
             }
@@ -84,20 +79,6 @@ struct WalkRecorderView: View {
                     }
                 }
             }
-            .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
-                Button("Save Walk") {
-                    Task {
-                        await coordinator.saveFinishedRecording()
-                    }
-                }
-                Button("Discard Walk", role: .destructive) {
-                    Task {
-                        await coordinator.discard()
-                    }
-                }
-            } message: {
-                Text("This walk is shorter than 10 seconds.")
-            }
         }
     }
 
@@ -126,9 +107,7 @@ struct WalkRecorderView: View {
             recordingButtonTitle,
             systemImage: recordingButtonSystemImage
         ) {
-            if isRecordingWalk {
-                stopWalk()
-            } else if isBlockedByVideoWalk {
+            if isBlockedByVideoWalk {
                 showActiveRecording()
             } else {
                 Task {
@@ -144,7 +123,7 @@ struct WalkRecorderView: View {
         .frame(maxWidth: .infinity)
         .controlSize(.large)
         .buttonStyle(.glassProminent)
-        .tint(isRecordingWalk ? .red : .green)
+        .tint(.green)
         .disabled(isRecordingButtonDisabled)
         .accessibilityIdentifier(AccessibilityID.startWalkButton)
     }
@@ -170,9 +149,6 @@ struct WalkRecorderView: View {
     }
 
     private var recordingButtonTitle: String {
-        if isRecordingWalk {
-            return "Stop and Save"
-        }
         if isBlockedByVideoWalk {
             return "Go to Video Walk"
         }
@@ -180,9 +156,6 @@ struct WalkRecorderView: View {
     }
 
     private var recordingButtonSystemImage: String {
-        if isRecordingWalk {
-            return "stop.fill"
-        }
         if isBlockedByVideoWalk {
             return "video.fill"
         }
@@ -191,17 +164,6 @@ struct WalkRecorderView: View {
 
     private var isRecordingButtonDisabled: Bool {
         recorder.phase == .saving || (isRecordingWalk == false && isBlockedByVideoWalk == false && recorder.isLocationAccessDenied)
-    }
-
-    private func stopWalk() {
-        if recorder.isShortRecording {
-            recorder.finishRecording()
-            isShowingShortRecordingConfirmation = true
-        } else {
-            Task {
-                await coordinator.stopAndSave()
-            }
-        }
     }
 
     private func openSettingsButton(label: String) -> some View {

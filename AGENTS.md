@@ -26,6 +26,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Startup should go directly from the native static launch screen to `ContentView`; do not reintroduce an artificial SwiftUI splash delay.
 - The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
 - Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode.
+- Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
 
 ## Conventions
 
@@ -36,6 +37,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Store video files in app-managed storage and persist only their URLs.
 - Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
 - Starting a second recording mode while another is active should route the user back to the active recorder, not create another `WalkRecorder`.
+- Recording stop controls and live time/distance belong in the app-level active recording banner, not duplicated inside the Walk and Video Walk tabs.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 
 ## Build And Run

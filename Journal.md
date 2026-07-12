@@ -195,6 +195,16 @@ QA found a serious loophole hiding in plain sight: GPS Walk and Video Walk each 
 
 The subtle bit is the short-recording dialog. A recording is still considered active while the app asks whether to save or discard it, because that dialog is not a finished state. Treating "waiting for a decision" as idle would reopen the same bug through a side door.
 
+### The Recording Leash
+
+The next QA catch was related: even with only one captain, the user could walk out of the room. A GPS recording kept running after a tab switch, but the stop button stayed behind on the Walk tab. Technically correct, practically awkward.
+
+The app shell now carries a persistent active-recording banner, like a leash clipped to the bottom of the screen. Switch to History or Settings and the banner follows: current mode, elapsed time, distance, a return button, and for GPS walks a stop button. Stopping a short GPS walk from the banner still goes through the same save-or-discard confirmation, because a shortcut should not skip the safety rail.
+
+The important pattern is ownership. A tab-specific view can own rich controls for its mode, but cross-tab recording visibility belongs to `ContentView`, where the tab selection and shared `RecordingCoordinator` already live.
+
+The banner eventually became the single scoreboard too. Walk and Video Walk no longer carry their own time-and-distance cards while recording; duplicating those numbers made the screens busier and created two places to keep visually consistent. Video recordings also get the same right-side stop treatment in the banner, with the actual camera cleanup still delegated back to `VideoWalkView` where the video file is finalized.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

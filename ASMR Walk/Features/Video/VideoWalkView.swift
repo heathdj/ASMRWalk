@@ -16,10 +16,13 @@ struct VideoWalkView: View {
     @State private var camera = VideoCaptureService()
     @State private var dockKitAccessory = DockKitAccessoryService()
     let coordinator: RecordingCoordinator
+    let stopRequestID: UUID?
     let showActiveRecording: () -> Void
     @State private var isStopping = false
     @State private var isShowingShortRecordingConfirmation = false
     @State private var shouldStopSessionAfterShortConfirmation = false
+
+    private let routeMapSize: CGFloat = 220
 
     var body: some View {
         ZStack {
@@ -39,7 +42,7 @@ struct VideoWalkView: View {
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
-            HStack(alignment: .bottom, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     if shouldShowStatusCard {
                         statusCard
@@ -50,21 +53,17 @@ struct VideoWalkView: View {
                         openSettingsButton
                     }
                     Spacer()
-                    RecordingMetrics(
-                        duration: walkRecorder.currentDuration,
-                        distanceMeters: walkRecorder.currentDistanceMeters
-                    )
-                    .frame(maxWidth: 360)
-                    .accessibilityIdentifier(AccessibilityID.videoMetrics)
                 }
 
                 Spacer()
 
                 VStack(spacing: 16) {
                     routeMap
-                    recordingButton
+                    if isRecordingVideoWalk == false {
+                        recordingButton
+                    }
                 }
-                .frame(width: 220)
+                .frame(width: routeMapSize)
             }
             .padding()
         }
@@ -100,6 +99,12 @@ struct VideoWalkView: View {
                 return
             }
             stopVideoWalk(confirmShortRecording: false)
+        }
+        .onChange(of: stopRequestID, initial: true) {
+            guard stopRequestID != nil, isRecordingVideoWalk else {
+                return
+            }
+            stopVideoWalk()
         }
         .confirmationDialog("Save Short Video Walk?", isPresented: $isShowingShortRecordingConfirmation) {
             Button("Save Video Walk") {
@@ -158,6 +163,7 @@ struct VideoWalkView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic))
+        .frame(width: routeMapSize, height: routeMapSize)
         .clipShape(.rect(cornerRadius: 20))
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
         .accessibilityLabel("Live walking route")
@@ -168,9 +174,7 @@ struct VideoWalkView: View {
             recordingButtonTitle,
             systemImage: recordingButtonSystemImage
         ) {
-            if isRecordingVideoWalk {
-                stopVideoWalk()
-            } else if isBlockedByWalk {
+            if isBlockedByWalk {
                 showActiveRecording()
             } else {
                 startVideoWalk()
@@ -231,9 +235,6 @@ struct VideoWalkView: View {
     }
 
     private var recordingButtonTitle: String {
-        if isRecordingVideoWalk {
-            return "Stop and Save"
-        }
         if isBlockedByWalk {
             return "Go to Walk"
         }
@@ -241,9 +242,6 @@ struct VideoWalkView: View {
     }
 
     private var recordingButtonSystemImage: String {
-        if isRecordingVideoWalk {
-            return "stop.fill"
-        }
         if isBlockedByWalk {
             return "figure.walk"
         }

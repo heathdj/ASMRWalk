@@ -41,11 +41,7 @@ final class ASMR_WalkUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["walk.status"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["walk.metrics"].exists)
         XCTAssertTrue(app.buttons["walk.startButton"].isEnabled)
-        let metricsLabel = app.descendants(matching: .any)["walk.metrics"].label
-        XCTAssertTrue(metricsLabel.contains("Elapsed time 0:00"))
-        XCTAssertTrue(metricsLabel.contains("Distance"))
     }
 
     @MainActor
@@ -54,16 +50,12 @@ final class ASMR_WalkUITests: XCTestCase {
 
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.screen"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.status"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["videoWalk.metrics"].exists)
         XCTAssertTrue(app.buttons["videoWalk.startButton"].exists)
     }
 
     @MainActor
     func testVideoWalkStartRoutesToActiveGPSWalk() {
-        app.terminate()
-        app.launchEnvironment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] = "1"
-        app.launchEnvironment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] = "walk"
-        app.launch()
+        launchWithActiveRecording(mode: "walk")
 
         app.tabBars.buttons["Video Walk"].tap()
 
@@ -71,6 +63,43 @@ final class ASMR_WalkUITests: XCTestCase {
         app.buttons["Go to Walk"].tap()
         XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
         XCTAssertEqual(app.buttons["walk.startButton"].label, "Start Walk")
+    }
+
+    @MainActor
+    func testActiveGPSRecordingBannerStaysVisibleAcrossTabs() {
+        launchWithActiveRecording(mode: "walk")
+
+        XCTAssertTrue(app.descendants(matching: .any)["recording.activeBanner"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["recording.returnButton"].exists)
+        XCTAssertTrue(app.buttons["recording.stopButton"].exists)
+
+        app.tabBars.buttons["Settings"].tap()
+
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["recording.activeBanner"].exists)
+        XCTAssertTrue(app.buttons["recording.returnButton"].exists)
+        XCTAssertTrue(app.buttons["recording.stopButton"].exists)
+    }
+
+    @MainActor
+    func testActiveGPSRecordingBannerReturnsToWalk() {
+        launchWithActiveRecording(mode: "walk")
+
+        app.tabBars.buttons["Settings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
+
+        app.buttons["recording.returnButton"].tap()
+
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testActiveVideoRecordingBannerShowsStopVideoControl() {
+        launchWithActiveRecording(mode: "videoWalk")
+
+        XCTAssertTrue(app.descendants(matching: .any)["recording.activeBanner"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["Stop Video"].exists)
+        XCTAssertFalse(app.buttons["Video"].exists)
     }
 
     @MainActor
@@ -95,5 +124,12 @@ final class ASMR_WalkUITests: XCTestCase {
             let app = XCUIApplication()
             app.launch()
         }
+    }
+
+    private func launchWithActiveRecording(mode: String) {
+        app.terminate()
+        app.launchEnvironment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] = "1"
+        app.launchEnvironment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] = mode
+        app.launch()
     }
 }
