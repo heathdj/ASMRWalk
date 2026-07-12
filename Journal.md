@@ -211,6 +211,12 @@ ASMR Walk kept describing itself as an iPhone app, but the Xcode target was stil
 
 Version 1 now draws a clean line: iPhone only. The app can focus on the device that actually matches the walking, camera, DockKit, and one-handed recording story. iPad can still become a real product decision later, but it should arrive with adaptive layouts and testing, not as an accidental build setting.
 
+### The Little Light Learned to Speak
+
+The first video recording indicator was just a tiny green dot. It was technically present, but easy to miss over a moving camera preview, and color alone is a shaky messenger. The fix keeps the lightweight idea but makes it clearer: the dot slowly pulses between 7 and 14 points, and the label beside it says `REC`.
+
+That pulse is deliberately small. No timers, no glowing blur, no animated shadows; just one SwiftUI circle changing size inside a fixed 14-point box. Compared with live camera capture, GPS, and MapKit, this is pocket change, but it gives the user a visible heartbeat that says the video is rolling.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -103,6 +103,17 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testVideoRecordingIndicatorIsExplicit() {
+        launchWithActiveRecording(mode: "videoWalk", showsVideoRecordingIndicator: true)
+
+        app.tabBars.buttons["Video Walk"].tap()
+
+        let indicator = app.descendants(matching: .any)["videoWalk.recordingIndicator"]
+        XCTAssertTrue(indicator.waitForExistence(timeout: 2))
+        XCTAssertEqual(indicator.label, "Recording video")
+    }
+
+    @MainActor
     func testSettingsTabShowsThemeAndAbout() {
         app.tabBars.buttons["Settings"].tap()
 
@@ -126,10 +137,11 @@ final class ASMR_WalkUITests: XCTestCase {
         }
     }
 
-    private func launchWithActiveRecording(mode: String) {
+    private func launchWithActiveRecording(mode: String, showsVideoRecordingIndicator: Bool = false) {
         app.terminate()
         app.launchEnvironment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] = "1"
         app.launchEnvironment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] = mode
+        app.launchEnvironment["ASMR_WALK_UI_TEST_SHOW_VIDEO_RECORDING_INDICATOR"] = showsVideoRecordingIndicator ? "1" : "0"
         app.launch()
     }
 }

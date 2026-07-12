@@ -46,7 +46,7 @@ struct VideoWalkView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if shouldShowStatusCard {
                         statusCard
-                    } else if isRecordingVideoWalk {
+                    } else if shouldShowRecordingIndicator {
                         recordingIndicator
                     }
                     if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
@@ -135,19 +135,11 @@ struct VideoWalkView: View {
     }
 
     private var shouldShowStatusCard: Bool {
-        isRecordingVideoWalk == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
+        shouldShowRecordingIndicator == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
     }
 
     private var recordingIndicator: some View {
-        Circle()
-            .fill(.green)
-            .frame(width: 14, height: 14)
-            .overlay {
-                Circle()
-                    .stroke(.white.opacity(0.9), lineWidth: 2)
-            }
-            .shadow(radius: 2)
-            .accessibilityLabel("Camera recording")
+        PulsingRecordingIndicator()
             .accessibilityIdentifier(AccessibilityID.videoRecordingIndicator)
     }
 
@@ -230,6 +222,10 @@ struct VideoWalkView: View {
         coordinator.activeMode == .videoWalk && walkRecorder.isRecording
     }
 
+    private var shouldShowRecordingIndicator: Bool {
+        isRecordingVideoWalk || Self.shouldShowRecordingIndicatorForUITests
+    }
+
     private var isBlockedByWalk: Bool {
         coordinator.blockingMode(for: .videoWalk) == .walk
     }
@@ -250,6 +246,14 @@ struct VideoWalkView: View {
 
     private var isRecordingButtonDisabled: Bool {
         isStopping || (isBlockedByWalk == false && (camera.isReady == false || camera.isPermissionDenied || walkRecorder.isLocationAccessDenied))
+    }
+
+    private static var shouldShowRecordingIndicatorForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_SHOW_VIDEO_RECORDING_INDICATOR"] == "1"
+        #else
+        false
+        #endif
     }
 
     private func startVideoWalk() {
@@ -345,5 +349,42 @@ struct VideoWalkView: View {
             camera.stopSession()
         }
         shouldStopSessionAfterShortConfirmation = false
+    }
+}
+
+private struct PulsingRecordingIndicator: View {
+    @State private var isExpanded = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ZStack {
+                Circle()
+                    .fill(.green)
+                    .frame(width: isExpanded ? 14 : 7, height: isExpanded ? 14 : 7)
+                    .overlay {
+                        Circle()
+                            .stroke(.white.opacity(0.9), lineWidth: 2)
+                    }
+            }
+            .frame(width: 14, height: 14)
+
+            Text("REC")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .monospaced()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(.black.opacity(0.7), in: .capsule)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Recording video")
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                isExpanded = true
+            }
+        }
+        .onDisappear {
+            isExpanded = false
+        }
     }
 }
