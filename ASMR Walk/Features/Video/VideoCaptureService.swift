@@ -134,7 +134,11 @@ final class VideoCaptureService: NSObject {
             return
         }
 
-        let zoomDirection = factor >= 0 ? 1.0 : -1.0
+        guard factor != 1 else {
+            return
+        }
+
+        let zoomDirection = factor > 1 ? 1.0 : -1.0
         let zoomStep = 0.2
         let minimumZoomFactor = max(activeVideoDevice.minAvailableVideoZoomFactor, 1.0)
         let maximumZoomFactor = min(activeVideoDevice.maxAvailableVideoZoomFactor, 10.0)

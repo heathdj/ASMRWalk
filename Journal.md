@@ -175,6 +175,18 @@ Device testing found a sneaky side effect of moving recordings to value snapshot
 
 The fix was to mirror the live recording values onto observable `WalkRecorder` properties: current duration, current distance, and route coordinates. The session still owns the recording math, and the persistence actor still owns the database, but the UI now has obvious top-level state to observe every second and after every accepted GPS point.
 
+### The Dock Learned to Stop Following Strangers
+
+DockKit system tracking is helpful in a normal camera app, but ASMR Walk wants the gimbal to behave like a steady mount unless the app explicitly handles an accessory event. On-device testing showed that the dock could try to track objects by itself as soon as the camera stream and dock were active.
+
+`DockKitAccessoryService` now asks `DockAccessoryManager` to disable system tracking when the service starts and again when an accessory docks. That second call matters because DockKit enables system tracking by default when a device docks. The service still listens for shutter and zoom events, but it no longer invites the dock to chase whatever it sees in frame.
+
+### Zoom Is a Multiplier, Not a Mood Ring
+
+The DockKit zoom event does not send "positive means in, negative means out." It sends a multiplier: greater than `1.0` means zoom in, less than `1.0` means zoom out, and `1.0` means no change. ASMR Walk originally checked whether the factor was nonnegative, which made every normal DockKit zoom event look like zoom in. On a real gimbal, that meant the zoom control had an elevator-up button and no elevator-down button.
+
+The camera service now compares the factor against `1.0`, so zoom-out events step the camera back toward its minimum zoom factor.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

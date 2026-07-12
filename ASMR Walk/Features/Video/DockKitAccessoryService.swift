@@ -53,6 +53,8 @@ final class DockKitAccessoryService {
         zoomAction: @escaping @MainActor @Sendable (_ factor: Double) -> Void
     ) async {
         do {
+            await disableSystemTracking()
+
             for await stateChange in try DockAccessoryManager.shared.accessoryStateChanges {
                 guard Task.isCancelled == false else {
                     return
@@ -66,6 +68,7 @@ final class DockKitAccessoryService {
                     isAccessoryConnected = true
                     accessoryName = accessory.identifier.name
                     errorMessage = nil
+                    await disableSystemTracking()
                     subscribeToEvents(
                         from: accessory,
                         shutterAction: shutterAction,
@@ -84,6 +87,19 @@ final class DockKitAccessoryService {
             return
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func disableSystemTracking() async {
+        do {
+            guard DockAccessoryManager.shared.isSystemTrackingEnabled else {
+                return
+            }
+
+            try await DockAccessoryManager.shared.setSystemTrackingEnabled(false)
+            errorMessage = nil
+        } catch {
+            errorMessage = "Unable to disable DockKit system tracking: \(error.localizedDescription)"
         }
     }
 
