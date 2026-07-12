@@ -25,7 +25,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
 - Startup should go directly from the native static launch screen to `ContentView`; do not reintroduce an artificial SwiftUI splash delay.
 - The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
-- Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode.
+- Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode; all enablement decisions should flow through `BackgroundRecordingPolicy`.
 - Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
 - Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
 
@@ -40,6 +40,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Starting a second recording mode while another is active should route the user back to the active recorder, not create another `WalkRecorder`.
 - Recording stop controls and live time/distance belong in the app-level active recording banner, not duplicated inside the Walk and Video Walk tabs.
 - Permission prompts should follow explicit user intent; opening a tab may refresh authorization status but must not request camera, microphone, location, or Photos access.
+- Background GPS decisions must stay centralized in `BackgroundRecordingPolicy`; Video Walk should remain foreground-only even when the user's Background GPS Recording setting is enabled.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 
 ## Build And Run
@@ -50,7 +51,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 
 - Google Maps URLs cannot preserve every recorded route point; GPX is the fidelity-preserving export.
 - GPX exports include plugin-friendly extensions for duration, mode, video presence, accuracy, and optional speed while remaining readable by generic GPX tools.
-- GPS background recording is supported only when the user enables it and grants Always location permission.
+- GPS background recording is supported only when the user enables it, starts a GPS Walk, and grants Always location permission.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - Photos save/playback needs `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
 - Background GPS recording needs `NSLocationAlwaysAndWhenInUseUsageDescription` and `UIBackgroundModes` containing `location`.

@@ -66,6 +66,38 @@ struct ASMR_WalkTests {
         #expect(BackgroundGPSRecording.storageKey == "backgroundGPSRecordingEnabled")
     }
 
+    @Test("Background GPS recording is only enabled for GPS walks")
+    func backgroundGPSRecordingPolicyScopesToGPSWalks() {
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .walk, userEnabled: true))
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .walk, userEnabled: false) == false)
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .videoWalk, userEnabled: true) == false)
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .videoWalk, userEnabled: false) == false)
+    }
+
+    @Test("Background GPS recording requires Always authorization")
+    func backgroundGPSRecordingPolicyRequiresAlwaysAuthorization() {
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedAlways
+        ))
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedWhenInUse
+        ) == false)
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: false,
+            authorizationStatus: .authorizedAlways
+        ) == false)
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: false,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedAlways
+        ) == false)
+    }
+
     @Test("About info exposes app metadata and support contact")
     func aboutInfo() {
         let info = AboutInfo.current

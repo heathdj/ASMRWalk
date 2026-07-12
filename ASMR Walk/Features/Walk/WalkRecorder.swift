@@ -57,7 +57,11 @@ final class WalkRecorder: NSObject {
     }
 
     var canContinueInBackground: Bool {
-        isRecording && isBackgroundRecordingEnabled && authorizationStatus == .authorizedAlways
+        BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: isRecording,
+            isBackgroundRecordingEnabled: isBackgroundRecordingEnabled,
+            authorizationStatus: authorizationStatus
+        )
     }
 
     var recording: WalkRecordingSnapshot? {
@@ -65,9 +69,13 @@ final class WalkRecorder: NSObject {
     }
 
     func setBackgroundRecordingEnabled(_ isEnabled: Bool, requestAuthorization: Bool = true) {
-        isBackgroundRecordingEnabled = isEnabled
+        let mode = recording?.mode ?? .walk
+        isBackgroundRecordingEnabled = BackgroundRecordingPolicy.isEnabledForRecording(
+            mode: mode,
+            userEnabled: isEnabled
+        )
 
-        if isEnabled, requestAuthorization {
+        if isBackgroundRecordingEnabled, requestAuthorization {
             requestAlwaysAuthorizationIfPossible()
         }
 
@@ -161,7 +169,10 @@ final class WalkRecorder: NSObject {
         }
 
         errorMessage = nil
-        isBackgroundRecordingEnabled = allowsBackgroundRecording && mode == .walk
+        isBackgroundRecordingEnabled = BackgroundRecordingPolicy.isEnabledForRecording(
+            mode: mode,
+            userEnabled: allowsBackgroundRecording
+        )
         authorizationStatus = locationManager.authorizationStatus
 
         guard authorizationStatus != .denied, authorizationStatus != .restricted else {
@@ -348,6 +359,12 @@ final class WalkRecorder: NSObject {
 
     private func configureBackgroundLocationUpdates() {
         let shouldAllowBackgroundUpdates = canContinueInBackground
+
+        assert(
+            shouldAllowBackgroundUpdates == false || recording?.mode == .walk,
+            "Background location updates must only be enabled for GPS walk recordings."
+        )
+
         locationManager.allowsBackgroundLocationUpdates = shouldAllowBackgroundUpdates
         locationManager.pausesLocationUpdatesAutomatically = shouldAllowBackgroundUpdates == false
 

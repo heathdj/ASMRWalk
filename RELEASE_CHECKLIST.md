@@ -29,6 +29,7 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Confirm Settings tab opens.
 - [ ] Confirm Light, Dark, and System theme settings apply app-wide.
 - [ ] Confirm Background GPS Recording defaults off.
+- [ ] Confirm Background GPS Recording is described as GPS Walk only and does not imply background video recording.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
 ## Device Validation
@@ -41,6 +42,8 @@ Run these on a physical iPhone before submission:
 - [ ] Background the app during a walk and confirm the foreground-only recording behavior is acceptable.
 - [ ] Enable Background GPS Recording, grant Always location permission, lock the screen during a GPS walk, and confirm the route continues.
 - [ ] Enable Background GPS Recording but deny Always location permission, then confirm the app explains the permission requirement and does not pretend to record in the background.
+- [ ] Enable Background GPS Recording, start a Video Walk, background the app, and confirm Video Walk stops instead of continuing background GPS/video capture.
+- [ ] Disable Background GPS Recording, start a GPS-only walk, background the app, and confirm the walk finalizes instead of continuing in the background.
 - [ ] Confirm Walk map opens near the user's current location at street level.
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
 - [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
@@ -66,6 +69,7 @@ Run these on a physical iPhone before submission:
 
 - [ ] Complete privacy nutrition labels for foreground/background location, camera, microphone, Photos, and user-generated content.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
+- [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
 - [ ] Mention that video walks are saved to the user's Photos library.

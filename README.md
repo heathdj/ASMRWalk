@@ -6,7 +6,7 @@ ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walkin
 
 - History tab for saved walk recordings.
 - GPS-only walk recording with a live MapKit route overlay.
-- Optional background GPS recording for GPS-only walks.
+- Optional background GPS recording for GPS-only walks, gated by Always location permission.
 - Video walk recording with camera preview, microphone audio, landscape-first UI, and live route overlay.
 - Saved video walk playback with a synchronized route-progress map overlay.
 - Local persistence with SwiftData.
@@ -74,7 +74,7 @@ See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
 The Video Walk tab requests landscape orientation when opened and restores portrait when leaving. The target must continue supporting landscape orientations for that behavior to work.
 
-Background GPS recording requires the `location` background mode and Always location permission. It applies only to GPS-only walks; video walks still stop when the app leaves the foreground.
+Background GPS recording requires the `location` background mode and Always location permission. It applies only to GPS-only walks, even when the Settings toggle is enabled; video walks still stop when the app leaves the foreground.
 
 ## Testing
 
@@ -95,7 +95,6 @@ The app uses a native static launch screen configured through the target Info se
 
 ## Current Limitations
 
-- Background walking recording is not implemented yet.
 - Exported Google Maps URLs sample waypoints; GPX remains the complete route export.
 - The map overlay is rendered in the app and is not burned into exported video.
 
@@ -105,5 +104,4 @@ The app uses a native static launch screen configured through the target Info se
 - Route thumbnails.
 - HealthKit workout integration.
 - Apple Watch companion recording.
-- Background route recording.
 - Burned-in video map overlay export.

@@ -223,6 +223,12 @@ Opening a tab used to be enough to make iOS ask for camera, microphone, or locat
 
 The recording tabs now refresh permission status on appear without prompting. The actual requests happen when the user starts a walk or video walk. Photos access follows the same rule: saving a finished video explains that ASMR Walk stores video walks in Photos before the Photos request appears, and playback explains that it needs to read saved videos from Photos. The pattern is simple: looking around is free; committing to the feature asks for the keys.
 
+### Background GPS Got a Gatekeeper
+
+Background GPS is powerful and review-sensitive, so the app now routes every decision through `BackgroundRecordingPolicy`. That policy has a short checklist: the user enabled it, the active mode is GPS Walk, a recording is actually running, and iOS granted Always location permission. Miss any one of those and background updates stay off.
+
+This matters most for Video Walk. The settings switch can be on, but video recording still stays foreground-only. Camera capture, screen behavior, and Photos finalization already have enough moving parts; letting video walks silently continue as background GPS sessions would blur the product promise and make App Store review harder to explain. The rule is now easy to test and easy to say: background means walking routes only.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
