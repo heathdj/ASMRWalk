@@ -157,6 +157,24 @@ Everything else deliberately does nothing for now. That is not neglect; it is ch
 
 One practical gotcha: the local SDK in this development environment does not expose the `DockKit` module, so the service is wrapped in `#if canImport(DockKit)`. The app still builds here, while a DockKit-capable Xcode/iPhone pair gets the real accessory stream. Hardware features are like stage lighting: the wiring can be clean, but you still test with the actual rig before opening night.
 
+### A First-Run Tour, Not a Toll Booth
+
+Onboarding now introduces the three main rooms before dropping someone into the app: Walk for a GPS-only route, Video Walk for camera-plus-route recording, and History for replay, review, and GPX export. It is intentionally a guided tour rather than a permission gauntlet. No system prompts fire just because a page appeared; people should understand the front door before iOS starts asking for keys.
+
+The completion flag lives in `@AppStorage`, which makes the root view choose between the onboarding tour and the normal tab shell without inventing a new persistence layer. Settings includes a "Show Onboarding Again" button because future-you will absolutely want to revisit the tour during testing, demos, and copy tweaks. Think of it as leaving the museum map at the front desk instead of throwing it away after the first visit.
+
+### The Archivist Moved Off the Front Counter
+
+The recording flow used to hand SwiftUI's `modelContext` to `WalkRecorder`, then checkpoint and save from the main actor. That worked functionally, but it meant database writes could happen right where the UI is trying to stay responsive. The runtime warning was the app tapping a clipboard, a camera, and a filing cabinet all at the front counter while the line was still moving.
+
+`WalkRecordingSession` now keeps a plain value snapshot of the live walk. The UI can still render duration, distance, and map points immediately, but SwiftData models are created and updated inside `WalkRecordingPersistence`, a `@ModelActor`. Saves, checkpoints, and deletes now go through that actor, while History keeps its `@Query` for the normal live SwiftUI list. The rule of thumb from here: views may observe records, but background-worthy writes belong to the archivist actor.
+
+### The Stopwatch Hid Inside the Notebook
+
+Device testing found a sneaky side effect of moving recordings to value snapshots: Video Walk kept recording, but the visible timer and distance stayed frozen at zero. The data was changing inside `WalkRecordingSession.snapshot`, but SwiftUI was watching `WalkRecorder`. Mutating a nested helper object is like updating a note inside a closed notebook; the person watching the cover does not know anything changed.
+
+The fix was to mirror the live recording values onto observable `WalkRecorder` properties: current duration, current distance, and route coordinates. The session still owns the recording math, and the persistence actor still owns the database, but the UI now has obvious top-level state to observe every second and after every accepted GPS point.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

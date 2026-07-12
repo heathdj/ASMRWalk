@@ -38,8 +38,8 @@ struct WalkRecorderView: View {
                     Spacer()
 
                     RecordingMetrics(
-                        duration: recorder.recording?.duration ?? 0,
-                        distanceMeters: recorder.recording?.distanceMeters ?? 0
+                        duration: recorder.currentDuration,
+                        distanceMeters: recorder.currentDistanceMeters
                     )
                     .accessibilityIdentifier(AccessibilityID.walkMetrics)
 
@@ -76,15 +76,21 @@ struct WalkRecorderView: View {
             }
             .onChange(of: scenePhase) {
                 if scenePhase != .active, recorder.isRecording, recorder.canContinueInBackground == false {
-                    recorder.stopAndSave()
+                    Task {
+                        await recorder.stopAndSave()
+                    }
                 }
             }
             .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
                 Button("Save Walk") {
-                    recorder.saveFinishedRecording()
+                    Task {
+                        await recorder.saveFinishedRecording()
+                    }
                 }
                 Button("Discard Walk", role: .destructive) {
-                    recorder.discard()
+                    Task {
+                        await recorder.discard()
+                    }
                 }
             } message: {
                 Text("This walk is shorter than 10 seconds.")
@@ -120,10 +126,12 @@ struct WalkRecorderView: View {
             if recorder.isRecording {
                 stopWalk()
             } else {
-                recorder.start(
-                    in: modelContext,
-                    allowsBackgroundRecording: isBackgroundGPSRecordingEnabled
-                )
+                Task {
+                    await recorder.start(
+                        in: modelContext,
+                        allowsBackgroundRecording: isBackgroundGPSRecordingEnabled
+                    )
+                }
             }
         }
         .font(.headline)
@@ -140,7 +148,9 @@ struct WalkRecorderView: View {
             recorder.finishRecording()
             isShowingShortRecordingConfirmation = true
         } else {
-            recorder.stopAndSave()
+            Task {
+                await recorder.stopAndSave()
+            }
         }
     }
 

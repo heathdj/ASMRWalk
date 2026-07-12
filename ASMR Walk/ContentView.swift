@@ -42,6 +42,9 @@ enum AppTab: CaseIterable, Hashable {
 }
 
 enum AccessibilityID {
+    static let onboardingScreen = "onboarding.screen"
+    static let onboardingPrimaryButton = "onboarding.primaryButton"
+    static let onboardingSkipButton = "onboarding.skipButton"
     static let historyEmptyState = "history.emptyState"
     static let historyList = "history.list"
     static let recordingDetail = "history.recordingDetail"
@@ -61,33 +64,41 @@ enum AccessibilityID {
     static let themePicker = "settings.themePicker"
     static let startRecordingDestinationPicker = "settings.startRecordingDestinationPicker"
     static let backgroundGPSRecordingToggle = "settings.backgroundGPSRecordingToggle"
+    static let showOnboardingButton = "settings.showOnboardingButton"
     static let aboutButton = "settings.aboutButton"
     static let aboutSheet = "settings.aboutSheet"
 }
 
 struct ContentView: View {
     @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
+    @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
     @State private var selectedTab: AppTab = .history
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
-                HistoryView {
-                    selectedTab = selectedStartRecordingDestination.tab
+        Group {
+            if hasCompletedOnboarding {
+                TabView(selection: $selectedTab) {
+                    Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
+                        HistoryView {
+                            selectedTab = selectedStartRecordingDestination.tab
+                        }
+                    }
+
+                    Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
+                        WalkRecorderView()
+                    }
+
+                    Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
+                        VideoWalkView()
+                    }
+
+                    Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
+                        SettingsView()
+                    }
                 }
-            }
-
-            Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
-                WalkRecorderView()
-            }
-
-            Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
-                VideoWalkView()
-            }
-
-            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
-                SettingsView()
+            } else {
+                OnboardingView()
             }
         }
         .tint(.green)

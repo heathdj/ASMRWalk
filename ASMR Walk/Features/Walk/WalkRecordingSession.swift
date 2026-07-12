@@ -6,20 +6,59 @@
 import CoreLocation
 import Foundation
 
+struct LocationPointSnapshot: Identifiable, Sendable {
+    let id = UUID()
+    let timestamp: Date
+    let latitude: Double
+    let longitude: Double
+    let altitude: Double?
+    let horizontalAccuracy: Double
+    let speed: Double?
+
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+}
+
+struct WalkRecordingSnapshot: Identifiable, Sendable {
+    let id: UUID
+    var title: String
+    let createdAt: Date
+    var duration: TimeInterval
+    var distanceMeters: Double
+    var mode: RecordingMode
+    var videoURL: URL?
+    var videoAssetIdentifier: String?
+    var points: [LocationPointSnapshot]
+
+    var hasVideo: Bool {
+        videoAssetIdentifier != nil || videoURL != nil
+    }
+
+    var isShortRecording: Bool {
+        duration < WalkRecording.shortRecordingThreshold
+    }
+}
+
 @MainActor
 final class WalkRecordingSession {
     static let maximumHorizontalAccuracy: CLLocationAccuracy = 50
     static let minimumMovementDistance: CLLocationDistance = 3
     static let maximumLocationAge: TimeInterval = 15
 
-    let recording: WalkRecording
+    private(set) var snapshot: WalkRecordingSnapshot
     private(set) var lastAcceptedLocation: CLLocation?
 
     init(startedAt: Date = .now, mode: RecordingMode = .walk) {
-        recording = WalkRecording(
+        snapshot = WalkRecordingSnapshot(
+            id: UUID(),
             title: Self.defaultTitle(for: startedAt, mode: mode),
             createdAt: startedAt,
-            mode: mode
+            duration: 0,
+            distanceMeters: 0,
+            mode: mode,
+            points: []
         )
     }
 
@@ -36,11 +75,11 @@ final class WalkRecordingSession {
             guard distance >= Self.minimumMovementDistance else {
                 return false
             }
-            recording.distanceMeters += distance
+            snapshot.distanceMeters += distance
         }
 
-        recording.addPoint(
-            LocationPoint(
+        snapshot.points.append(
+            LocationPointSnapshot(
                 timestamp: location.timestamp,
                 latitude: location.coordinate.latitude,
                 longitude: location.coordinate.longitude,
@@ -54,7 +93,18 @@ final class WalkRecordingSession {
     }
 
     func updateDuration(at date: Date = .now) {
-        recording.duration = max(0, date.timeIntervalSince(recording.createdAt))
+        snapshot.duration = max(0, date.timeIntervalSince(snapshot.createdAt))
+    }
+
+    func attachVideo(at url: URL) {
+        snapshot.mode = .videoWalk
+        snapshot.videoURL = url
+    }
+
+    func attachPhotoLibraryVideo(assetIdentifier: String) {
+        snapshot.mode = .videoWalk
+        snapshot.videoAssetIdentifier = assetIdentifier
+        snapshot.videoURL = nil
     }
 
     private static func defaultTitle(for date: Date, mode: RecordingMode) -> String {

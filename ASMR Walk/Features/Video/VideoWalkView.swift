@@ -50,8 +50,8 @@ struct VideoWalkView: View {
                     }
                     Spacer()
                     RecordingMetrics(
-                        duration: walkRecorder.recording?.duration ?? 0,
-                        distanceMeters: walkRecorder.recording?.distanceMeters ?? 0
+                        duration: walkRecorder.currentDuration,
+                        distanceMeters: walkRecorder.currentDistanceMeters
                     )
                     .frame(maxWidth: 360)
                     .accessibilityIdentifier(AccessibilityID.videoMetrics)
@@ -68,6 +68,7 @@ struct VideoWalkView: View {
             .padding()
         }
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
+        .toolbarVisibility(walkRecorder.isRecording ? .hidden : .visible, for: .tabBar)
         .task {
             InterfaceOrientationController.lockVideoWalkLandscape()
             walkRecorder.startPreviewingLocation()
@@ -97,12 +98,16 @@ struct VideoWalkView: View {
         }
         .confirmationDialog("Save Short Video Walk?", isPresented: $isShowingShortRecordingConfirmation) {
             Button("Save Video Walk") {
-                walkRecorder.saveFinishedRecording()
-                cleanupAfterShortRecordingDecision()
+                Task {
+                    await walkRecorder.saveFinishedRecording()
+                    cleanupAfterShortRecordingDecision()
+                }
             }
             Button("Discard Video Walk", role: .destructive) {
-                walkRecorder.discard()
-                cleanupAfterShortRecordingDecision()
+                Task {
+                    await walkRecorder.discard()
+                    cleanupAfterShortRecordingDecision()
+                }
             }
         } message: {
             Text("This video walk is shorter than 10 seconds.")
@@ -200,18 +205,20 @@ struct VideoWalkView: View {
     }
 
     private func startVideoWalk() {
-        walkRecorder.start(in: modelContext, mode: .videoWalk)
-        guard walkRecorder.isRecording else {
-            return
-        }
+        Task {
+            await walkRecorder.start(in: modelContext, mode: .videoWalk)
+            guard walkRecorder.isRecording else {
+                return
+            }
 
-        do {
-            try camera.startRecording(orientation: InterfaceOrientationController.videoWalkOrientation)
-            UIApplication.shared.isIdleTimerDisabled = true
-        } catch {
-            walkRecorder.discard()
-            camera.report(error)
-            UIApplication.shared.isIdleTimerDisabled = false
+            do {
+                try camera.startRecording(orientation: InterfaceOrientationController.videoWalkOrientation)
+                UIApplication.shared.isIdleTimerDisabled = true
+            } catch {
+                await walkRecorder.discard()
+                camera.report(error)
+                UIApplication.shared.isIdleTimerDisabled = false
+            }
         }
     }
 
@@ -251,7 +258,7 @@ struct VideoWalkView: View {
             } catch {
                 UIApplication.shared.isIdleTimerDisabled = false
                 camera.report(error)
-                walkRecorder.discard()
+                await walkRecorder.discard()
                 if stopSessionWhenFinished {
                     walkRecorder.stopPreviewingLocation()
                     camera.stopSession()
@@ -269,7 +276,7 @@ struct VideoWalkView: View {
                 shouldStopSessionAfterShortConfirmation = stopSessionWhenFinished
                 isShowingShortRecordingConfirmation = true
             } else {
-                walkRecorder.saveFinishedRecording()
+                await walkRecorder.saveFinishedRecording()
                 if stopSessionWhenFinished {
                     walkRecorder.stopPreviewingLocation()
                     camera.stopSession()

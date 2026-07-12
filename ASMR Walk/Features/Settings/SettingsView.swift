@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage(AppTheme.storageKey) private var selectedThemeRawValue = AppTheme.system.rawValue
+    @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var selectedStartDestinationRawValue = StartRecordingDestination.walk.rawValue
     @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
     @State private var isShowingAbout = false
@@ -40,6 +41,13 @@ struct SettingsView: View {
                     Text("Recording")
                 } footer: {
                     Text("When enabled, GPS-only walks can continue while the app is backgrounded or the screen is locked. Always location permission is required.")
+                }
+
+                Section("Guide") {
+                    Button("Show Onboarding Again", systemImage: "sparkles") {
+                        hasCompletedOnboarding = false
+                    }
+                    .accessibilityIdentifier(AccessibilityID.showOnboardingButton)
                 }
 
                 Section("About") {
