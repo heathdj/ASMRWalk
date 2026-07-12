@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3A6821202FF06A2A0012C321 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */; };
+		3AC8940E300431E6003AC68B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		3A3E1F252FC3DE3800CFEE4A /* ASMR WalkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR WalkTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A3E1F2F2FC3DE3800CFEE4A /* ASMR WalkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR WalkUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
+		3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -93,6 +95,7 @@
 		3A3E1F0F2FC3DE3500CFEE4A = {
 			isa = PBXGroup;
 			children = (
+				3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */,
 				3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */,
 				3A3E1F1A2FC3DE3500CFEE4A /* ASMR Walk */,
 				3A3E1F282FC3DE3800CFEE4A /* ASMR WalkTests */,
@@ -232,6 +235,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3A6821202FF06A2A0012C321 /* Launch Screen.storyboard in Resources */,
+				3AC8940E300431E6003AC68B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
