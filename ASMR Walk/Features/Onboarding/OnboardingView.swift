@@ -95,7 +95,7 @@ private enum OnboardingPage: CaseIterable, Identifiable {
         case .walk:
             "Record a GPS route when you want the simple walking journal: time, distance, and a clean map trail."
         case .videoWalk:
-            "Capture video while ASMR Walk tracks the route beside it, so the walk has both a picture and a path."
+            "Capture video while ASMR Walk tracks the route beside it. Finished videos are saved to Photos so they remain yours outside the app."
         case .history:
             "Review saved walks, replay routes on the map, watch video walks, and export GPX files when you need the route elsewhere."
         }

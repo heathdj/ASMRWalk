@@ -13,6 +13,18 @@ extension WalkRecording {
     var distanceText: String {
         distanceMeters.distanceText
     }
+
+    var deleteConfirmationMessage: String {
+        if videoAssetIdentifier != nil {
+            return "This permanently removes the ASMR Walk recording and route. The video remains in Photos."
+        }
+
+        if videoURL != nil {
+            return "This permanently removes the recording, route, and app-managed video file."
+        }
+
+        return "This permanently removes the recording and its route."
+    }
 }
 
 extension TimeInterval {

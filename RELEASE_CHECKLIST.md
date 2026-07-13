@@ -56,6 +56,8 @@ Run these on a physical iPhone before submission:
 - [ ] Confirm the saved video appears in Photos.
 - [ ] Confirm the recording stores a Photos asset reference and playback loads from Photos.
 - [ ] Confirm legacy/local video fallback still works for older recordings if available.
+- [ ] Confirm delete messaging states Photos videos remain in Photos.
+- [ ] Confirm delete messaging states legacy/app-managed fallback videos are removed with their recording.
 - [ ] Deny camera or microphone permission and confirm the app shows a Settings recovery button.
 - [ ] Deny Photos permission and confirm video recording fails gracefully or falls back without crashing.
 - [ ] Open a saved video walk and confirm playback plus route overlay works.
@@ -73,6 +75,7 @@ Run these on a physical iPhone before submission:
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
 - [ ] Mention that video walks are saved to the user's Photos library.
+- [ ] Mention that deleting an ASMR Walk recording does not delete the Photos video.
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
 
 ## Known Version 1 Scope

@@ -20,6 +20,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - `DockKitAccessoryService` owns DockKit accessory state and event streams for Video Walk; camera shutter toggles recording, camera zoom adjusts `VideoCaptureService`, and other accessory events intentionally no-op for now.
 - Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
 - New video walks should save finished `.mov` files into Photos and store the resulting `PHAsset.localIdentifier`; legacy sandbox `videoURL` remains as fallback.
+- Deleting a recording removes app metadata and routes; Photos-backed videos remain in Photos, while legacy/app-managed fallback `videoURL` files are deleted.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
@@ -59,4 +60,5 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
 - Disable the idle timer only while video recording is active, not for GPS-only walks.
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.
+- Delete messaging must distinguish Photos-backed videos, which remain in Photos, from app-managed fallback video files, which are removed with the recording.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.

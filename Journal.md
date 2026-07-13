@@ -229,6 +229,12 @@ Background GPS is powerful and review-sensitive, so the app now routes every dec
 
 This matters most for Video Walk. The settings switch can be on, but video recording still stays foreground-only. Camera capture, screen behavior, and Photos finalization already have enough moving parts; letting video walks silently continue as background GPS sessions would blur the product promise and make App Store review harder to explain. The rule is now easy to test and easy to say: background means walking routes only.
 
+### Photos Own the Video, ASMR Walk Owns the Route
+
+Video walks now have a split ownership model. The route, stats, and playback reference live in ASMR Walk; the finished movie usually lives in Photos. Deleting a recording is therefore like removing an index card from the app's catalog, not shredding the movie sitting in the user's library.
+
+The delete dialog now says that plainly. Photos-backed videos remain in Photos, while older app-managed fallback files are removed with their recording. The behavior did not change; the promise finally matches the machinery.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

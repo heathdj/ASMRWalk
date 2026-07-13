@@ -11,7 +11,7 @@ ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walkin
 - Saved video walk playback with a synchronized route-progress map overlay.
 - Local persistence with SwiftData.
 - Recording detail screens with route maps, duration, distance, route-point counts, and video indicators.
-- Delete support for saved recordings, including cleanup of app-managed video files.
+- Delete support for saved recordings, with Photos videos left in Photos and app-managed fallback video files cleaned up.
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing.
@@ -64,6 +64,8 @@ ASMR Walk uses the camera and microphone to record video walks.
 iOS will terminate the app if camera or microphone capture is requested without those usage-description keys.
 
 See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
+
+Finished video walks are saved to the user's Photos library when Photos access is available. Deleting an ASMR Walk recording removes the route and app metadata, but it does not delete the Photos video; older app-managed fallback video files are deleted with their recording.
 
 ## Running
 

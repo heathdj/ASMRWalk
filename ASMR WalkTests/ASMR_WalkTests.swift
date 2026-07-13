@@ -113,6 +113,35 @@ struct ASMR_WalkTests {
         #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
         #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
     }
+
+    @Test("Delete confirmation explains Photos video ownership")
+    func deleteConfirmationForPhotosVideo() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoAssetIdentifier: "photos-asset-id"
+        )
+
+        #expect(recording.deleteConfirmationMessage.contains("video remains in Photos"))
+    }
+
+    @Test("Delete confirmation explains local fallback video cleanup")
+    func deleteConfirmationForLocalVideoFallback() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: URL(fileURLWithPath: "/tmp/video.mov")
+        )
+
+        #expect(recording.deleteConfirmationMessage.contains("app-managed video file"))
+    }
+
+    @Test("Delete confirmation explains route-only cleanup")
+    func deleteConfirmationForRouteOnlyWalk() {
+        let recording = WalkRecording(title: "Walk", mode: .walk)
+
+        #expect(recording.deleteConfirmationMessage == "This permanently removes the recording and its route.")
+    }
 }
 
 @MainActor
