@@ -72,6 +72,12 @@ See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
 Finished video walks are saved to the user's Photos library when Photos access is available. Deleting an ASMR Walk recording removes the route and app metadata, but it does not delete the Photos video; older app-managed fallback video files are deleted with their recording.
 
+## Privacy
+
+ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, and video references stay on the device unless the user saves video to Photos or explicitly exports/shares a route.
+
+See `PRIVACY_POLICY.md` for the public privacy-policy source. Before App Store submission, publish that policy at a stable URL and enter the URL in App Store Connect.
+
 ## Running
 
 1. Open the project in Xcode.

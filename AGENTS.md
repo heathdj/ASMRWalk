@@ -29,6 +29,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode; all enablement decisions should flow through `BackgroundRecordingPolicy`.
 - Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
 - Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
+- Version 1 is local-first with no developer-operated backend, accounts, analytics, advertising, or sync; App Privacy answers should be based on actual off-device collection, not protected APIs used only on device.
 
 ## Conventions
 
@@ -43,6 +44,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Permission prompts should follow explicit user intent; opening a tab may refresh authorization status but must not request camera, microphone, location, or Photos access.
 - Background GPS decisions must stay centralized in `BackgroundRecordingPolicy`; Video Walk should remain foreground-only even when the user's Background GPS Recording setting is enabled.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
+- User-initiated exports and share links are not background collection by ASMR Walk, but privacy policy and review notes must explain what route data they contain.
 
 ## Build And Run
 
@@ -63,3 +65,4 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.
 - Delete messaging must distinguish Photos-backed videos, which remain in Photos, from app-managed fallback video files, which are removed with the recording.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.
+- Adding analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any app-owned network upload requires revisiting `PrivacyInfo.xcprivacy`, App Privacy answers, and `PRIVACY_POLICY.md`.

@@ -241,6 +241,12 @@ The Photos prompts used to say the same generic thing for both add and read acce
 
 This is a small copy change with real review weight. Privacy strings are not marketing taglines; they are the labels on the permission keys. If the key opens Photos for saving, say saving. If it opens Photos for replay, say replay.
 
+### Local-First Means Label What Actually Leaves
+
+App Privacy labels are easy to overstate when an app touches sensitive APIs. ASMR Walk uses location, camera, microphone, and Photos, but version 1 does not run a developer backend, analytics pipeline, account system, ad network, or sync service. The important distinction is access versus collection.
+
+Routes and metadata live on the phone. Videos usually live in the user's Photos library. Data leaves ASMR Walk only when the user chooses to share a GPX file, open a Google Maps route link, or when Apple frameworks such as Photos do their own system-level work based on the user's settings. The release checklist now treats privacy review like checking a valve: verify what actually flows off device before declaring anything collected.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

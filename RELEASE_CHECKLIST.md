@@ -25,6 +25,8 @@ Use this before uploading `1.0` to App Store Connect.
 ## Build And Test
 
 - [ ] Run a clean Release build.
+- [ ] Archive the app and generate Xcode's privacy report from the archive.
+- [ ] Confirm the privacy report shows no tracking and no app-declared collected data.
 - [ ] Run unit tests.
 - [ ] Run UI tests.
 - [ ] Confirm the native launch screen appears correctly.
@@ -72,7 +74,15 @@ Run these on a physical iPhone before submission:
 
 ## App Store Connect
 
-- [ ] Complete privacy nutrition labels for foreground/background location, camera, microphone, Photos, and user-generated content.
+- [ ] Publish `PRIVACY_POLICY.md` at a public, stable URL.
+- [ ] Enter the public privacy-policy URL in App Store Connect.
+- [ ] Complete App Privacy answers from actual off-device collection, not simply from protected APIs used on device.
+- [ ] Confirm ASMR Walk does not collect data on developer-operated servers in version 1.
+- [ ] Confirm App Privacy answers disclose no tracking.
+- [ ] Confirm App Privacy answers do not mark locally stored routes, videos, Photos references, camera input, microphone input, or location as developer-collected data unless a future upload, analytics, sync, or backend feature is added.
+- [ ] Document network behavior: no direct app-owned network calls, no analytics SDK, no account backend, no CloudKit sync.
+- [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
+- [ ] Document Apple framework behavior separately: Photos may resolve iCloud-backed video assets depending on the user's Photos settings.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
@@ -80,6 +90,7 @@ Run these on a physical iPhone before submission:
 - [ ] Mention that video walks are saved to the user's Photos library.
 - [ ] Mention that deleting an ASMR Walk recording does not delete the Photos video.
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
+- [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any other off-device collection.
 
 ## Known Version 1 Scope
 
