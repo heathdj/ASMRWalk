@@ -434,6 +434,112 @@ struct WalkRecordingTests {
         #expect(try context.fetchCount(FetchDescriptor<LocationPoint>()) == 0)
     }
 
+    @Test("Persistence checkpoints append only new route points")
+    func persistenceCheckpointsAppendOnlyNewPoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "E94C5F79-B21C-4687-9345-D640978534E1"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 30,
+            distanceMeters: 90,
+            pointCount: 10
+        )
+        let secondCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 60,
+            distanceMeters: 180,
+            pointCount: 15
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(secondCheckpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 15)
+        #expect(recording.duration == 60)
+        #expect(recording.distanceMeters == 180)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == secondCheckpoint.points.map(\.timestamp))
+    }
+
+    @Test("Repeated persistence checkpoints do not duplicate points")
+    func repeatedPersistenceCheckpointsDoNotDuplicatePoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "5E19B546-9E52-4C93-9086-4C263FB8384D"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let checkpoint = makeSnapshot(
+            id: recordingID,
+            duration: 45,
+            distanceMeters: 135,
+            pointCount: 12
+        )
+
+        try await persistence.save(checkpoint)
+        try await persistence.save(checkpoint)
+        try await persistence.save(checkpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 12)
+        #expect(Set(recording.points.map(\.timestamp)).count == 12)
+    }
+
+    @Test("Final persistence save retains all points after partial checkpoints")
+    func finalPersistenceSaveRetainsAllPointsAfterPartialCheckpoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "8F23B3D8-6911-4193-A558-D52704386507"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 120,
+            distanceMeters: 360,
+            pointCount: 40
+        )
+        let finalSnapshot = makeSnapshot(
+            id: recordingID,
+            title: "Finished Walk",
+            duration: 180,
+            distanceMeters: 540,
+            pointCount: 75
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(finalSnapshot)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Finished Walk")
+        #expect(recording.points.count == 75)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == finalSnapshot.points.map(\.timestamp))
+    }
+
+    @Test("Persistence updates metadata without rewriting existing points")
+    func persistenceUpdatesMetadataWithoutRewritingExistingPoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "2823E0B3-0866-43EA-A1D9-9404C28A0201"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 30,
+            distanceMeters: 90,
+            pointCount: 8
+        )
+        let metadataOnlyCheckpoint = makeSnapshot(
+            id: recordingID,
+            title: "Updated Metadata",
+            duration: 75,
+            distanceMeters: 90,
+            pointCount: 8
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(metadataOnlyCheckpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Updated Metadata")
+        #expect(recording.duration == 75)
+        #expect(recording.points.count == 8)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == metadataOnlyCheckpoint.points.map(\.timestamp))
+    }
+
     @Test("Sample data contains both recording modes")
     func sampleData() {
         #expect(SampleData.recordings.count == 2)
@@ -556,5 +662,43 @@ struct WalkRecordingTests {
             horizontalAccuracy: horizontalAccuracy,
             speed: speed
         )
+    }
+
+    private func makeSnapshot(
+        id: UUID,
+        title: String = "Checkpoint Walk",
+        createdAt: Date = Date(timeIntervalSince1970: 1_000),
+        duration: TimeInterval,
+        distanceMeters: Double,
+        pointCount: Int
+    ) -> WalkRecordingSnapshot {
+        WalkRecordingSnapshot(
+            id: id,
+            title: title,
+            createdAt: createdAt,
+            duration: duration,
+            distanceMeters: distanceMeters,
+            mode: .walk,
+            points: (0..<pointCount).map { index in
+                LocationPointSnapshot(
+                    timestamp: createdAt.addingTimeInterval(TimeInterval(index)),
+                    latitude: 33.4484 + (Double(index) * 0.0001),
+                    longitude: -112.0740 + (Double(index) * 0.0001),
+                    altitude: nil,
+                    horizontalAccuracy: 5,
+                    speed: 1.2
+                )
+            }
+        )
+    }
+
+    private func fetchRecording(id: UUID, in container: ModelContainer) throws -> WalkRecording? {
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<WalkRecording>(
+            predicate: #Predicate { recording in
+                recording.id == id
+            }
+        )
+        return try context.fetch(descriptor).first
     }
 }

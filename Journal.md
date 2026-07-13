@@ -247,6 +247,12 @@ App Privacy labels are easy to overstate when an app touches sensitive APIs. ASM
 
 Routes and metadata live on the phone. Videos usually live in the user's Photos library. Data leaves ASMR Walk only when the user chooses to share a GPX file, open a Google Maps route link, or when Apple frameworks such as Photos do their own system-level work based on the user's settings. The release checklist now treats privacy review like checking a valve: verify what actually flows off device before declaring anything collected.
 
+### Checkpoints Learned to Stop Recopying the Trail
+
+The first persistence pass treated every checkpoint like a full rewrite: delete all saved route points, then recreate the entire trail from the latest snapshot. That is simple, but it gets more expensive with every block walked. A long route turns each save into a bigger chore than the last one.
+
+`WalkRecordingPersistence` now treats checkpoints like adding pages to a notebook. Metadata still updates every time, but route points are append-only: if 40 points are already saved and the live snapshot has 75, only points 41 through 75 are inserted. Re-saving the same checkpoint adds nothing, which keeps retries from duplicating points and gives interruption recovery the same final-save path.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

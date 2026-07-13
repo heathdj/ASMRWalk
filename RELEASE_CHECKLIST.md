@@ -49,6 +49,7 @@ Run these on a physical iPhone before submission:
 - [ ] Enable Background GPS Recording but deny Always location permission, then confirm the app explains the permission requirement and does not pretend to record in the background.
 - [ ] Enable Background GPS Recording, start a Video Walk, background the app, and confirm Video Walk stops instead of continuing background GPS/video capture.
 - [ ] Disable Background GPS Recording, start a GPS-only walk, background the app, and confirm the walk finalizes instead of continuing in the background.
+- [ ] Record a long GPS route on device and confirm repeated checkpoints do not create duplicates or noticeably increase battery/database cost as the route grows.
 - [ ] Confirm Walk map opens near the user's current location at street level.
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
 - [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
