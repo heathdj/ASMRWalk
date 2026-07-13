@@ -45,12 +45,40 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testWalkPermissionDeniedShowsSettingsRecovery() {
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_DENIED_LOCATION": "1"])
+
+        app.tabBars.buttons["Walk"].tap()
+
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        let status = app.descendants(matching: .any)["walk.status"]
+        XCTAssertTrue(status.exists)
+        XCTAssertTrue(status.label.contains("Location access needed"))
+        XCTAssertTrue(app.buttons["permissions.openSettings"].exists)
+        XCTAssertFalse(app.buttons["walk.startButton"].isEnabled)
+    }
+
+    @MainActor
     func testVideoWalkTabShowsReadyStateAndControls() {
         app.tabBars.buttons["Video Walk"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.screen"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.descendants(matching: .any)["videoWalk.status"].exists)
         XCTAssertTrue(app.buttons["videoWalk.startButton"].exists)
+    }
+
+    @MainActor
+    func testVideoWalkPermissionDeniedShowsSettingsRecovery() {
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY": "1"])
+
+        app.tabBars.buttons["Video Walk"].tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["videoWalk.screen"].waitForExistence(timeout: 2))
+        let status = app.descendants(matching: .any)["videoWalk.status"]
+        XCTAssertTrue(status.exists)
+        XCTAssertTrue(status.label.contains("Privacy access needed"))
+        XCTAssertTrue(app.buttons["permissions.openSettings"].exists)
+        XCTAssertFalse(app.buttons["videoWalk.startButton"].isEnabled)
     }
 
     @MainActor
@@ -138,10 +166,19 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     private func launchWithActiveRecording(mode: String, showsVideoRecordingIndicator: Bool = false) {
+        launchWithEnvironment([
+            "ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE": mode,
+            "ASMR_WALK_UI_TEST_SHOW_VIDEO_RECORDING_INDICATOR": showsVideoRecordingIndicator ? "1" : "0"
+        ])
+    }
+
+    private func launchWithEnvironment(_ environment: [String: String]) {
         app.terminate()
+        app.launchEnvironment = [:]
         app.launchEnvironment["ASMR_WALK_UI_TEST_SKIP_ONBOARDING"] = "1"
-        app.launchEnvironment["ASMR_WALK_UI_TEST_ACTIVE_RECORDING_MODE"] = mode
-        app.launchEnvironment["ASMR_WALK_UI_TEST_SHOW_VIDEO_RECORDING_INDICATOR"] = showsVideoRecordingIndicator ? "1" : "0"
+        for (key, value) in environment {
+            app.launchEnvironment[key] = value
+        }
         app.launch()
     }
 }

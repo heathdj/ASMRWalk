@@ -31,7 +31,7 @@ struct WalkRecorderView: View {
                     )
                     .accessibilityIdentifier(AccessibilityID.walkStatus)
 
-                    if recorder.isLocationAccessDenied {
+                    if isLocationAccessDenied {
                         openSettingsButton(label: "Open Location Settings")
                     }
 
@@ -144,11 +144,17 @@ struct WalkRecorderView: View {
     }
 
     private var statusTitle: String {
-        isBlockedByVideoWalk ? "Video walk recording" : recorder.statusTitle
+        if Self.shouldShowDeniedLocationForUITests {
+            return "Location access needed"
+        }
+        return isBlockedByVideoWalk ? "Video walk recording" : recorder.statusTitle
     }
 
     private var statusDetail: String {
-        isBlockedByVideoWalk ? "Finish the active video walk before starting a GPS walk." : recorder.statusDetail
+        if Self.shouldShowDeniedLocationForUITests {
+            return "Enable location access in Settings to record a route."
+        }
+        return isBlockedByVideoWalk ? "Finish the active video walk before starting a GPS walk." : recorder.statusDetail
     }
 
     private var recordingButtonTitle: String {
@@ -166,7 +172,19 @@ struct WalkRecorderView: View {
     }
 
     private var isRecordingButtonDisabled: Bool {
-        recorder.phase == .saving || (isRecordingWalk == false && isBlockedByVideoWalk == false && recorder.isLocationAccessDenied)
+        recorder.phase == .saving || (isRecordingWalk == false && isBlockedByVideoWalk == false && isLocationAccessDenied)
+    }
+
+    private var isLocationAccessDenied: Bool {
+        recorder.isLocationAccessDenied || Self.shouldShowDeniedLocationForUITests
+    }
+
+    private static var shouldShowDeniedLocationForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_LOCATION"] == "1"
+        #else
+        false
+        #endif
     }
 
     private func openSettingsButton(label: String) -> some View {

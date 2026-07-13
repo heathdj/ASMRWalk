@@ -8,6 +8,24 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+enum VideoWalkStopOutcome: Equatable {
+    case savedToPhotos(assetIdentifier: String, localVideoURL: URL)
+    case keptLocalVideo(videoURL: URL, message: String)
+    case discarded(message: String)
+
+    static func photosSaveSucceeded(assetIdentifier: String, localVideoURL: URL) -> Self {
+        .savedToPhotos(assetIdentifier: assetIdentifier, localVideoURL: localVideoURL)
+    }
+
+    static func photosSaveFailed(videoURL: URL, error: Error) -> Self {
+        .keptLocalVideo(videoURL: videoURL, message: error.localizedDescription)
+    }
+
+    static func stopFailed(error: Error) -> Self {
+        .discarded(message: error.localizedDescription)
+    }
+}
+
 struct VideoWalkView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
@@ -49,7 +67,7 @@ struct VideoWalkView: View {
                     } else if shouldShowRecordingIndicator {
                         recordingIndicator
                     }
-                    if camera.isPermissionDenied || walkRecorder.isLocationAccessDenied {
+                    if isPrivacyAccessDenied {
                         openSettingsButton
                     }
                     Spacer()
@@ -201,6 +219,9 @@ struct VideoWalkView: View {
         if isBlockedByWalk {
             return "GPS walk recording"
         }
+        if Self.shouldShowDeniedVideoPrivacyForUITests {
+            return "Privacy access needed"
+        }
         if isRecordingVideoWalk {
             return "Recording video walk"
         }
@@ -213,6 +234,10 @@ struct VideoWalkView: View {
     private var statusDetail: String {
         if isBlockedByWalk {
             return "Finish the active GPS walk before starting a video walk."
+        }
+
+        if Self.shouldShowDeniedVideoPrivacyForUITests {
+            return "Enable camera, microphone, and location access in Settings to record a video walk."
         }
 
         if camera.needsPermissionRequest, walkRecorder.authorizationStatus == .notDetermined {
@@ -263,12 +288,26 @@ struct VideoWalkView: View {
     }
 
     private var isRecordingButtonDisabled: Bool {
-        isStopping || (isBlockedByWalk == false && (camera.isPermissionDenied || walkRecorder.isLocationAccessDenied))
+        isStopping || (isBlockedByWalk == false && isPrivacyAccessDenied)
+    }
+
+    private var isPrivacyAccessDenied: Bool {
+        camera.isPermissionDenied
+            || walkRecorder.isLocationAccessDenied
+            || Self.shouldShowDeniedVideoPrivacyForUITests
     }
 
     private static var shouldShowRecordingIndicatorForUITests: Bool {
         #if DEBUG
         ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_SHOW_VIDEO_RECORDING_INDICATOR"] == "1"
+        #else
+        false
+        #endif
+    }
+
+    private static var shouldShowDeniedVideoPrivacyForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY"] == "1"
         #else
         false
         #endif
@@ -329,17 +368,14 @@ struct VideoWalkView: View {
                 do {
                     camera.reportMessage(PhotoLibraryVideoStore.saveAccessExplanation)
                     let assetIdentifier = try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: videoURL)
-                    walkRecorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
-                    try? FileManager.default.removeItem(at: videoURL)
-                    camera.reportMessage("Video walk saved to Photos.")
+                    apply(VideoWalkStopOutcome.photosSaveSucceeded(assetIdentifier: assetIdentifier, localVideoURL: videoURL))
                 } catch {
-                    walkRecorder.attachVideo(at: videoURL)
-                    camera.report(error)
+                    apply(VideoWalkStopOutcome.photosSaveFailed(videoURL: videoURL, error: error))
                 }
                 UIApplication.shared.isIdleTimerDisabled = false
             } catch {
                 UIApplication.shared.isIdleTimerDisabled = false
-                camera.report(error)
+                apply(VideoWalkStopOutcome.stopFailed(error: error))
                 await coordinator.discard()
                 if stopSessionWhenFinished {
                     walkRecorder.stopPreviewingLocation()
@@ -365,6 +401,20 @@ struct VideoWalkView: View {
                 }
             }
             isStopping = false
+        }
+    }
+
+    private func apply(_ outcome: VideoWalkStopOutcome) {
+        switch outcome {
+        case let .savedToPhotos(assetIdentifier, localVideoURL):
+            walkRecorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
+            try? FileManager.default.removeItem(at: localVideoURL)
+            camera.reportMessage("Video walk saved to Photos.")
+        case let .keptLocalVideo(videoURL, message):
+            walkRecorder.attachVideo(at: videoURL)
+            camera.reportMessage(message)
+        case let .discarded(message):
+            camera.reportMessage(message)
         }
     }
 

@@ -253,6 +253,12 @@ The first persistence pass treated every checkpoint like a full rewrite: delete 
 
 `WalkRecordingPersistence` now treats checkpoints like adding pages to a notebook. Metadata still updates every time, but route points are append-only: if 40 points are already saved and the live snapshot has 75, only points 41 through 75 are inserted. Re-saving the same checkpoint adds nothing, which keeps retries from duplicating points and gives interruption recovery the same final-save path.
 
+### Tests Need Handles, Not Luck
+
+The riskiest release flows live at the edge of iOS: permission denial, Photos fallback, video stop failure, background location, and interruptions. Some of that can only be proven on a phone, but a lot of it can be made deterministic if the app gives tests a clean handle.
+
+Issue 34 added those handles in small places. Video stop handling now has a pure outcome type that can be tested without a camera or Photos library. UI tests can launch into denied-permission states without changing real device settings. The goal is not to fake the whole operating system; it is to make ASMR Walk's response to each operating-system answer predictable and covered.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

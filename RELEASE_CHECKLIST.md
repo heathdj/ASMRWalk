@@ -41,6 +41,8 @@ Use this before uploading `1.0` to App Store Connect.
 
 Run these on a physical iPhone before submission:
 
+### Physical Device Only
+
 - [ ] Start and save a GPS-only walk.
 - [ ] Stop a GPS-only walk before 10 seconds and confirm Save/Discard behavior.
 - [ ] Deny location permission and confirm the app shows a Settings recovery button.
@@ -72,6 +74,11 @@ Run these on a physical iPhone before submission:
 - [ ] Export a GPX file through the share sheet.
 - [ ] Inspect an exported GPX file and confirm ASMR Walk extensions include duration, recording mode, `hasVideo`, recording ID, horizontal accuracy, and speed when available.
 - [ ] Confirm exported GPX does not include local sandbox video URLs.
+
+### Automated Coverage Gate
+
+- [ ] Confirm Swift Testing covers permission policy, concurrent recording prevention, video stop outcomes, Photos fallback semantics, checkpoint recovery, and large-route persistence.
+- [ ] Confirm XCUI tests cover permission recovery surfaces and active-recording cross-tab behavior with deterministic launch environment hooks.
 
 ## App Store Connect
 

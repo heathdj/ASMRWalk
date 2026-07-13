@@ -46,6 +46,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Background GPS decisions must stay centralized in `BackgroundRecordingPolicy`; Video Walk should remain foreground-only even when the user's Background GPS Recording setting is enabled.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 - User-initiated exports and share links are not background collection by ASMR Walk, but privacy policy and review notes must explain what route data they contain.
+- High-risk release flows should have deterministic Swift Testing or XCUI coverage when possible; physical-device-only behavior belongs in `RELEASE_CHECKLIST.md`.
 
 ## Build And Run
 

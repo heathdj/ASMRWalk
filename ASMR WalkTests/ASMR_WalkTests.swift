@@ -115,6 +115,42 @@ struct ASMR_WalkTests {
         #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("replay them with your route"))
     }
 
+    @Test("Video stop outcome records Photos success")
+    func videoStopOutcomePhotosSuccess() throws {
+        let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
+        let outcome = VideoWalkStopOutcome.photosSaveSucceeded(
+            assetIdentifier: "photos-asset",
+            localVideoURL: videoURL
+        )
+
+        #expect(outcome == .savedToPhotos(assetIdentifier: "photos-asset", localVideoURL: videoURL))
+    }
+
+    @Test("Video stop outcome records Photos fallback")
+    func videoStopOutcomePhotosFallback() throws {
+        let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
+        let error = NSError(
+            domain: "PhotoSave",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Photos unavailable"]
+        )
+        let outcome = VideoWalkStopOutcome.photosSaveFailed(videoURL: videoURL, error: error)
+
+        #expect(outcome == .keptLocalVideo(videoURL: videoURL, message: "Photos unavailable"))
+    }
+
+    @Test("Video stop outcome records stop failure discard")
+    func videoStopOutcomeStopFailure() throws {
+        let error = NSError(
+            domain: "VideoStop",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Video file missing"]
+        )
+        let outcome = VideoWalkStopOutcome.stopFailed(error: error)
+
+        #expect(outcome == .discarded(message: "Video file missing"))
+    }
+
     @Test("Privacy usage descriptions are specific")
     func privacyUsageDescriptionsAreSpecific() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
@@ -509,6 +545,40 @@ struct WalkRecordingTests {
         #expect(recording.title == "Finished Walk")
         #expect(recording.points.count == 75)
         #expect(recording.pointsInTimeOrder.map(\.timestamp) == finalSnapshot.points.map(\.timestamp))
+    }
+
+    @Test("Final persistence save recovers points after a missed checkpoint")
+    func finalPersistenceSaveRecoversPointsAfterMissedCheckpoint() async throws {
+        let recordingID = try #require(UUID(uuidString: "9EB7066D-6430-4F2D-9639-A91E0505D294"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 120,
+            distanceMeters: 360,
+            pointCount: 40
+        )
+        _ = makeSnapshot(
+            id: recordingID,
+            duration: 150,
+            distanceMeters: 450,
+            pointCount: 60
+        )
+        let finalSnapshot = makeSnapshot(
+            id: recordingID,
+            duration: 210,
+            distanceMeters: 630,
+            pointCount: 90
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(finalSnapshot)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 90)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == finalSnapshot.points.map(\.timestamp))
+        #expect(recording.duration == 210)
+        #expect(recording.distanceMeters == 630)
     }
 
     @Test("Persistence updates metadata without rewriting existing points")
