@@ -2,8 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>ASMR Walk uses the camera to record video walks.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>ASMR Walk uses background location only when you enable background GPS recording for walks.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ASMR Walk uses your location while recording to draw and save your walking route.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ASMR Walk uses the microphone to record video walks.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>ASMR Walk saves finished video walks to Photos so they remain available outside the app.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ASMR Walk reads saved video walks from Photos so you can replay them with your route.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

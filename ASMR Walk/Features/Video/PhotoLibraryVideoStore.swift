@@ -9,7 +9,7 @@ import Photos
 
 enum PhotoLibraryVideoStore {
     static let saveAccessExplanation = "ASMR Walk saves finished video walks to Photos so they remain available outside the app."
-    static let readAccessExplanation = "ASMR Walk reads saved video walks from Photos so you can play them with your route."
+    static let readAccessExplanation = "ASMR Walk reads saved video walks from Photos so you can replay them with your route."
 
     enum StoreError: LocalizedError {
         case missingAddUsageDescription

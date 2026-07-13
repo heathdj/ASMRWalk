@@ -235,6 +235,12 @@ Video walks now have a split ownership model. The route, stats, and playback ref
 
 The delete dialog now says that plainly. Photos-backed videos remain in Photos, while older app-managed fallback files are removed with their recording. The behavior did not change; the promise finally matches the machinery.
 
+### Privacy Strings Need Separate Jobs
+
+The Photos prompts used to say the same generic thing for both add and read access. That is not precise enough. Saving a finished video walk to Photos and reading that video back for route replay are different user moments, so the usage descriptions now say different things.
+
+This is a small copy change with real review weight. Privacy strings are not marketing taglines; they are the labels on the permission keys. If the key opens Photos for saving, say saving. If it opens Photos for replay, say replay.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

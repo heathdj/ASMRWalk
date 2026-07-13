@@ -55,6 +55,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - GPS background recording is supported only when the user enables it, starts a GPS Walk, and grants Always location permission.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - Photos save/playback needs `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
+- Photos add and read usage strings must stay distinct: add-only explains saving finished video walks to Photos, read explains replaying saved video walks with routes.
 - Background GPS recording needs `NSLocationAlwaysAndWhenInUseUsageDescription` and `UIBackgroundModes` containing `location`.
 - DockKit support is guarded with `#if canImport(DockKit)` so local SDKs without the framework still build; real accessory behavior must be verified on an iPhone and SDK that expose DockKit.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.

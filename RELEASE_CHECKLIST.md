@@ -18,6 +18,9 @@ Use this before uploading `1.0` to App Store Connect.
   - [ ] `NSPhotoLibraryAddUsageDescription`
   - [ ] `NSPhotoLibraryUsageDescription`
 - [ ] Confirm the generated Info settings, not just `ASMR-Walk-Info.plist`, contain the privacy strings used at runtime.
+- [ ] Confirm archived `Info.plist` Photos add text explains saving finished video walks to Photos.
+- [ ] Confirm archived `Info.plist` Photos read text explains replaying saved video walks with routes.
+- [ ] Confirm archived `Info.plist` location, camera, microphone, and Photos strings use sentence case and ending punctuation.
 
 ## Build And Test
 

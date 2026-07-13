@@ -112,6 +112,27 @@ struct ASMR_WalkTests {
     func photoLibraryPermissionExplanations() {
         #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
         #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
+        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("replay them with your route"))
+    }
+
+    @Test("Privacy usage descriptions are specific")
+    func privacyUsageDescriptionsAreSpecific() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let infoPlistURL = projectRoot.appending(path: "ASMR-Walk-Info.plist")
+        let infoPlistData = try Data(contentsOf: infoPlistURL)
+        let infoPlist = try #require(PropertyListSerialization.propertyList(
+            from: infoPlistData,
+            format: nil
+        ) as? [String: Any])
+
+        #expect(infoPlist["NSLocationWhenInUseUsageDescription"] as? String == "ASMR Walk uses your location while recording to draw and save your walking route.")
+        #expect(infoPlist["NSLocationAlwaysAndWhenInUseUsageDescription"] as? String == "ASMR Walk uses background location only when you enable background GPS recording for walks.")
+        #expect(infoPlist["NSCameraUsageDescription"] as? String == "ASMR Walk uses the camera to record video walks.")
+        #expect(infoPlist["NSMicrophoneUsageDescription"] as? String == "ASMR Walk uses the microphone to record video walks.")
+        #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves finished video walks to Photos so they remain available outside the app.")
+        #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads saved video walks from Photos so you can replay them with your route.")
     }
 
     @Test("Delete confirmation explains Photos video ownership")

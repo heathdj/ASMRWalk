@@ -55,11 +55,16 @@ Before running recording features, confirm the app target includes these generat
 - `Privacy - Camera Usage Description`
 - `Privacy - Microphone Usage Description`
 
-Suggested camera/microphone text:
+Expected privacy strings:
 
-```text
-ASMR Walk uses the camera and microphone to record video walks.
-```
+| Key | Value |
+| --- | --- |
+| `NSLocationWhenInUseUsageDescription` | ASMR Walk uses your location while recording to draw and save your walking route. |
+| `NSLocationAlwaysAndWhenInUseUsageDescription` | ASMR Walk uses background location only when you enable background GPS recording for walks. |
+| `NSCameraUsageDescription` | ASMR Walk uses the camera to record video walks. |
+| `NSMicrophoneUsageDescription` | ASMR Walk uses the microphone to record video walks. |
+| `NSPhotoLibraryAddUsageDescription` | ASMR Walk saves finished video walks to Photos so they remain available outside the app. |
+| `NSPhotoLibraryUsageDescription` | ASMR Walk reads saved video walks from Photos so you can replay them with your route. |
 
 iOS will terminate the app if camera or microphone capture is requested without those usage-description keys.
 
