@@ -34,6 +34,11 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Confirm there is no artificial in-app splash delay after launch.
 - [ ] Confirm Settings tab opens.
 - [ ] Confirm Light, Dark, and System theme settings apply app-wide.
+- [ ] Confirm Walk, Video Walk, active recording banner, History, and Settings remain usable in light and dark appearance.
+- [ ] Confirm Walk and Video Walk keep essential controls visible at accessibility Dynamic Type sizes.
+- [ ] Confirm Walk and Video Walk keep essential controls visible with Button Shapes enabled.
+- [ ] Confirm Walk and Video Walk keep essential controls visible with Reduce Transparency enabled.
+- [ ] Confirm Walk and Video Walk keep essential controls visible with Increase Contrast enabled.
 - [ ] Confirm Background GPS Recording defaults off.
 - [ ] Confirm Background GPS Recording is described as GPS Walk only and does not imply background video recording.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
@@ -57,6 +62,7 @@ Run these on a physical iPhone before submission:
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
 - [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
 - [ ] Open Video Walk and confirm the tab is landscape-only, never portrait.
+- [ ] Inspect Video Walk in landscape with accessibility Dynamic Type sizes and confirm the square route map does not overlap the REC indicator, status card, or start control.
 - [ ] Start and save a video walk.
 - [ ] Stop a video walk before 10 seconds and confirm Save/Discard behavior.
 - [ ] Confirm the screen stays awake only while video recording is active.
@@ -69,6 +75,8 @@ Run these on a physical iPhone before submission:
 - [ ] Confirm delete messaging states legacy/app-managed fallback videos are removed with their recording.
 - [ ] Deny camera or microphone permission and confirm the app shows a Settings recovery button.
 - [ ] Deny Photos permission and confirm video recording fails gracefully or falls back without crashing.
+- [ ] Run VoiceOver through Walk, Video Walk, and the active recording banner and confirm recording state is understandable without relying on color.
+- [ ] Run Accessibility Inspector on Walk, Video Walk, History, and Settings. Resolve or document any remaining issues.
 - [ ] Open a saved video walk and confirm playback plus route overlay works.
 - [ ] Delete a video walk and confirm the app recording is removed. Photos-library videos are user-owned and should remain in Photos unless a separate delete-from-Photos feature is added.
 - [ ] Export a Google Maps URL.
@@ -79,7 +87,7 @@ Run these on a physical iPhone before submission:
 ### Automated Coverage Gate
 
 - [ ] Confirm Swift Testing covers permission policy, concurrent recording prevention, video stop outcomes, Photos fallback semantics, checkpoint recovery, and large-route persistence.
-- [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, and active-recording cross-tab behavior with deterministic launch environment hooks.
+- [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect
 

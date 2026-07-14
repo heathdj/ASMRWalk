@@ -265,6 +265,12 @@ UI tests were walking into the app like regular returning users and hoping the s
 
 The fix gives tests a proper key to the front door. In DEBUG builds, a launch environment value can seed onboarding as either `completed` or `firstLaunch` before SwiftUI reads `@AppStorage`. Returning-user tests now say "I am a returning user" before launch, while one dedicated test says "show me first launch" and verifies the tour. The onboarding pages also carry explicit accessibility identifiers, because test handles should be door labels, not guesses about how SwiftUI exposes combined text. The simulator's memory is no longer part of the contract.
 
+### Accessibility Is a Weather Report
+
+The recording screens are built on maps, camera previews, glass panels, and compact controls. That looks good in the default forecast, but accessibility settings change the weather: Dynamic Type makes text taller, Reduce Transparency weakens glass, Increase Contrast demands stronger edges, and VoiceOver needs state to be spoken instead of merely colored green or red.
+
+The shared status card and active-recording banner now adapt instead of squeezing. They can reflow from horizontal to vertical, use more solid panel backgrounds when transparency or contrast settings call for it, and expose explicit labels for recording state, time, and distance. Video Walk keeps its route map square, but sizes it from the available landscape space so it gives room back to `REC`, status, and controls on smaller screens. The UI tests also gained an accessibility QA launch mode: not a replacement for Accessibility Inspector, but a repeatable smoke test that says the essentials still have handles when the adaptive surfaces are active.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

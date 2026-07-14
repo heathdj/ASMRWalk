@@ -30,6 +30,9 @@ struct VideoWalkView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var camera = VideoCaptureService()
     @State private var dockKitAccessory = DockKitAccessoryService()
@@ -40,7 +43,8 @@ struct VideoWalkView: View {
     @State private var isShowingShortRecordingConfirmation = false
     @State private var shouldStopSessionAfterShortConfirmation = false
 
-    private let routeMapSize: CGFloat = 220
+    private let maximumRouteMapSize: CGFloat = 220
+    private let minimumRouteMapSize: CGFloat = 128
 
     var body: some View {
         ZStack {
@@ -53,37 +57,16 @@ struct VideoWalkView: View {
                 .ignoresSafeArea()
 
             LinearGradient(
-                colors: [.black.opacity(0.5), .clear, .black.opacity(0.65)],
+                colors: gradientColors,
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
             .allowsHitTesting(false)
 
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    if shouldShowStatusCard {
-                        statusCard
-                    } else if shouldShowRecordingIndicator {
-                        recordingIndicator
-                    }
-                    if isPrivacyAccessDenied {
-                        openSettingsButton
-                    }
-                    Spacer()
-                }
-
-                Spacer()
-
-                VStack(spacing: 16) {
-                    routeMap
-                    if isRecordingVideoWalk == false {
-                        recordingButton
-                    }
-                }
-                .frame(width: routeMapSize)
+            GeometryReader { proxy in
+                overlayLayout(availableSize: proxy.size)
             }
-            .padding()
         }
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
@@ -152,7 +135,7 @@ struct VideoWalkView: View {
             systemImage: isBlockedByWalk ? "figure.walk" : isRecordingVideoWalk ? "record.circle.fill" : "video.fill",
             accessibilityIdentifier: AccessibilityID.videoStatus
         )
-        .frame(maxWidth: 360)
+        .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 360, alignment: .leading)
     }
 
     private var shouldShowStatusCard: Bool {
@@ -164,7 +147,37 @@ struct VideoWalkView: View {
             .accessibilityIdentifier(AccessibilityID.videoRecordingIndicator)
     }
 
-    private var routeMap: some View {
+    private func overlayLayout(availableSize: CGSize) -> some View {
+        let mapSize = routeMapSize(for: availableSize)
+
+        return HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                if shouldShowStatusCard {
+                    statusCard
+                } else if shouldShowRecordingIndicator {
+                    recordingIndicator
+                }
+                if isPrivacyAccessDenied {
+                    openSettingsButton
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? availableSize.width * 0.54 : .infinity, alignment: .leading)
+
+            Spacer(minLength: 12)
+
+            VStack(spacing: 16) {
+                routeMap(size: mapSize)
+                if isRecordingVideoWalk == false {
+                    recordingButton
+                }
+            }
+            .frame(width: mapSize)
+        }
+        .padding()
+    }
+
+    private func routeMap(size: CGFloat) -> some View {
         Map(initialPosition: .userLocation(followsHeading: false, fallback: .automatic)) {
             UserAnnotation {
                 FacingLocationIndicator(headingDegrees: walkRecorder.headingDegrees)
@@ -176,10 +189,17 @@ struct VideoWalkView: View {
             }
         }
         .mapStyle(.standard(elevation: .realistic))
-        .frame(width: routeMapSize, height: routeMapSize)
+        .frame(width: size, height: size)
         .clipShape(.rect(cornerRadius: 20))
-        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    .primary.opacity(usesHighContrastSurfaces ? 0.45 : 0.18),
+                    lineWidth: usesHighContrastSurfaces ? 2 : 1
+                )
+        }
         .accessibilityLabel("Live walking route")
+        .accessibilityHint("Shows your current position and recorded route while video walk recording is available.")
     }
 
     private var recordingButton: some View {
@@ -259,6 +279,24 @@ struct VideoWalkView: View {
 
     private var walkRecorder: WalkRecorder {
         coordinator.recorder
+    }
+
+    private var gradientColors: [Color] {
+        if reduceTransparency || usesHighContrastSurfaces {
+            return [.black.opacity(0.72), .black.opacity(0.2), .black.opacity(0.78)]
+        }
+
+        return [.black.opacity(0.5), .clear, .black.opacity(0.65)]
+    }
+
+    private var usesHighContrastSurfaces: Bool {
+        colorSchemeContrast == .increased || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces
+    }
+
+    private func routeMapSize(for availableSize: CGSize) -> CGFloat {
+        let widthLimit = availableSize.width * (dynamicTypeSize.isAccessibilitySize ? 0.24 : 0.28)
+        let heightLimit = availableSize.height * (dynamicTypeSize.isAccessibilitySize ? 0.36 : 0.44)
+        return min(maximumRouteMapSize, max(minimumRouteMapSize, min(widthLimit, heightLimit)))
     }
 
     private var isRecordingVideoWalk: Bool {
@@ -428,6 +466,9 @@ struct VideoWalkView: View {
 }
 
 private struct PulsingRecordingIndicator: View {
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var isExpanded = false
 
     var body: some View {
@@ -450,10 +491,15 @@ private struct PulsingRecordingIndicator: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(.black.opacity(0.7), in: .capsule)
+        .background(indicatorBackgroundColor, in: .capsule)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Recording video")
+        .accessibilityValue("REC")
         .onAppear {
+            guard reduceMotion == false else {
+                isExpanded = false
+                return
+            }
             withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
                 isExpanded = true
             }
@@ -461,5 +507,15 @@ private struct PulsingRecordingIndicator: View {
         .onDisappear {
             isExpanded = false
         }
+    }
+
+    private var indicatorBackgroundColor: Color {
+        if reduceTransparency
+            || colorSchemeContrast == .increased
+            || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces {
+            return .black
+        }
+
+        return .black.opacity(0.7)
     }
 }

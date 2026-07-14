@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 enum AppTab: CaseIterable, Hashable {
     case history
@@ -72,6 +73,16 @@ enum AccessibilityID {
     static let showOnboardingButton = "settings.showOnboardingButton"
     static let aboutButton = "settings.aboutButton"
     static let aboutSheet = "settings.aboutSheet"
+}
+
+enum AccessibilityQALaunchConfiguration {
+    static var usesAdaptiveAccessibilitySurfaces: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_ACCESSIBILITY_QA"] == "1"
+        #else
+        false
+        #endif
+    }
 }
 
 struct ContentView: View {
@@ -206,6 +217,11 @@ struct ContentView: View {
 }
 
 private struct ActiveRecordingBanner: View {
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @ScaledMetric(relativeTo: .body) private var spacing = 12
+    @ScaledMetric(relativeTo: .body) private var padding = 12
+
     let mode: RecordingMode?
     let duration: TimeInterval
     let distanceMeters: Double
@@ -213,31 +229,23 @@ private struct ActiveRecordingBanner: View {
     let stopAction: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Button(action: returnAction) {
-                HStack(spacing: 12) {
-                    Image(systemName: systemImage)
-                        .font(.headline)
-                        .foregroundStyle(.green)
-                        .frame(width: 32, height: 32)
+        ViewThatFits(in: .horizontal) {
+            horizontalLayout
+            verticalLayout
+        }
+        .padding(padding)
+        .adaptivePanelBackground(
+            reduceTransparency: reduceTransparency || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces,
+            highContrast: colorSchemeContrast == .increased || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces,
+            cornerRadius: 20
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(AccessibilityID.activeRecordingBanner)
+    }
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-
-                        Text("\(duration.timerText) - \(distanceMeters.distanceText)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-
-                    Spacer(minLength: 0)
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier(AccessibilityID.activeRecordingReturnButton)
+    private var horizontalLayout: some View {
+        HStack(spacing: spacing) {
+            returnButton
 
             Button(stopTitle, systemImage: "stop.fill", action: stopAction)
                 .font(.subheadline.weight(.semibold))
@@ -245,10 +253,49 @@ private struct ActiveRecordingBanner: View {
                 .tint(.red)
                 .accessibilityIdentifier(AccessibilityID.activeRecordingStopButton)
         }
-        .padding(12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 20))
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier(AccessibilityID.activeRecordingBanner)
+    }
+
+    private var verticalLayout: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            returnButton
+
+            Button(stopTitle, systemImage: "stop.fill", action: stopAction)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .buttonStyle(.glassProminent)
+                .tint(.red)
+                .accessibilityIdentifier(AccessibilityID.activeRecordingStopButton)
+        }
+    }
+
+    private var returnButton: some View {
+        Button(action: returnAction) {
+            HStack(spacing: spacing) {
+                Image(systemName: systemImage)
+                    .font(.headline)
+                    .foregroundStyle(.green)
+                    .frame(width: 32, height: 32)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+
+                    Text("\(duration.timerText) - \(distanceMeters.distanceText)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                .fixedSize(horizontal: false, vertical: true)
+
+                Spacer(minLength: 0)
+            }
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(duration.timerText), \(distanceMeters.distanceText). Return to recording.")
+        .accessibilityIdentifier(AccessibilityID.activeRecordingReturnButton)
     }
 
     private var title: String {
@@ -284,6 +331,12 @@ private struct ActiveRecordingBanner: View {
 }
 
 struct RecordingStatusCard: View {
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @ScaledMetric(relativeTo: .body) private var spacing = 12
+    @ScaledMetric(relativeTo: .body) private var iconFrame = 44
+    @ScaledMetric(relativeTo: .body) private var cardPadding = 16
+
     let title: String
     let detail: String
     let systemImage: String
@@ -299,26 +352,80 @@ struct RecordingStatusCard: View {
     }
 
     private var cardContent: some View {
-        HStack(spacing: 12) {
+        ViewThatFits(in: .horizontal) {
+            horizontalLayout
+            verticalLayout
+        }
+        .padding(cardPadding)
+        .adaptivePanelBackground(
+            reduceTransparency: reduceTransparency || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces,
+            highContrast: colorSchemeContrast == .increased || AccessibilityQALaunchConfiguration.usesAdaptiveAccessibilitySurfaces,
+            cornerRadius: 20
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(title)
+        .accessibilityValue(detail)
+    }
+
+    private var horizontalLayout: some View {
+        HStack(spacing: spacing) {
             Image(systemName: systemImage)
                 .font(.title2)
                 .foregroundStyle(.green)
-                .frame(width: 44, height: 44)
+                .frame(width: iconFrame, height: iconFrame)
+                .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.headline)
-
-                Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            textContent
 
             Spacer()
         }
-            .padding()
-            .glassEffect(.regular, in: .rect(cornerRadius: 20))
-            .accessibilityElement(children: .combine)
+    }
+
+    private var verticalLayout: some View {
+        VStack(alignment: .leading, spacing: spacing) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .foregroundStyle(.green)
+                .frame(width: iconFrame, height: iconFrame)
+                .accessibilityHidden(true)
+
+            textContent
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var textContent: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.headline)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(detail)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func adaptivePanelBackground(
+        reduceTransparency: Bool,
+        highContrast: Bool,
+        cornerRadius: CGFloat
+    ) -> some View {
+        if reduceTransparency || highContrast {
+            self
+                .background(Color(uiColor: .secondarySystemBackground), in: .rect(cornerRadius: cornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(.primary.opacity(highContrast ? 0.4 : 0.18), lineWidth: highContrast ? 1.5 : 1)
+                }
+        } else {
+            self
+                .glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        }
     }
 }
 

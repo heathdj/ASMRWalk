@@ -104,6 +104,8 @@ struct WalkRecorderView: View {
             MapScaleView()
         }
         .ignoresSafeArea()
+        .accessibilityLabel("Live walking route")
+        .accessibilityHint("Shows your current position and recorded GPS route.")
     }
 
     private var recordingButton: some View {

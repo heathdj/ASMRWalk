@@ -169,6 +169,21 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testAccessibilityQASurfacesKeepRecordingControlsAvailable() {
+        launchReturningUser(environment: ["ASMR_WALK_UI_TEST_ACCESSIBILITY_QA": "1"])
+
+        openTab("Walk")
+        XCTAssertTrue(element("walk.screen").waitForExistence(timeout: 2))
+        XCTAssertTrue(element("walk.status").waitForExistence(timeout: 2))
+        XCTAssertTrue(element("walk.startButton").isEnabled)
+
+        openTab("Video Walk")
+        XCTAssertTrue(element("videoWalk.screen").waitForExistence(timeout: 2))
+        XCTAssertTrue(element("videoWalk.status").waitForExistence(timeout: 2))
+        XCTAssertTrue(element("videoWalk.startButton").exists)
+    }
+
+    @MainActor
     func testSettingsTabShowsThemeAndAbout() {
         launchReturningUser()
 
