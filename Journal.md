@@ -259,6 +259,12 @@ The riskiest release flows live at the edge of iOS: permission denial, Photos fa
 
 Issue 34 added those handles in small places. Video stop handling now has a pure outcome type that can be tested without a camera or Photos library. UI tests can launch into denied-permission states without changing real device settings. The goal is not to fake the whole operating system; it is to make ASMR Walk's response to each operating-system answer predictable and covered.
 
+### Onboarding Tests Need Their Own Front Door
+
+UI tests were walking into the app like regular returning users and hoping the simulator remembered that onboarding had already been completed. That works until someone runs on a clean simulator, deletes the app, changes test order, or lets CI start from a blank slate. Then the test asks for History and the app politely shows the first-run tour instead.
+
+The fix gives tests a proper key to the front door. In DEBUG builds, a launch environment value can seed onboarding as either `completed` or `firstLaunch` before SwiftUI reads `@AppStorage`. Returning-user tests now say "I am a returning user" before launch, while one dedicated test says "show me first launch" and verifies the tour. The onboarding pages also carry explicit accessibility identifiers, because test handles should be door labels, not guesses about how SwiftUI exposes combined text. The simulator's memory is no longer part of the contract.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

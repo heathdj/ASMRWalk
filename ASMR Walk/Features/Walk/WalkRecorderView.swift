@@ -27,9 +27,9 @@ struct WalkRecorderView: View {
                     RecordingStatusCard(
                         title: statusTitle,
                         detail: statusDetail,
-                        systemImage: isBlockedByVideoWalk ? "video.fill" : recorder.isRecording ? "location.fill.viewfinder" : "location.fill"
+                        systemImage: isBlockedByVideoWalk ? "video.fill" : recorder.isRecording ? "location.fill.viewfinder" : "location.fill",
+                        accessibilityIdentifier: AccessibilityID.walkStatus
                     )
-                    .accessibilityIdentifier(AccessibilityID.walkStatus)
 
                     if isLocationAccessDenied {
                         openSettingsButton(label: "Open Location Settings")
@@ -45,6 +45,7 @@ struct WalkRecorderView: View {
             }
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier(AccessibilityID.walkScreen)
             .onAppear {
                 if isBlockedByVideoWalk == false {
                     recorder.refreshAuthorizationStatus()

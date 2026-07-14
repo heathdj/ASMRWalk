@@ -149,10 +149,10 @@ struct VideoWalkView: View {
         RecordingStatusCard(
             title: statusTitle,
             detail: statusDetail,
-            systemImage: isBlockedByWalk ? "figure.walk" : isRecordingVideoWalk ? "record.circle.fill" : "video.fill"
+            systemImage: isBlockedByWalk ? "figure.walk" : isRecordingVideoWalk ? "record.circle.fill" : "video.fill",
+            accessibilityIdentifier: AccessibilityID.videoStatus
         )
         .frame(maxWidth: 360)
-        .accessibilityIdentifier(AccessibilityID.videoStatus)
     }
 
     private var shouldShowStatusCard: Bool {

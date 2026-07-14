@@ -43,6 +43,9 @@ enum AppTab: CaseIterable, Hashable {
 
 enum AccessibilityID {
     static let onboardingScreen = "onboarding.screen"
+    static let onboardingWalkPage = "onboarding.page.walk"
+    static let onboardingVideoWalkPage = "onboarding.page.videoWalk"
+    static let onboardingHistoryPage = "onboarding.page.history"
     static let onboardingPrimaryButton = "onboarding.primaryButton"
     static let onboardingSkipButton = "onboarding.skipButton"
     static let historyEmptyState = "history.emptyState"
@@ -52,6 +55,7 @@ enum AccessibilityID {
     static let videoPlayback = "history.videoPlayback"
     static let videoRouteOverlay = "history.videoRouteOverlay"
     static let openSettingsButton = "permissions.openSettings"
+    static let walkScreen = "walk.screen"
     static let walkStatus = "walk.status"
     static let startWalkButton = "walk.startButton"
     static let activeRecordingBanner = "recording.activeBanner"
@@ -283,8 +287,18 @@ struct RecordingStatusCard: View {
     let title: String
     let detail: String
     let systemImage: String
+    var accessibilityIdentifier: String? = nil
 
     var body: some View {
+        if let accessibilityIdentifier {
+            cardContent
+                .accessibilityIdentifier(accessibilityIdentifier)
+        } else {
+            cardContent
+        }
+    }
+
+    private var cardContent: some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.title2)
@@ -302,9 +316,9 @@ struct RecordingStatusCard: View {
 
             Spacer()
         }
-        .padding()
-        .glassEffect(.regular, in: .rect(cornerRadius: 20))
-        .accessibilityElement(children: .combine)
+            .padding()
+            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+            .accessibilityElement(children: .combine)
     }
 }
 

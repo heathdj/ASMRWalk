@@ -122,6 +122,17 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             .indigo
         }
     }
+
+    var accessibilityIdentifier: String {
+        switch self {
+        case .walk:
+            AccessibilityID.onboardingWalkPage
+        case .videoWalk:
+            AccessibilityID.onboardingVideoWalkPage
+        case .history:
+            AccessibilityID.onboardingHistoryPage
+        }
+    }
 }
 
 private struct OnboardingPageView: View {
@@ -157,6 +168,7 @@ private struct OnboardingPageView: View {
             Spacer(minLength: 24)
         }
         .padding(.vertical)
+        .accessibilityIdentifier(page.accessibilityIdentifier)
     }
 }
 

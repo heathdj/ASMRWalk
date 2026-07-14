@@ -29,6 +29,7 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Confirm the privacy report shows no tracking and no app-declared collected data.
 - [ ] Run unit tests.
 - [ ] Run UI tests.
+- [ ] Run UI tests on a clean simulator and confirm onboarding state is seeded by launch environment, not retained defaults.
 - [ ] Confirm the native launch screen appears correctly.
 - [ ] Confirm there is no artificial in-app splash delay after launch.
 - [ ] Confirm Settings tab opens.
@@ -78,7 +79,7 @@ Run these on a physical iPhone before submission:
 ### Automated Coverage Gate
 
 - [ ] Confirm Swift Testing covers permission policy, concurrent recording prevention, video stop outcomes, Photos fallback semantics, checkpoint recovery, and large-route persistence.
-- [ ] Confirm XCUI tests cover permission recovery surfaces and active-recording cross-tab behavior with deterministic launch environment hooks.
+- [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, and active-recording cross-tab behavior with deterministic launch environment hooks.
 
 ## App Store Connect
 
