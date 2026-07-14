@@ -31,6 +31,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
 - Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
 - Version 1 is local-first with no developer-operated backend, accounts, analytics, advertising, or sync; App Privacy answers should be based on actual off-device collection, not protected APIs used only on device.
+- README, release checklist, privacy policy, and App Store copy must keep the same 1.0 scope language for device family, Photos ownership, background GPS, and roadmap items.
 
 ## Conventions
 
@@ -68,3 +69,4 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - Delete messaging must distinguish Photos-backed videos, which remain in Photos, from app-managed fallback video files, which are removed with the recording.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.
 - Adding analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any app-owned network upload requires revisiting `PrivacyInfo.xcprivacy`, App Privacy answers, and `PRIVACY_POLICY.md`.
+- Roadmap items must be labeled as future work in public docs, not mixed into implemented 1.0 capability lists.

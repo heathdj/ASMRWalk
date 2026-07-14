@@ -271,6 +271,12 @@ The recording screens are built on maps, camera previews, glass panels, and comp
 
 The shared status card and active-recording banner now adapt instead of squeezing. They can reflow from horizontal to vertical, use more solid panel backgrounds when transparency or contrast settings call for it, and expose explicit labels for recording state, time, and distance. Video Walk keeps its route map square, but sizes it from the available landscape space so it gives room back to `REC`, status, and controls on smaller screens. The UI tests also gained an accessibility QA launch mode: not a replacement for Accessibility Inspector, but a repeatable smoke test that says the essentials still have handles when the adaptive surfaces are active.
 
+### Release Docs Need One Story
+
+Documentation can drift like a trail map copied too many times. One page says background GPS exists, another still hints it is future work, and suddenly App Review, QA, and future engineering are all reading different maps.
+
+The release docs now use the same version-one story everywhere: ASMR Walk is iPhone-only, local-first, Photos-backed for finished video walks, GPS-only for optional background recording, and foreground-only for Video Walk. Roadmap items are labeled as future ideas instead of hanging around the feature list in disguise. `APP_STORE_COPY.md` now gives App Store Connect text the same source of truth as the README, checklist, and privacy policy.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

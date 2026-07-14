@@ -9,6 +9,7 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.
+- [ ] Targeted device family is iPhone only for version 1.0.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
@@ -40,7 +41,8 @@ Use this before uploading `1.0` to App Store Connect.
 - [ ] Confirm Walk and Video Walk keep essential controls visible with Reduce Transparency enabled.
 - [ ] Confirm Walk and Video Walk keep essential controls visible with Increase Contrast enabled.
 - [ ] Confirm Background GPS Recording defaults off.
-- [ ] Confirm Background GPS Recording is described as GPS Walk only and does not imply background video recording.
+- [ ] Confirm Background GPS Recording is described as optional, user-enabled, and GPS Walk only.
+- [ ] Confirm documentation and App Store copy do not imply background video recording.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
 ## Device Validation
@@ -101,6 +103,7 @@ Run these on a physical iPhone before submission:
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
 - [ ] Document Apple framework behavior separately: Photos may resolve iCloud-backed video assets depending on the user's Photos settings.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
+- [ ] Confirm App Store copy says ASMR Walk 1.0 is iPhone-only.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
@@ -112,8 +115,10 @@ Run these on a physical iPhone before submission:
 ## Known Version 1 Scope
 
 - No iCloud sync.
+- No iPad support.
 - No Apple Watch support.
 - No HealthKit workout integration.
 - Background route recording is GPS-only and opt-in.
+- No background Video Walk recording.
 - No burned-in video map overlay export.
 - No delete-from-Photos management for videos saved to the user's Photos library.
