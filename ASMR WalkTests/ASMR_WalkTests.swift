@@ -443,8 +443,44 @@ struct RecordingCoordinatorTests {
         #expect(locationClient.allowsBackgroundLocationUpdates)
         #expect(locationClient.pausesLocationUpdatesAutomatically == false)
         #expect(locationClient.backgroundActivityCount == 1)
+        let backgroundActivity = try #require(locationClient.backgroundActivities.first)
 
         await coordinator.discard()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(recorder.phase == .ready)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(locationClient.pausesLocationUpdatesAutomatically)
+        #expect(backgroundActivity.didInvalidate)
+        #expect(locationClient.backgroundActivityCount == 1)
+    }
+
+    @Test("Saving an Always-authorized background GPS walk invalidates background activity without replacing it", .bug("https://github.com/heathdj/ASMRWalk/issues/29"))
+    func savingBackgroundGPSWalkInvalidatesBackgroundActivityWithoutReplacement() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedAlways)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+
+        let didStart = await coordinator.start(
+            in: container.mainContext,
+            mode: .walk,
+            allowsBackgroundRecording: true
+        )
+
+        try #require(didStart)
+        #expect(locationClient.allowsBackgroundLocationUpdates)
+        #expect(locationClient.backgroundActivityCount == 1)
+        let backgroundActivity = try #require(locationClient.backgroundActivities.first)
+
+        await coordinator.stopAndSave()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(recorder.phase == .ready)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(locationClient.pausesLocationUpdatesAutomatically)
+        #expect(backgroundActivity.didInvalidate)
+        #expect(locationClient.backgroundActivityCount == 1)
     }
 
     @Test("Video walks stay foreground-only even when background GPS is enabled", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
@@ -517,7 +553,7 @@ struct RecordingCoordinatorTests {
         #expect(result == .failed)
         #expect(coordinator.hasActiveRecording == false)
         #expect(recorder.phase == .ready)
-        #expect(camera.errors == ["Video stop failed"])
+        #expect(camera.messages.contains("Video stop failed"))
         #expect(camera.didStopSession)
         #expect(try fetchOnlyRecording(in: container) == nil)
     }
@@ -997,6 +1033,7 @@ private final class FakeWalkLocationClient: WalkLocationClient {
     private(set) var didStartHeadingUpdates = false
     private(set) var didStopHeadingUpdates = false
     private(set) var backgroundActivityCount = 0
+    private(set) var backgroundActivities: [FakeBackgroundActivity] = []
     private weak var delegate: CLLocationManagerDelegate?
 
     init(authorizationStatus: CLAuthorizationStatus) {
@@ -1031,7 +1068,9 @@ private final class FakeWalkLocationClient: WalkLocationClient {
 
     func makeBackgroundActivity() -> any WalkBackgroundActivity {
         backgroundActivityCount += 1
-        return FakeBackgroundActivity()
+        let activity = FakeBackgroundActivity()
+        backgroundActivities.append(activity)
+        return activity
     }
 }
 

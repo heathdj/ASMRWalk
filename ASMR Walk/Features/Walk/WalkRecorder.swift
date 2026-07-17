@@ -370,18 +370,22 @@ final class WalkRecorder: NSObject {
     }
 
     func discard() async {
+        let videoURL = recording?.videoURL
+        let recordingID = recording?.id
+
         if isPreviewingLocation == false {
             updateTask?.cancel()
         }
         clockTask?.cancel()
         stopBackgroundActivitySession()
+        phase = .ready
         configureBackgroundLocationUpdates()
 
-        if let videoURL = recording?.videoURL {
+        if let videoURL {
             try? FileManager.default.removeItem(at: videoURL)
         }
 
-        if let recordingID = recording?.id {
+        if let recordingID {
             try? await persistence?.deleteRecording(id: recordingID)
         }
 
@@ -460,7 +464,12 @@ final class WalkRecorder: NSObject {
     }
 
     private func configureBackgroundLocationUpdates() {
-        let shouldAllowBackgroundUpdates = canContinueInBackground
+        let isBackgroundEligibleWalk = recording?.mode == .walk
+        let shouldAllowBackgroundUpdates = BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: isRecording && isBackgroundEligibleWalk,
+            isBackgroundRecordingEnabled: isBackgroundRecordingEnabled,
+            authorizationStatus: authorizationStatus
+        )
 
         assert(
             shouldAllowBackgroundUpdates == false || recording?.mode == .walk,
@@ -544,13 +553,14 @@ final class WalkRecorder: NSObject {
             headingDegrees = nil
         }
         clockTask = nil
+        phase = .ready
+        stopBackgroundActivitySession()
         session = nil
         persistence = nil
         syncLiveSnapshot()
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0
         configureBackgroundLocationUpdates()
-        phase = .ready
     }
 }
 

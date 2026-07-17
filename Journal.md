@@ -249,6 +249,8 @@ Issue #34 exposed a testing blind spot. The app had plenty of polite little test
 
 The fix was to give those services test handles. `WalkRecorder` now talks to a `WalkLocationClient`, so tests can simulate Core Location authorization and background-update behavior without waking real GPS. Video stopping moved into `VideoWalkStopFlow`, where a fake camera and fake Photos store can drive the same coordinator path the app uses. Think of it as practicing the emergency drill with the actual stage directions, just with cardboard props instead of live hardware.
 
+Those fake services quickly paid rent. QA found that discarding an Always-authorized background GPS walk could clear the session while the recorder still claimed to be recording, letting background updates spring back to life during cleanup. The fix is a lifecycle rule worth remembering: before you recompute background privileges, make the state machine tell the truth. Capture the files and IDs you need, invalidate the background activity, transition out of `.recording`, then let policy recompute from honest state.
+
 ### Photos Own the Video, ASMR Walk Owns the Route
 
 Video walks now have a split ownership model. The route, stats, and playback reference live in ASMR Walk; the finished movie usually lives in Photos. Deleting a recording is therefore like removing an index card from the app's catalog, not shredding the movie sitting in the user's library.
