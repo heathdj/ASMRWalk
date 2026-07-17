@@ -29,6 +29,12 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### The Screen Marker That Stole the Name Tags
+
+UI testing caught a sneaky SwiftUI accessibility gotcha: putting an accessibility identifier on a broad `ZStack` can leak that identifier onto the child controls instead of creating a clean screen marker. The Walk screen looked present to automation, but the status card and start button could lose their own identifiers in the accessibility tree.
+
+The fix was to make the Walk and Video Walk root stacks explicit accessibility containers before assigning their screen identifiers. Think of the screen as the room label on the door; the buttons and status cards still need their own name tags once you're inside.
+
 ### Videos Move Into the Family Album
 
 Storing videos only inside the app sandbox is fragile. It works until an update, migration, cleanup, or reinstall changes the furniture. The new preferred path treats Photos as the long-term video home: when a video walk finishes, the app asks Photos to import the `.mov`, then stores the Photos asset identifier on the `WalkRecording`. Later playback asks Photos for an `AVPlayerItem` using that identifier.
@@ -216,6 +222,8 @@ Version 1 now draws a clean line: iPhone only. The app can focus on the device t
 The first video recording indicator was just a tiny green dot. It was technically present, but easy to miss over a moving camera preview, and color alone is a shaky messenger. The fix keeps the lightweight idea but makes it clearer: the dot slowly pulses between 7 and 14 points, and the label beside it says `REC`.
 
 That pulse is deliberately small. No timers, no glowing blur, no animated shadows; just one SwiftUI circle changing size inside a fixed 14-point box. Compared with live camera capture, GPS, and MapKit, this is pocket change, but it gives the user a visible heartbeat that says the video is rolling.
+
+Then UI testing found a stage-management bug: the recording light and the status card were sharing the same spotlight. If the camera or location state needed to show a status card, the explicit recording indicator stepped offstage, even when the app was in a video-recording test state. The fix lets the status card explain the situation while the `REC` indicator remains separately discoverable. In accessibility terms, the warning sign and the "we are recording" sign are different signs; one should not erase the other.
 
 ### Ask at the Door, Not on the Sidewalk
 

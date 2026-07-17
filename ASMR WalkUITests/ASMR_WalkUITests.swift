@@ -54,7 +54,7 @@ final class ASMR_WalkUITests: XCTestCase {
         app.buttons["Record a Walk"].tap()
 
         XCTAssertTrue(element("walk.screen").waitForExistence(timeout: 2))
-        XCTAssertTrue(element("walk.status").exists)
+        XCTAssertTrue(element("walk.status").waitForExistence(timeout: 2))
     }
 
     @MainActor
@@ -64,7 +64,7 @@ final class ASMR_WalkUITests: XCTestCase {
         openTab("Walk")
 
         XCTAssertTrue(element("walk.screen").waitForExistence(timeout: 2))
-        XCTAssertTrue(element("walk.status").exists)
+        XCTAssertTrue(element("walk.status").waitForExistence(timeout: 2))
         XCTAssertTrue(element("walk.startButton").isEnabled)
     }
 

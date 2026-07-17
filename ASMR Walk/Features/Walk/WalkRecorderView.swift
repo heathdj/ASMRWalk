@@ -45,6 +45,7 @@ struct WalkRecorderView: View {
             }
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier(AccessibilityID.walkScreen)
             .onAppear {
                 if isBlockedByVideoWalk == false {

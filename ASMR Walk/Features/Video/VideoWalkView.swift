@@ -68,6 +68,7 @@ struct VideoWalkView: View {
                 overlayLayout(availableSize: proxy.size)
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
@@ -150,6 +151,9 @@ struct VideoWalkView: View {
             VStack(alignment: .leading, spacing: 12) {
                 if shouldShowStatusCard {
                     statusCard
+                    if shouldShowRecordingIndicator {
+                        recordingIndicator
+                    }
                 } else if shouldShowRecordingIndicator {
                     recordingIndicator
                 }
