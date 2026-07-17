@@ -1,15 +1,15 @@
 # ASMR Walk Release Checklist
 
-Use this before uploading `1.0` to App Store Connect.
+Use this before uploading `1.0.1` to App Store Connect.
 
 ## Required Target Settings
 
 - [ ] Bundle identifier is final.
-- [ ] Version is `1.0`.
+- [ ] Version is `1.0.1`.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.
-- [ ] Targeted device family is iPhone only for version 1.0.
+- [ ] Targeted device family is iPhone only for version 1.0.1.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
@@ -106,7 +106,7 @@ Run these on a physical iPhone before submission:
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
 - [ ] Document Apple framework behavior separately: Photos may resolve iCloud-backed video assets depending on the user's Photos settings.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
-- [ ] Confirm App Store copy says ASMR Walk 1.0 is iPhone-only.
+- [ ] Confirm App Store copy says ASMR Walk 1.0.1 is iPhone-only.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
@@ -115,7 +115,7 @@ Run these on a physical iPhone before submission:
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
 - [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any other off-device collection.
 
-## Known Version 1 Scope
+## Known Version 1.0.1 Scope
 
 - No iCloud sync.
 - No iPad support.

@@ -1,6 +1,6 @@
 # ASMR Walk App Store Copy
 
-Use this as the source draft for App Store Connect text for version 1.0. Keep it aligned with `README.md`, `RELEASE_CHECKLIST.md`, and `PRIVACY_POLICY.md`.
+Use this as the source draft for App Store Connect text for version 1.0.1. Keep it aligned with `README.md`, `RELEASE_CHECKLIST.md`, and `PRIVACY_POLICY.md`.
 
 ## Short Description
 
@@ -16,7 +16,7 @@ ASMR Walk can export full-fidelity GPX files through the iOS share sheet and can
 
 Background GPS recording is optional and applies only to GPS Walk recordings. It requires the user to enable Background GPS Recording in Settings and grant Always location permission. Video Walk recording is foreground-only.
 
-Version 1.0 is iPhone-only. iPad, Apple Watch, HealthKit, iCloud sync, accounts, analytics, advertising, and developer-operated backend storage are not included in version 1.0.
+Version 1.0.1 is iPhone-only. iPad, Apple Watch, HealthKit, iCloud sync, accounts, analytics, advertising, and developer-operated backend storage are not included in version 1.0.1.
 
 ## Keywords
 
@@ -29,4 +29,4 @@ walking, GPS, route, GPX, video walk, walking journal, map, local-first
 - Video Walk recordings stop when the app leaves the foreground.
 - Finished video walks are saved to Photos when Photos access is available.
 - Deleting an ASMR Walk recording does not delete the user's Photos video.
-- ASMR Walk stores route and recording metadata locally and does not use developer-operated accounts, analytics, advertising, sync, or backend upload code in version 1.0.
+- ASMR Walk stores route and recording metadata locally and does not use developer-operated accounts, analytics, advertising, sync, or backend upload code in version 1.0.1.

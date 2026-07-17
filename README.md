@@ -2,9 +2,9 @@
 
 ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walking routes, can pair a route with a walk video, stores recordings locally with SwiftData, and exports routes for use outside the app.
 
-## Version 1.0 Scope
+## Version 1.0.1 Scope
 
-ASMR Walk 1.0 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, Photos-backed video storage, local history, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
+ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, Photos-backed video storage, local history, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
 
 ## Current Features
 
@@ -46,7 +46,7 @@ ASMR Walk/
 - Xcode with iOS 26 SDK support.
 - iOS 26 iPhone simulator or physical iPhone.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
-- Version 1 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
+- Version 1.0.1 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
 
 ## Setup
 
@@ -115,11 +115,11 @@ The app uses a native static launch screen configured through the target Info se
 - Exported Google Maps URLs sample waypoints; GPX remains the complete route export.
 - The map overlay is rendered in the app and is not burned into exported video.
 - Video Walk does not continue recording in the background.
-- iPad, Apple Watch, HealthKit, and iCloud sync are not part of version 1.0.
+- iPad, Apple Watch, HealthKit, and iCloud sync are not part of version 1.0.1.
 
 ## Roadmap
 
-These are future ideas, not shipped 1.0 features:
+These are future ideas, not shipped 1.0.1 features:
 
 - iCloud sync.
 - Route thumbnails.
