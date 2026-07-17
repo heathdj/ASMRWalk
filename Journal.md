@@ -243,6 +243,12 @@ Background GPS is powerful and review-sensitive, so the app now routes every dec
 
 This matters most for Video Walk. The settings switch can be on, but video recording still stays foreground-only. Camera capture, screen behavior, and Photos finalization already have enough moving parts; letting video walks silently continue as background GPS sessions would blur the product promise and make App Store review harder to explain. The rule is now easy to test and easy to say: background means walking routes only.
 
+### Testing the Weather, Not Just the Thermostat
+
+Issue #34 exposed a testing blind spot. The app had plenty of polite little tests for policy helpers and result factories, but the riskiest bugs live where services change state: location permission gets denied then granted, When In Use needs to upgrade to Always, the app backgrounds mid-recording, the camera fails to stop, or Photos refuses a save.
+
+The fix was to give those services test handles. `WalkRecorder` now talks to a `WalkLocationClient`, so tests can simulate Core Location authorization and background-update behavior without waking real GPS. Video stopping moved into `VideoWalkStopFlow`, where a fake camera and fake Photos store can drive the same coordinator path the app uses. Think of it as practicing the emergency drill with the actual stage directions, just with cardboard props instead of live hardware.
+
 ### Photos Own the Video, ASMR Walk Owns the Route
 
 Video walks now have a split ownership model. The route, stats, and playback reference live in ASMR Walk; the finished movie usually lives in Photos. Deleting a recording is therefore like removing an index card from the app's catalog, not shredding the movie sitting in the user's library.

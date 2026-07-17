@@ -26,6 +26,74 @@ enum VideoWalkStopOutcome: Equatable {
     }
 }
 
+enum VideoWalkStopFlowResult: Equatable {
+    case saved
+    case awaitingShortRecordingDecision(stopSessionWhenFinished: Bool)
+    case failed
+}
+
+@MainActor
+struct VideoWalkStopFlow {
+    let coordinator: RecordingCoordinator
+    let camera: any VideoRecordingControlling
+    let photoLibrary: any PhotoLibraryVideoStoring
+
+    func stop(
+        stopSessionWhenFinished: Bool = false,
+        confirmShortRecording: Bool = true
+    ) async -> VideoWalkStopFlowResult {
+        do {
+            let videoURL = try await camera.stopRecording()
+            do {
+                camera.reportMessage(PhotoLibraryVideoStore.saveAccessExplanation)
+                let assetIdentifier = try await photoLibrary.saveVideoToPhotoLibrary(from: videoURL)
+                apply(.photosSaveSucceeded(assetIdentifier: assetIdentifier, localVideoURL: videoURL))
+            } catch {
+                apply(.photosSaveFailed(videoURL: videoURL, error: error))
+            }
+            UIApplication.shared.isIdleTimerDisabled = false
+        } catch {
+            UIApplication.shared.isIdleTimerDisabled = false
+            apply(.stopFailed(error: error))
+            await coordinator.discard()
+            if stopSessionWhenFinished {
+                coordinator.recorder.stopPreviewingLocation()
+                camera.stopSession()
+            }
+            return .failed
+        }
+
+        guard coordinator.finishRecording() else {
+            return .failed
+        }
+
+        if confirmShortRecording, coordinator.recorder.isShortRecording {
+            return .awaitingShortRecordingDecision(stopSessionWhenFinished: stopSessionWhenFinished)
+        }
+
+        await coordinator.saveFinishedRecording()
+        if stopSessionWhenFinished {
+            coordinator.recorder.stopPreviewingLocation()
+            camera.stopSession()
+        }
+        return .saved
+    }
+
+    private func apply(_ outcome: VideoWalkStopOutcome) {
+        switch outcome {
+        case let .savedToPhotos(assetIdentifier, localVideoURL):
+            coordinator.recorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
+            try? FileManager.default.removeItem(at: localVideoURL)
+            camera.reportMessage("Video walk saved to Photos.")
+        case let .keptLocalVideo(videoURL, message):
+            coordinator.recorder.attachVideo(at: videoURL)
+            camera.reportMessage(message)
+        case let .discarded(message):
+            camera.reportMessage(message)
+        }
+    }
+}
+
 struct VideoWalkView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
@@ -42,6 +110,7 @@ struct VideoWalkView: View {
     @State private var isStopping = false
     @State private var isShowingShortRecordingConfirmation = false
     @State private var shouldStopSessionAfterShortConfirmation = false
+    private let photoLibrary: any PhotoLibraryVideoStoring = SystemPhotoLibraryVideoStore()
 
     private let maximumRouteMapSize: CGFloat = 220
     private let minimumRouteMapSize: CGFloat = 128
@@ -97,7 +166,9 @@ struct VideoWalkView: View {
                 Task {
                     await preparePreviewIfAuthorized()
                 }
-            } else if isRecordingVideoWalk {
+            } else if RecordingLifecyclePolicy.shouldStopVideoWalkWhenSceneDeactivates(
+                isRecordingVideoWalk: isRecordingVideoWalk
+            ) {
                 stopVideoWalk(confirmShortRecording: false)
             }
         }
@@ -440,58 +511,20 @@ struct VideoWalkView: View {
 
         isStopping = true
         Task {
-            do {
-                let videoURL = try await camera.stopRecording()
-                do {
-                    camera.reportMessage(PhotoLibraryVideoStore.saveAccessExplanation)
-                    let assetIdentifier = try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: videoURL)
-                    apply(VideoWalkStopOutcome.photosSaveSucceeded(assetIdentifier: assetIdentifier, localVideoURL: videoURL))
-                } catch {
-                    apply(VideoWalkStopOutcome.photosSaveFailed(videoURL: videoURL, error: error))
-                }
-                UIApplication.shared.isIdleTimerDisabled = false
-            } catch {
-                UIApplication.shared.isIdleTimerDisabled = false
-                apply(VideoWalkStopOutcome.stopFailed(error: error))
-                await coordinator.discard()
-                if stopSessionWhenFinished {
-                    walkRecorder.stopPreviewingLocation()
-                    camera.stopSession()
-                }
-                isStopping = false
-                return
-            }
+            let result = await VideoWalkStopFlow(
+                coordinator: coordinator,
+                camera: camera,
+                photoLibrary: photoLibrary
+            ).stop(
+                stopSessionWhenFinished: stopSessionWhenFinished,
+                confirmShortRecording: confirmShortRecording
+            )
 
-            guard coordinator.finishRecording() else {
-                isStopping = false
-                return
-            }
-
-            if confirmShortRecording, walkRecorder.isShortRecording {
+            if case let .awaitingShortRecordingDecision(stopSessionWhenFinished) = result {
                 shouldStopSessionAfterShortConfirmation = stopSessionWhenFinished
                 isShowingShortRecordingConfirmation = true
-            } else {
-                await coordinator.saveFinishedRecording()
-                if stopSessionWhenFinished {
-                    walkRecorder.stopPreviewingLocation()
-                    camera.stopSession()
-                }
             }
             isStopping = false
-        }
-    }
-
-    private func apply(_ outcome: VideoWalkStopOutcome) {
-        switch outcome {
-        case let .savedToPhotos(assetIdentifier, localVideoURL):
-            walkRecorder.attachPhotoLibraryVideo(assetIdentifier: assetIdentifier)
-            try? FileManager.default.removeItem(at: localVideoURL)
-            camera.reportMessage("Video walk saved to Photos.")
-        case let .keptLocalVideo(videoURL, message):
-            walkRecorder.attachVideo(at: videoURL)
-            camera.reportMessage(message)
-        case let .discarded(message):
-            camera.reportMessage(message)
         }
     }
 

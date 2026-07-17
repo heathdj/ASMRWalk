@@ -78,7 +78,10 @@ struct WalkRecorderView: View {
             .onChange(of: scenePhase) {
                 if scenePhase == .active {
                     recorder.refreshAuthorizationStatus()
-                } else if isRecordingWalk, recorder.canContinueInBackground == false {
+                } else if RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
+                    isRecordingWalk: isRecordingWalk,
+                    canContinueInBackground: recorder.canContinueInBackground
+                ) {
                     Task {
                         await coordinator.stopAndSave()
                     }

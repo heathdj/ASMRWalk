@@ -91,7 +91,7 @@ Run these on a physical iPhone before submission:
 
 ### Automated Coverage Gate
 
-- [ ] Confirm Swift Testing covers permission policy, concurrent recording prevention, video stop outcomes, Photos fallback semantics, checkpoint recovery, and large-route persistence.
+- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, Photos fallback semantics, checkpoint recovery, and large-route persistence.
 - [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect

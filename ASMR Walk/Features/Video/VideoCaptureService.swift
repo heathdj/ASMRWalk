@@ -337,6 +337,16 @@ final class VideoCaptureService: NSObject {
     }
 }
 
+@MainActor
+protocol VideoRecordingControlling: AnyObject {
+    func stopRecording() async throws -> URL
+    func report(_ error: Error)
+    func reportMessage(_ message: String)
+    func stopSession()
+}
+
+extension VideoCaptureService: VideoRecordingControlling {}
+
 extension VideoCaptureService: AVCaptureFileOutputRecordingDelegate {
     nonisolated func fileOutput(
         _ output: AVCaptureFileOutput,

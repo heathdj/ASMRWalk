@@ -121,3 +121,13 @@ enum PhotoLibraryVideoStore {
         }
     }
 }
+
+protocol PhotoLibraryVideoStoring {
+    func saveVideoToPhotoLibrary(from fileURL: URL) async throws -> String
+}
+
+struct SystemPhotoLibraryVideoStore: PhotoLibraryVideoStoring {
+    func saveVideoToPhotoLibrary(from fileURL: URL) async throws -> String {
+        try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: fileURL)
+    }
+}

@@ -18,3 +18,16 @@ enum BackgroundRecordingPolicy {
         isRecording && isBackgroundRecordingEnabled && authorizationStatus == .authorizedAlways
     }
 }
+
+enum RecordingLifecyclePolicy {
+    static func shouldStopGPSWalkWhenSceneDeactivates(
+        isRecordingWalk: Bool,
+        canContinueInBackground: Bool
+    ) -> Bool {
+        isRecordingWalk && canContinueInBackground == false
+    }
+
+    static func shouldStopVideoWalkWhenSceneDeactivates(isRecordingVideoWalk: Bool) -> Bool {
+        isRecordingVideoWalk
+    }
+}
