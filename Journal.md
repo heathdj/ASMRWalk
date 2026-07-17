@@ -223,6 +223,12 @@ Opening a tab used to be enough to make iOS ask for camera, microphone, or locat
 
 The recording tabs now refresh permission status on appear without prompting. The actual requests happen when the user starts a walk or video walk. Photos access follows the same rule: saving a finished video explains that ASMR Walk stores video walks in Photos before the Photos request appears, and playback explains that it needs to read saved videos from Photos. The pattern is simple: looking around is free; committing to the feature asks for the keys.
 
+### The Camera Door Should Reopen
+
+Fixing permission timing exposed a second-order bug: once Video Walk stopped asking for camera access on tab open, returning to the tab could leave the camera pipeline unprepared. The screen might sound calm and ready, but the preview was not actually running, and DockKit's shutter wisely refused to start from an unready camera.
+
+The fix gives camera preview startup its own policy. If camera and microphone access are still undetermined, Video Walk waits for the user's Start action and does not prompt. If both are already authorized, the tab prepares the live preview automatically on appear or when the app becomes active again. If access is denied, the UI says privacy access is needed instead of pretending the camera is ready. It is the same door, but now the app checks whether it already has the key before standing in the hallway.
+
 ### Background GPS Got a Gatekeeper
 
 Background GPS is powerful and review-sensitive, so the app now routes every decision through `BackgroundRecordingPolicy`. That policy has a short checklist: the user enabled it, the active mode is GPS Walk, a recording is actually running, and iOS granted Always location permission. Miss any one of those and background updates stay off.

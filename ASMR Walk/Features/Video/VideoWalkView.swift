@@ -72,12 +72,7 @@ struct VideoWalkView: View {
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
             InterfaceOrientationController.lockVideoWalkLandscape()
-            camera.refreshAuthorizationStatus()
-            if coordinator.activeMode != .walk {
-                walkRecorder.refreshAuthorizationStatus()
-                walkRecorder.startPreviewingLocation(requestAuthorization: false)
-            }
-            camera.refreshPreview()
+            await preparePreviewIfAuthorized()
             dockKitAccessory.start(
                 shutterAction: handleDockKitShutter,
                 zoomAction: camera.updateZoomFromDockKitAccessory
@@ -98,8 +93,9 @@ struct VideoWalkView: View {
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
-                camera.refreshAuthorizationStatus()
-                walkRecorder.refreshAuthorizationStatus()
+                Task {
+                    await preparePreviewIfAuthorized()
+                }
             } else if isRecordingVideoWalk {
                 stopVideoWalk(confirmShortRecording: false)
             }
@@ -242,13 +238,22 @@ struct VideoWalkView: View {
         if Self.shouldShowDeniedVideoPrivacyForUITests {
             return "Privacy access needed"
         }
+        if isPrivacyAccessDenied {
+            return "Privacy access needed"
+        }
         if isRecordingVideoWalk {
             return "Recording video walk"
+        }
+        if camera.errorMessage != nil || walkRecorder.errorMessage != nil {
+            return "Video unavailable"
         }
         if camera.needsPermissionRequest {
             return "Ready when you are"
         }
-        return camera.isReady ? "Camera ready" : "Ready to record"
+        if camera.canPreparePreviewWithoutPrompt {
+            return camera.isReady ? "Camera ready" : "Preparing camera"
+        }
+        return "Ready when you are"
     }
 
     private var statusDetail: String {
@@ -258,6 +263,14 @@ struct VideoWalkView: View {
 
         if Self.shouldShowDeniedVideoPrivacyForUITests {
             return "Enable camera, microphone, and location access in Settings to record a video walk."
+        }
+
+        if isPrivacyAccessDenied {
+            return "Enable camera, microphone, and location access in Settings to record a video walk."
+        }
+
+        if let errorMessage = camera.errorMessage ?? walkRecorder.errorMessage {
+            return errorMessage
         }
 
         if camera.needsPermissionRequest, walkRecorder.authorizationStatus == .notDetermined {
@@ -272,9 +285,11 @@ struct VideoWalkView: View {
             return "Starting a video walk asks for location access to save your route."
         }
 
-        return camera.errorMessage
-            ?? walkRecorder.errorMessage
-            ?? "Video and route recording start together."
+        if camera.canPreparePreviewWithoutPrompt, camera.isReady == false {
+            return "Starting the live preview."
+        }
+
+        return "Video and route recording start together."
     }
 
     private var walkRecorder: WalkRecorder {
@@ -351,6 +366,15 @@ struct VideoWalkView: View {
         #endif
     }
 
+    private func preparePreviewIfAuthorized() async {
+        camera.refreshAuthorizationStatus()
+        if coordinator.activeMode != .walk {
+            walkRecorder.refreshAuthorizationStatus()
+            walkRecorder.startPreviewingLocation(requestAuthorization: false)
+        }
+        await camera.prepareIfAuthorized()
+    }
+
     private func startVideoWalk() {
         Task {
             await camera.prepare()
@@ -380,14 +404,25 @@ struct VideoWalkView: View {
             return
         }
 
-        guard camera.isReady, camera.isPermissionDenied == false, walkRecorder.isLocationAccessDenied == false else {
+        if isRecordingVideoWalk {
+            stopVideoWalk()
             return
         }
 
-        if isRecordingVideoWalk {
-            stopVideoWalk()
-        } else {
+        guard camera.isPermissionDenied == false, walkRecorder.isLocationAccessDenied == false else {
+            return
+        }
+
+        if camera.isReady {
             startVideoWalk()
+        } else {
+            Task {
+                await camera.prepareIfAuthorized()
+                guard camera.isReady else {
+                    return
+                }
+                startVideoWalk()
+            }
         }
     }
 

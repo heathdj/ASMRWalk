@@ -69,7 +69,10 @@ Run these on a physical iPhone before submission:
 - [ ] Stop a video walk before 10 seconds and confirm Save/Discard behavior.
 - [ ] Confirm the screen stays awake only while video recording is active.
 - [ ] Confirm the small green recording indicator appears while video recording.
+- [ ] Open Video Walk before granting camera or microphone permission and confirm the tab does not trigger system prompts.
+- [ ] Grant camera and microphone permission, return to Video Walk, and confirm the live camera preview starts automatically.
 - [ ] Confirm the camera preview is live when returning to the Video Walk tab.
+- [ ] Confirm DockKit shutter can start a video walk after returning to the Video Walk tab.
 - [ ] Confirm the saved video appears in Photos.
 - [ ] Confirm the recording stores a Photos asset reference and playback loads from Photos.
 - [ ] Confirm legacy/local video fallback still works for older recordings if available.

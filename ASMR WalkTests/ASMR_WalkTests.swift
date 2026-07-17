@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreLocation
+import AVFoundation
 import SwiftUI
 import SwiftData
 import Testing
@@ -113,6 +114,33 @@ struct ASMR_WalkTests {
         #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
         #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
         #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("replay them with your route"))
+    }
+
+    @Test("Video preview prepares automatically only after camera and microphone are authorized")
+    func videoPreviewPolicyPreparesForAuthorizedPrivacy() {
+        let snapshot = VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .authorized)
+
+        #expect(VideoCapturePreviewPolicy.decision(for: snapshot) == .prepare)
+    }
+
+    @Test("Video preview waits for user intent while camera or microphone permission is undetermined")
+    func videoPreviewPolicyWaitsForUserIntentBeforePrompting() {
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .notDetermined, microphone: .authorized)
+        ) == .waitForUserIntent)
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .notDetermined)
+        ) == .waitForUserIntent)
+    }
+
+    @Test("Video preview blocks when camera or microphone permission is denied")
+    func videoPreviewPolicyBlocksDeniedPrivacy() {
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .denied, microphone: .authorized)
+        ) == .blocked)
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .restricted)
+        ) == .blocked)
     }
 
     @Test("Video stop outcome records Photos success")
