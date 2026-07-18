@@ -8,6 +8,8 @@ import SwiftData
 
 @ModelActor
 actor WalkRecordingPersistence {
+    private var persistedPointCounts: [UUID: Int] = [:]
+
     func save(_ snapshot: WalkRecordingSnapshot) throws {
         let recording = try recording(for: snapshot)
 
@@ -18,10 +20,11 @@ actor WalkRecordingPersistence {
         recording.videoURL = snapshot.videoURL
         recording.videoAssetIdentifier = snapshot.videoAssetIdentifier
 
-        for point in recording.points {
-            modelContext.delete(point)
-        }
-        recording.points = snapshot.points.map { makeLocationPoint(from: $0) }
+        appendMissingPoints(from: snapshot, to: recording)
+        persistedPointCounts[snapshot.id] = max(
+            persistedPointCounts[snapshot.id] ?? recording.points.count,
+            snapshot.points.count
+        )
 
         try modelContext.save()
     }
@@ -32,6 +35,7 @@ actor WalkRecordingPersistence {
         }
 
         modelContext.delete(recording)
+        persistedPointCounts[id] = nil
         try modelContext.save()
     }
 
@@ -73,5 +77,16 @@ actor WalkRecordingPersistence {
             }
         )
         return try modelContext.fetch(descriptor).first
+    }
+
+    private func appendMissingPoints(from snapshot: WalkRecordingSnapshot, to recording: WalkRecording) {
+        let persistedPointCount = persistedPointCounts[snapshot.id] ?? recording.points.count
+        guard snapshot.points.count > persistedPointCount else {
+            return
+        }
+
+        for pointSnapshot in snapshot.points.dropFirst(persistedPointCount) {
+            recording.points.append(makeLocationPoint(from: pointSnapshot))
+        }
     }
 }

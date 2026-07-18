@@ -42,7 +42,7 @@ struct HistoryView: View {
                     recordingPendingDeletion = nil
                 }
             } message: {
-                Text("This permanently removes the recording and its route.")
+                Text(recordingPendingDeletion?.deleteConfirmationMessage ?? "This permanently removes the recording and its route.")
             }
             .alert("Unable to Delete Walk", isPresented: $isShowingDeletionError) {
                 Button("OK", role: .cancel) { }

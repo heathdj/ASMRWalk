@@ -14,6 +14,7 @@ struct VideoWalkPlaybackView: View {
     @State private var timeObserver: Any?
     @State private var currentTime: TimeInterval = 0
     @State private var loadErrorMessage: String?
+    @State private var loadingMessage = "Loading Video"
 
     var body: some View {
         Group {
@@ -32,7 +33,7 @@ struct VideoWalkPlaybackView: View {
                         .background(.black)
                         .foregroundStyle(.white)
                     } else {
-                        ProgressView("Loading Video")
+                        ProgressView(loadingMessage)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .background(.black)
                             .foregroundStyle(.white)
@@ -70,11 +71,13 @@ struct VideoWalkPlaybackView: View {
     private func configurePlayer() async {
         removeTimeObserver()
         loadErrorMessage = nil
+        loadingMessage = "Loading Video"
         currentTime = 0
 
         do {
             let player: AVPlayer
             if let assetIdentifier = recording.videoAssetIdentifier {
+                loadingMessage = PhotoLibraryVideoStore.readAccessExplanation
                 let playerItem = try await PhotoLibraryVideoStore.playerItem(for: assetIdentifier)
                 player = AVPlayer(playerItem: playerItem)
             } else if let videoURL = recording.videoURL,

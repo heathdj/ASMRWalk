@@ -8,6 +8,107 @@ import Foundation
 import Observation
 import SwiftData
 
+struct WalkLocationUpdateSnapshot {
+    let authorizationDenied: Bool
+    let location: CLLocation?
+}
+
+@MainActor
+protocol WalkBackgroundActivity {
+    func invalidate()
+}
+
+extension CLBackgroundActivitySession: WalkBackgroundActivity {}
+
+@MainActor
+protocol WalkLocationClient: AnyObject {
+    var authorizationStatus: CLAuthorizationStatus { get }
+    var allowsBackgroundLocationUpdates: Bool { get set }
+    var pausesLocationUpdatesAutomatically: Bool { get set }
+    var headingUpdatesAvailable: Bool { get }
+
+    func setDelegate(_ delegate: CLLocationManagerDelegate?)
+    func requestWhenInUseAuthorization()
+    func requestAlwaysAuthorization()
+    func startUpdatingHeading()
+    func stopUpdatingHeading()
+    func liveUpdates() -> AsyncThrowingStream<WalkLocationUpdateSnapshot, Error>
+    func makeBackgroundActivity() -> any WalkBackgroundActivity
+}
+
+@MainActor
+final class CoreLocationClient: WalkLocationClient {
+    private let locationManager: CLLocationManager
+
+    init(locationManager: CLLocationManager = CLLocationManager()) {
+        self.locationManager = locationManager
+    }
+
+    var authorizationStatus: CLAuthorizationStatus {
+        locationManager.authorizationStatus
+    }
+
+    var allowsBackgroundLocationUpdates: Bool {
+        get { locationManager.allowsBackgroundLocationUpdates }
+        set { locationManager.allowsBackgroundLocationUpdates = newValue }
+    }
+
+    var pausesLocationUpdatesAutomatically: Bool {
+        get { locationManager.pausesLocationUpdatesAutomatically }
+        set { locationManager.pausesLocationUpdatesAutomatically = newValue }
+    }
+
+    var headingUpdatesAvailable: Bool {
+        CLLocationManager.headingAvailable()
+    }
+
+    func setDelegate(_ delegate: CLLocationManagerDelegate?) {
+        locationManager.delegate = delegate
+    }
+
+    func requestWhenInUseAuthorization() {
+        locationManager.requestWhenInUseAuthorization()
+    }
+
+    func requestAlwaysAuthorization() {
+        locationManager.requestAlwaysAuthorization()
+    }
+
+    func startUpdatingHeading() {
+        locationManager.startUpdatingHeading()
+    }
+
+    func stopUpdatingHeading() {
+        locationManager.stopUpdatingHeading()
+    }
+
+    func liveUpdates() -> AsyncThrowingStream<WalkLocationUpdateSnapshot, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    for try await update in CLLocationUpdate.liveUpdates(.fitness) {
+                        continuation.yield(WalkLocationUpdateSnapshot(
+                            authorizationDenied: update.authorizationDenied,
+                            location: update.location
+                        ))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
+    func makeBackgroundActivity() -> any WalkBackgroundActivity {
+        CLBackgroundActivitySession()
+    }
+}
+
 @MainActor
 @Observable
 final class WalkRecorder: NSObject {
@@ -29,19 +130,20 @@ final class WalkRecorder: NSObject {
     private(set) var currentDistanceMeters: Double = 0
     private(set) var coordinates: [CLLocationCoordinate2D] = []
 
-    private let locationManager: CLLocationManager
+    private let locationClient: any WalkLocationClient
     private var updateTask: Task<Void, Never>?
     private var clockTask: Task<Void, Never>?
-    private var backgroundActivitySession: CLBackgroundActivitySession?
+    private var backgroundActivitySession: (any WalkBackgroundActivity)?
     private var persistence: WalkRecordingPersistence?
     private var acceptedPointsSinceSave = 0
     private var secondsSinceSave = 0
 
-    init(locationManager: CLLocationManager = CLLocationManager()) {
-        self.locationManager = locationManager
-        authorizationStatus = locationManager.authorizationStatus
+    init(locationClient: (any WalkLocationClient)? = nil) {
+        let locationClient = locationClient ?? CoreLocationClient()
+        self.locationClient = locationClient
+        authorizationStatus = locationClient.authorizationStatus
         super.init()
-        self.locationManager.delegate = self
+        self.locationClient.setDelegate(self)
     }
 
     var isRecording: Bool {
@@ -57,38 +159,54 @@ final class WalkRecorder: NSObject {
     }
 
     var canContinueInBackground: Bool {
-        isRecording && isBackgroundRecordingEnabled && authorizationStatus == .authorizedAlways
+        BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: isRecording,
+            isBackgroundRecordingEnabled: isBackgroundRecordingEnabled,
+            authorizationStatus: authorizationStatus
+        )
     }
 
     var recording: WalkRecordingSnapshot? {
         session?.snapshot
     }
 
-    func setBackgroundRecordingEnabled(_ isEnabled: Bool) {
-        isBackgroundRecordingEnabled = isEnabled
+    func setBackgroundRecordingEnabled(_ isEnabled: Bool, requestAuthorization: Bool = true) {
+        let mode = recording?.mode ?? .walk
+        isBackgroundRecordingEnabled = BackgroundRecordingPolicy.isEnabledForRecording(
+            mode: mode,
+            userEnabled: isEnabled
+        )
 
-        if isEnabled {
+        if isBackgroundRecordingEnabled, requestAuthorization {
             requestAlwaysAuthorizationIfPossible()
         }
 
         configureBackgroundLocationUpdates()
     }
 
-    func startPreviewingLocation() {
+    func refreshAuthorizationStatus() {
+        authorizationStatus = locationClient.authorizationStatus
+    }
+
+    func startPreviewingLocation(requestAuthorization: Bool = true) {
         guard isPreviewingLocation == false else {
             return
         }
 
         errorMessage = nil
-        authorizationStatus = locationManager.authorizationStatus
+        authorizationStatus = locationClient.authorizationStatus
 
         guard authorizationStatus != .denied, authorizationStatus != .restricted else {
             errorMessage = "Location access is unavailable."
             return
         }
 
-        if authorizationStatus == .notDetermined {
-            locationManager.requestWhenInUseAuthorization()
+        if authorizationStatus == .notDetermined, requestAuthorization {
+            locationClient.requestWhenInUseAuthorization()
+        }
+
+        guard authorizationStatus != .notDetermined else {
+            return
         }
 
         isPreviewingLocation = true
@@ -153,8 +271,11 @@ final class WalkRecorder: NSObject {
         }
 
         errorMessage = nil
-        isBackgroundRecordingEnabled = allowsBackgroundRecording && mode == .walk
-        authorizationStatus = locationManager.authorizationStatus
+        isBackgroundRecordingEnabled = BackgroundRecordingPolicy.isEnabledForRecording(
+            mode: mode,
+            userEnabled: allowsBackgroundRecording
+        )
+        authorizationStatus = locationClient.authorizationStatus
 
         guard authorizationStatus != .denied, authorizationStatus != .restricted else {
             errorMessage = "Location access is unavailable."
@@ -162,7 +283,7 @@ final class WalkRecorder: NSObject {
         }
 
         if authorizationStatus == .notDetermined {
-            locationManager.requestWhenInUseAuthorization()
+            locationClient.requestWhenInUseAuthorization()
         }
         if isBackgroundRecordingEnabled {
             requestAlwaysAuthorizationIfPossible()
@@ -249,18 +370,22 @@ final class WalkRecorder: NSObject {
     }
 
     func discard() async {
+        let videoURL = recording?.videoURL
+        let recordingID = recording?.id
+
         if isPreviewingLocation == false {
             updateTask?.cancel()
         }
         clockTask?.cancel()
         stopBackgroundActivitySession()
+        phase = .ready
         configureBackgroundLocationUpdates()
 
-        if let videoURL = recording?.videoURL {
+        if let videoURL {
             try? FileManager.default.removeItem(at: videoURL)
         }
 
-        if let recordingID = recording?.id {
+        if let recordingID {
             try? await persistence?.deleteRecording(id: recordingID)
         }
 
@@ -282,7 +407,7 @@ final class WalkRecorder: NSObject {
         updateTask?.cancel()
         updateTask = Task {
             do {
-                for try await update in CLLocationUpdate.liveUpdates(.fitness) {
+            for try await update in locationClient.liveUpdates() {
                     guard Task.isCancelled == false, isRecording || isPreviewingLocation else {
                         break
                     }
@@ -301,7 +426,7 @@ final class WalkRecorder: NSObject {
                     }
 
                     if let location = update.location {
-                        authorizationStatus = locationManager.authorizationStatus
+                        authorizationStatus = locationClient.authorizationStatus
                         configureBackgroundLocationUpdates()
                         await accept(location)
                     }
@@ -318,33 +443,44 @@ final class WalkRecorder: NSObject {
     }
 
     private func startHeadingUpdatesIfAvailable() {
-        guard CLLocationManager.headingAvailable() else {
+        guard locationClient.headingUpdatesAvailable else {
             headingDegrees = nil
             return
         }
 
-        locationManager.startUpdatingHeading()
+        locationClient.startUpdatingHeading()
     }
 
     private func requestAlwaysAuthorizationIfPossible() {
-        authorizationStatus = locationManager.authorizationStatus
+        authorizationStatus = locationClient.authorizationStatus
         switch authorizationStatus {
         case .authorizedWhenInUse:
-            locationManager.requestAlwaysAuthorization()
+            locationClient.requestAlwaysAuthorization()
         case .notDetermined:
-            locationManager.requestWhenInUseAuthorization()
+            locationClient.requestWhenInUseAuthorization()
         default:
             break
         }
     }
 
     private func configureBackgroundLocationUpdates() {
-        let shouldAllowBackgroundUpdates = canContinueInBackground
-        locationManager.allowsBackgroundLocationUpdates = shouldAllowBackgroundUpdates
-        locationManager.pausesLocationUpdatesAutomatically = shouldAllowBackgroundUpdates == false
+        let isBackgroundEligibleWalk = recording?.mode == .walk
+        let shouldAllowBackgroundUpdates = BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: isRecording && isBackgroundEligibleWalk,
+            isBackgroundRecordingEnabled: isBackgroundRecordingEnabled,
+            authorizationStatus: authorizationStatus
+        )
+
+        assert(
+            shouldAllowBackgroundUpdates == false || recording?.mode == .walk,
+            "Background location updates must only be enabled for GPS walk recordings."
+        )
+
+        locationClient.allowsBackgroundLocationUpdates = shouldAllowBackgroundUpdates
+        locationClient.pausesLocationUpdatesAutomatically = shouldAllowBackgroundUpdates == false
 
         if shouldAllowBackgroundUpdates, backgroundActivitySession == nil {
-            backgroundActivitySession = CLBackgroundActivitySession()
+            backgroundActivitySession = locationClient.makeBackgroundActivity()
         } else if shouldAllowBackgroundUpdates == false {
             stopBackgroundActivitySession()
         }
@@ -360,7 +496,7 @@ final class WalkRecorder: NSObject {
             return
         }
 
-        locationManager.stopUpdatingHeading()
+        locationClient.stopUpdatingHeading()
     }
 
     private func startClock() {
@@ -417,20 +553,21 @@ final class WalkRecorder: NSObject {
             headingDegrees = nil
         }
         clockTask = nil
+        phase = .ready
+        stopBackgroundActivitySession()
         session = nil
         persistence = nil
         syncLiveSnapshot()
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0
         configureBackgroundLocationUpdates()
-        phase = .ready
     }
 }
 
 extension WalkRecorder: CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor [weak self] in
-            self?.authorizationStatus = manager.authorizationStatus
+            self?.authorizationStatus = self?.locationClient.authorizationStatus ?? manager.authorizationStatus
             if self?.isBackgroundRecordingEnabled == true {
                 self?.requestAlwaysAuthorizationIfPossible()
             }

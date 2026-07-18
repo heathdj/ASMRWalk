@@ -8,6 +8,31 @@ import Foundation
 import Observation
 import UIKit
 
+struct VideoCaptureAuthorizationSnapshot: Equatable {
+    let camera: AVAuthorizationStatus
+    let microphone: AVAuthorizationStatus
+}
+
+enum VideoCapturePreviewPreparationDecision: Equatable {
+    case prepare
+    case waitForUserIntent
+    case blocked
+}
+
+enum VideoCapturePreviewPolicy {
+    static func decision(for snapshot: VideoCaptureAuthorizationSnapshot) -> VideoCapturePreviewPreparationDecision {
+        if snapshot.camera == .authorized, snapshot.microphone == .authorized {
+            return .prepare
+        }
+
+        if snapshot.camera == .notDetermined || snapshot.microphone == .notDetermined {
+            return .waitForUserIntent
+        }
+
+        return .blocked
+    }
+}
+
 @MainActor
 @Observable
 final class VideoCaptureService: NSObject {
@@ -59,24 +84,71 @@ final class VideoCaptureService: NSObject {
             || microphoneAuthorizationStatus == .restricted
     }
 
+    var needsPermissionRequest: Bool {
+        cameraAuthorizationStatus == .notDetermined || microphoneAuthorizationStatus == .notDetermined
+    }
+
+    var canPreparePreviewWithoutPrompt: Bool {
+        previewPreparationDecision == .prepare
+    }
+
+    private var authorizationSnapshot: VideoCaptureAuthorizationSnapshot {
+        VideoCaptureAuthorizationSnapshot(
+            camera: cameraAuthorizationStatus,
+            microphone: microphoneAuthorizationStatus
+        )
+    }
+
+    private var previewPreparationDecision: VideoCapturePreviewPreparationDecision {
+        VideoCapturePreviewPolicy.decision(for: authorizationSnapshot)
+    }
+
+    func refreshAuthorizationStatus() {
+        cameraAuthorizationStatus = Self.authorizationStatus(for: .video)
+        microphoneAuthorizationStatus = Self.authorizationStatus(for: .audio)
+    }
+
     func prepare() async {
+        await prepare(requestsPermissionIfNeeded: true)
+    }
+
+    func prepareIfAuthorized() async {
+        guard isRecording == false else {
+            return
+        }
+
+        refreshAuthorizationStatus()
+
+        switch previewPreparationDecision {
+        case .prepare:
+            await prepare(requestsPermissionIfNeeded: false)
+        case .waitForUserIntent:
+            errorMessage = nil
+            isReady = session.isRunning
+        case .blocked:
+            errorMessage = CaptureError.permissionDenied.localizedDescription
+            stopSession()
+        }
+    }
+
+    private func prepare(requestsPermissionIfNeeded: Bool) async {
         guard isReady == false || session.isRunning == false else {
             return
         }
 
         do {
-            cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
-            microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            cameraAuthorizationStatus = Self.authorizationStatus(for: .video)
+            microphoneAuthorizationStatus = Self.authorizationStatus(for: .audio)
 
-            guard await Self.requestAccess(for: .video),
-                  await Self.requestAccess(for: .audio) else {
-                cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
-                microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            guard await Self.authorizeAccess(for: .video, requestIfNeeded: requestsPermissionIfNeeded),
+                  await Self.authorizeAccess(for: .audio, requestIfNeeded: requestsPermissionIfNeeded) else {
+                cameraAuthorizationStatus = Self.authorizationStatus(for: .video)
+                microphoneAuthorizationStatus = Self.authorizationStatus(for: .audio)
                 throw CaptureError.permissionDenied
             }
 
-            cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
-            microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            cameraAuthorizationStatus = Self.authorizationStatus(for: .video)
+            microphoneAuthorizationStatus = Self.authorizationStatus(for: .audio)
             try Task.checkCancellation()
             resetCapturePipeline()
             try configureSession()
@@ -116,6 +188,10 @@ final class VideoCaptureService: NSObject {
 
     func report(_ error: Error) {
         errorMessage = error.localizedDescription
+    }
+
+    func reportMessage(_ message: String) {
+        errorMessage = message
     }
 
     func stopRecording() async throws -> URL {
@@ -220,12 +296,16 @@ final class VideoCaptureService: NSObject {
         }.value
     }
 
-    private static func requestAccess(for mediaType: AVMediaType) async -> Bool {
-        switch AVCaptureDevice.authorizationStatus(for: mediaType) {
+    private static func authorizationStatus(for mediaType: AVMediaType) -> AVAuthorizationStatus {
+        AVCaptureDevice.authorizationStatus(for: mediaType)
+    }
+
+    private static func authorizeAccess(for mediaType: AVMediaType, requestIfNeeded: Bool) async -> Bool {
+        switch authorizationStatus(for: mediaType) {
         case .authorized:
             true
         case .notDetermined:
-            await AVCaptureDevice.requestAccess(for: mediaType)
+            requestIfNeeded ? await AVCaptureDevice.requestAccess(for: mediaType) : false
         case .denied, .restricted:
             false
         @unknown default:
@@ -256,6 +336,16 @@ final class VideoCaptureService: NSObject {
         stopContinuation = nil
     }
 }
+
+@MainActor
+protocol VideoRecordingControlling: AnyObject {
+    func stopRecording() async throws -> URL
+    func report(_ error: Error)
+    func reportMessage(_ message: String)
+    func stopSession()
+}
+
+extension VideoCaptureService: VideoRecordingControlling {}
 
 extension VideoCaptureService: AVCaptureFileOutputRecordingDelegate {
     nonisolated func fileOutput(

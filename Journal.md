@@ -29,6 +29,12 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### The Screen Marker That Stole the Name Tags
+
+UI testing caught a sneaky SwiftUI accessibility gotcha: putting an accessibility identifier on a broad `ZStack` can leak that identifier onto the child controls instead of creating a clean screen marker. The Walk screen looked present to automation, but the status card and start button could lose their own identifiers in the accessibility tree.
+
+The fix was to make the Walk and Video Walk root stacks explicit accessibility containers before assigning their screen identifiers. Think of the screen as the room label on the door; the buttons and status cards still need their own name tags once you're inside.
+
 ### Videos Move Into the Family Album
 
 Storing videos only inside the app sandbox is fragile. It works until an update, migration, cleanup, or reinstall changes the furniture. The new preferred path treats Photos as the long-term video home: when a video walk finishes, the app asks Photos to import the `.mov`, then stores the Photos asset identifier on the `WalkRecording`. Later playback asks Photos for an `AVPlayerItem` using that identifier.
@@ -186,6 +192,112 @@ DockKit system tracking is helpful in a normal camera app, but ASMR Walk wants t
 The DockKit zoom event does not send "positive means in, negative means out." It sends a multiplier: greater than `1.0` means zoom in, less than `1.0` means zoom out, and `1.0` means no change. ASMR Walk originally checked whether the factor was nonnegative, which made every normal DockKit zoom event look like zoom in. On a real gimbal, that meant the zoom control had an elevator-up button and no elevator-down button.
 
 The camera service now compares the factor against `1.0`, so zoom-out events step the camera back toward its minimum zoom factor.
+
+### One Recording Captain
+
+QA found a serious loophole hiding in plain sight: GPS Walk and Video Walk each brought their own `WalkRecorder` to the party. That meant a GPS walk could keep running, the user could switch tabs, and Video Walk could start a second route recorder. Two captains were steering the same ship, and neither knew the other had grabbed the wheel.
+
+`RecordingCoordinator` is now the single bouncer at the recording door. The tab shell owns it, both recording screens share its one `WalkRecorder`, and the coordinator remembers which mode is active until the recording is saved or discarded. If someone tries to start Video Walk during a GPS walk, the button becomes "Go to Walk" instead of pretending a second recording can begin. The reverse path works the same way for Video Walk.
+
+The subtle bit is the short-recording dialog. A recording is still considered active while the app asks whether to save or discard it, because that dialog is not a finished state. Treating "waiting for a decision" as idle would reopen the same bug through a side door.
+
+### The Recording Leash
+
+The next QA catch was related: even with only one captain, the user could walk out of the room. A GPS recording kept running after a tab switch, but the stop button stayed behind on the Walk tab. Technically correct, practically awkward.
+
+The app shell now carries a persistent active-recording banner, like a leash clipped to the bottom of the screen. Switch to History or Settings and the banner follows: current mode, elapsed time, distance, a return button, and for GPS walks a stop button. Stopping a short GPS walk from the banner still goes through the same save-or-discard confirmation, because a shortcut should not skip the safety rail.
+
+The important pattern is ownership. A tab-specific view can own rich controls for its mode, but cross-tab recording visibility belongs to `ContentView`, where the tab selection and shared `RecordingCoordinator` already live.
+
+The banner eventually became the single scoreboard too. Walk and Video Walk no longer carry their own time-and-distance cards while recording; duplicating those numbers made the screens busier and created two places to keep visually consistent. Video recordings also get the same right-side stop treatment in the banner, with the actual camera cleanup still delegated back to `VideoWalkView` where the video file is finalized.
+
+### Choosing the Pocket-Sized Release
+
+ASMR Walk kept describing itself as an iPhone app, but the Xcode target was still advertising iPad support. That little checkbox is not a harmless decoration; it invites iPad layouts, multitasking behavior, orientation coverage, screenshots, and review expectations. Shipping iPad support without doing the work would be like printing "all-terrain vehicle" on a bicycle.
+
+Version 1 now draws a clean line: iPhone only. The app can focus on the device that actually matches the walking, camera, DockKit, and one-handed recording story. iPad can still become a real product decision later, but it should arrive with adaptive layouts and testing, not as an accidental build setting.
+
+### The Little Light Learned to Speak
+
+The first video recording indicator was just a tiny green dot. It was technically present, but easy to miss over a moving camera preview, and color alone is a shaky messenger. The fix keeps the lightweight idea but makes it clearer: the dot slowly pulses between 7 and 14 points, and the label beside it says `REC`.
+
+That pulse is deliberately small. No timers, no glowing blur, no animated shadows; just one SwiftUI circle changing size inside a fixed 14-point box. Compared with live camera capture, GPS, and MapKit, this is pocket change, but it gives the user a visible heartbeat that says the video is rolling.
+
+Then UI testing found a stage-management bug: the recording light and the status card were sharing the same spotlight. If the camera or location state needed to show a status card, the explicit recording indicator stepped offstage, even when the app was in a video-recording test state. The fix lets the status card explain the situation while the `REC` indicator remains separately discoverable. In accessibility terms, the warning sign and the "we are recording" sign are different signs; one should not erase the other.
+
+### Ask at the Door, Not on the Sidewalk
+
+Opening a tab used to be enough to make iOS ask for camera, microphone, or location access. That is technically easy and socially clumsy. Permissions are a conversation, and the user should know which button started it.
+
+The recording tabs now refresh permission status on appear without prompting. The actual requests happen when the user starts a walk or video walk. Photos access follows the same rule: saving a finished video explains that ASMR Walk stores video walks in Photos before the Photos request appears, and playback explains that it needs to read saved videos from Photos. The pattern is simple: looking around is free; committing to the feature asks for the keys.
+
+### The Camera Door Should Reopen
+
+Fixing permission timing exposed a second-order bug: once Video Walk stopped asking for camera access on tab open, returning to the tab could leave the camera pipeline unprepared. The screen might sound calm and ready, but the preview was not actually running, and DockKit's shutter wisely refused to start from an unready camera.
+
+The fix gives camera preview startup its own policy. If camera and microphone access are still undetermined, Video Walk waits for the user's Start action and does not prompt. If both are already authorized, the tab prepares the live preview automatically on appear or when the app becomes active again. If access is denied, the UI says privacy access is needed instead of pretending the camera is ready. It is the same door, but now the app checks whether it already has the key before standing in the hallway.
+
+### Background GPS Got a Gatekeeper
+
+Background GPS is powerful and review-sensitive, so the app now routes every decision through `BackgroundRecordingPolicy`. That policy has a short checklist: the user enabled it, the active mode is GPS Walk, a recording is actually running, and iOS granted Always location permission. Miss any one of those and background updates stay off.
+
+This matters most for Video Walk. The settings switch can be on, but video recording still stays foreground-only. Camera capture, screen behavior, and Photos finalization already have enough moving parts; letting video walks silently continue as background GPS sessions would blur the product promise and make App Store review harder to explain. The rule is now easy to test and easy to say: background means walking routes only.
+
+### Testing the Weather, Not Just the Thermostat
+
+Issue #34 exposed a testing blind spot. The app had plenty of polite little tests for policy helpers and result factories, but the riskiest bugs live where services change state: location permission gets denied then granted, When In Use needs to upgrade to Always, the app backgrounds mid-recording, the camera fails to stop, or Photos refuses a save.
+
+The fix was to give those services test handles. `WalkRecorder` now talks to a `WalkLocationClient`, so tests can simulate Core Location authorization and background-update behavior without waking real GPS. Video stopping moved into `VideoWalkStopFlow`, where a fake camera and fake Photos store can drive the same coordinator path the app uses. Think of it as practicing the emergency drill with the actual stage directions, just with cardboard props instead of live hardware.
+
+Those fake services quickly paid rent. QA found that discarding an Always-authorized background GPS walk could clear the session while the recorder still claimed to be recording, letting background updates spring back to life during cleanup. The fix is a lifecycle rule worth remembering: before you recompute background privileges, make the state machine tell the truth. Capture the files and IDs you need, invalidate the background activity, transition out of `.recording`, then let policy recompute from honest state.
+
+### Photos Own the Video, ASMR Walk Owns the Route
+
+Video walks now have a split ownership model. The route, stats, and playback reference live in ASMR Walk; the finished movie usually lives in Photos. Deleting a recording is therefore like removing an index card from the app's catalog, not shredding the movie sitting in the user's library.
+
+The delete dialog now says that plainly. Photos-backed videos remain in Photos, while older app-managed fallback files are removed with their recording. The behavior did not change; the promise finally matches the machinery.
+
+### Privacy Strings Need Separate Jobs
+
+The Photos prompts used to say the same generic thing for both add and read access. That is not precise enough. Saving a finished video walk to Photos and reading that video back for route replay are different user moments, so the usage descriptions now say different things.
+
+This is a small copy change with real review weight. Privacy strings are not marketing taglines; they are the labels on the permission keys. If the key opens Photos for saving, say saving. If it opens Photos for replay, say replay.
+
+### Local-First Means Label What Actually Leaves
+
+App Privacy labels are easy to overstate when an app touches sensitive APIs. ASMR Walk uses location, camera, microphone, and Photos, but version 1 does not run a developer backend, analytics pipeline, account system, ad network, or sync service. The important distinction is access versus collection.
+
+Routes and metadata live on the phone. Videos usually live in the user's Photos library. Data leaves ASMR Walk only when the user chooses to share a GPX file, open a Google Maps route link, or when Apple frameworks such as Photos do their own system-level work based on the user's settings. The release checklist now treats privacy review like checking a valve: verify what actually flows off device before declaring anything collected.
+
+### Checkpoints Learned to Stop Recopying the Trail
+
+The first persistence pass treated every checkpoint like a full rewrite: delete all saved route points, then recreate the entire trail from the latest snapshot. That is simple, but it gets more expensive with every block walked. A long route turns each save into a bigger chore than the last one.
+
+`WalkRecordingPersistence` now treats checkpoints like adding pages to a notebook. Metadata still updates every time, but route points are append-only: if 40 points are already saved and the live snapshot has 75, only points 41 through 75 are inserted. Re-saving the same checkpoint adds nothing, which keeps retries from duplicating points and gives interruption recovery the same final-save path.
+
+### Tests Need Handles, Not Luck
+
+The riskiest release flows live at the edge of iOS: permission denial, Photos fallback, video stop failure, background location, and interruptions. Some of that can only be proven on a phone, but a lot of it can be made deterministic if the app gives tests a clean handle.
+
+Issue 34 added those handles in small places. Video stop handling now has a pure outcome type that can be tested without a camera or Photos library. UI tests can launch into denied-permission states without changing real device settings. The goal is not to fake the whole operating system; it is to make ASMR Walk's response to each operating-system answer predictable and covered.
+
+### Onboarding Tests Need Their Own Front Door
+
+UI tests were walking into the app like regular returning users and hoping the simulator remembered that onboarding had already been completed. That works until someone runs on a clean simulator, deletes the app, changes test order, or lets CI start from a blank slate. Then the test asks for History and the app politely shows the first-run tour instead.
+
+The fix gives tests a proper key to the front door. In DEBUG builds, a launch environment value can seed onboarding as either `completed` or `firstLaunch` before SwiftUI reads `@AppStorage`. Returning-user tests now say "I am a returning user" before launch, while one dedicated test says "show me first launch" and verifies the tour. The onboarding pages also carry explicit accessibility identifiers, because test handles should be door labels, not guesses about how SwiftUI exposes combined text. The simulator's memory is no longer part of the contract.
+
+### Accessibility Is a Weather Report
+
+The recording screens are built on maps, camera previews, glass panels, and compact controls. That looks good in the default forecast, but accessibility settings change the weather: Dynamic Type makes text taller, Reduce Transparency weakens glass, Increase Contrast demands stronger edges, and VoiceOver needs state to be spoken instead of merely colored green or red.
+
+The shared status card and active-recording banner now adapt instead of squeezing. They can reflow from horizontal to vertical, use more solid panel backgrounds when transparency or contrast settings call for it, and expose explicit labels for recording state, time, and distance. Video Walk keeps its route map square, but sizes it from the available landscape space so it gives room back to `REC`, status, and controls on smaller screens. The UI tests also gained an accessibility QA launch mode: not a replacement for Accessibility Inspector, but a repeatable smoke test that says the essentials still have handles when the adaptive surfaces are active.
+
+### Release Docs Need One Story
+
+Documentation can drift like a trail map copied too many times. One page says background GPS exists, another still hints it is future work, and suddenly App Review, QA, and future engineering are all reading different maps.
+
+The release docs now use the same version-one story everywhere: ASMR Walk is iPhone-only, local-first, Photos-backed for finished video walks, GPS-only for optional background recording, and foreground-only for Video Walk. Roadmap items are labeled as future ideas instead of hanging around the feature list in disguise. `APP_STORE_COPY.md` now gives App Store Connect text the same source of truth as the README, checklist, and privacy policy.
 
 ## Engineer's Wisdom
 

@@ -13,10 +13,10 @@ struct WalkRecorderView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
-    @State private var recorder = WalkRecorder()
+    let coordinator: RecordingCoordinator
+    let showActiveRecording: () -> Void
     @State private var cameraPosition: MapCameraPosition = .automatic
     @State private var hasPositionedCamera = false
-    @State private var isShowingShortRecordingConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -25,39 +25,40 @@ struct WalkRecorderView: View {
 
                 VStack(spacing: 16) {
                     RecordingStatusCard(
-                        title: recorder.statusTitle,
-                        detail: recorder.statusDetail,
-                        systemImage: recorder.isRecording ? "location.fill.viewfinder" : "location.fill"
+                        title: statusTitle,
+                        detail: statusDetail,
+                        systemImage: isBlockedByVideoWalk ? "video.fill" : recorder.isRecording ? "location.fill.viewfinder" : "location.fill",
+                        accessibilityIdentifier: AccessibilityID.walkStatus
                     )
-                    .accessibilityIdentifier(AccessibilityID.walkStatus)
 
-                    if recorder.isLocationAccessDenied {
+                    if isLocationAccessDenied {
                         openSettingsButton(label: "Open Location Settings")
                     }
 
                     Spacer()
 
-                    RecordingMetrics(
-                        duration: recorder.currentDuration,
-                        distanceMeters: recorder.currentDistanceMeters
-                    )
-                    .accessibilityIdentifier(AccessibilityID.walkMetrics)
-
-                    recordingButton
+                    if isRecordingWalk == false {
+                        recordingButton
+                    }
                 }
                 .padding()
             }
             .navigationTitle("Walk")
             .navigationBarTitleDisplayMode(.inline)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier(AccessibilityID.walkScreen)
             .onAppear {
-                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
-                recorder.startPreviewingLocation()
+                if isBlockedByVideoWalk == false {
+                    recorder.refreshAuthorizationStatus()
+                    recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
+                    recorder.startPreviewingLocation(requestAuthorization: false)
+                }
             }
             .onDisappear {
                 recorder.stopPreviewingLocation()
             }
             .onChange(of: isBackgroundGPSRecordingEnabled) {
-                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled)
+                recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
             }
             .onChange(of: recorder.latestLocation?.timestamp) {
                 guard hasPositionedCamera == false, let location = recorder.latestLocation else {
@@ -75,25 +76,16 @@ struct WalkRecorderView: View {
                 hasPositionedCamera = true
             }
             .onChange(of: scenePhase) {
-                if scenePhase != .active, recorder.isRecording, recorder.canContinueInBackground == false {
+                if scenePhase == .active {
+                    recorder.refreshAuthorizationStatus()
+                } else if RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
+                    isRecordingWalk: isRecordingWalk,
+                    canContinueInBackground: recorder.canContinueInBackground
+                ) {
                     Task {
-                        await recorder.stopAndSave()
+                        await coordinator.stopAndSave()
                     }
                 }
-            }
-            .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
-                Button("Save Walk") {
-                    Task {
-                        await recorder.saveFinishedRecording()
-                    }
-                }
-                Button("Discard Walk", role: .destructive) {
-                    Task {
-                        await recorder.discard()
-                    }
-                }
-            } message: {
-                Text("This walk is shorter than 10 seconds.")
             }
         }
     }
@@ -116,19 +108,22 @@ struct WalkRecorderView: View {
             MapScaleView()
         }
         .ignoresSafeArea()
+        .accessibilityLabel("Live walking route")
+        .accessibilityHint("Shows your current position and recorded GPS route.")
     }
 
     private var recordingButton: some View {
         Button(
-            recorder.isRecording ? "Stop and Save" : "Start Walk",
-            systemImage: recorder.isRecording ? "stop.fill" : "figure.walk"
+            recordingButtonTitle,
+            systemImage: recordingButtonSystemImage
         ) {
-            if recorder.isRecording {
-                stopWalk()
+            if isBlockedByVideoWalk {
+                showActiveRecording()
             } else {
                 Task {
-                    await recorder.start(
+                    await coordinator.start(
                         in: modelContext,
+                        mode: .walk,
                         allowsBackgroundRecording: isBackgroundGPSRecordingEnabled
                     )
                 }
@@ -138,20 +133,65 @@ struct WalkRecorderView: View {
         .frame(maxWidth: .infinity)
         .controlSize(.large)
         .buttonStyle(.glassProminent)
-        .tint(recorder.isRecording ? .red : .green)
-        .disabled(recorder.phase == .saving || recorder.isLocationAccessDenied)
+        .tint(.green)
+        .disabled(isRecordingButtonDisabled)
         .accessibilityIdentifier(AccessibilityID.startWalkButton)
     }
 
-    private func stopWalk() {
-        if recorder.isShortRecording {
-            recorder.finishRecording()
-            isShowingShortRecordingConfirmation = true
-        } else {
-            Task {
-                await recorder.stopAndSave()
-            }
+    private var recorder: WalkRecorder {
+        coordinator.recorder
+    }
+
+    private var isRecordingWalk: Bool {
+        coordinator.activeMode == .walk && recorder.isRecording
+    }
+
+    private var isBlockedByVideoWalk: Bool {
+        coordinator.blockingMode(for: .walk) == .videoWalk
+    }
+
+    private var statusTitle: String {
+        if Self.shouldShowDeniedLocationForUITests {
+            return "Location access needed"
         }
+        return isBlockedByVideoWalk ? "Video walk recording" : recorder.statusTitle
+    }
+
+    private var statusDetail: String {
+        if Self.shouldShowDeniedLocationForUITests {
+            return "Enable location access in Settings to record a route."
+        }
+        return isBlockedByVideoWalk ? "Finish the active video walk before starting a GPS walk." : recorder.statusDetail
+    }
+
+    private var recordingButtonTitle: String {
+        if isBlockedByVideoWalk {
+            return "Go to Video Walk"
+        }
+        return "Start Walk"
+    }
+
+    private var recordingButtonSystemImage: String {
+        if isBlockedByVideoWalk {
+            return "video.fill"
+        }
+        return "figure.walk"
+    }
+
+    private var isRecordingButtonDisabled: Bool {
+        recorder.phase == .saving || (isRecordingWalk == false && isBlockedByVideoWalk == false && isLocationAccessDenied)
+    }
+
+    private var isLocationAccessDenied: Bool {
+        recorder.isLocationAccessDenied || Self.shouldShowDeniedLocationForUITests
+    }
+
+    private static var shouldShowDeniedLocationForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_LOCATION"] == "1"
+        #else
+        false
+        #endif
     }
 
     private func openSettingsButton(label: String) -> some View {

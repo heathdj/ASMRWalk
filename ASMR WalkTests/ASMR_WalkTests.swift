@@ -7,6 +7,7 @@
 
 import Foundation
 import CoreLocation
+import AVFoundation
 import SwiftUI
 import SwiftData
 import Testing
@@ -66,6 +67,38 @@ struct ASMR_WalkTests {
         #expect(BackgroundGPSRecording.storageKey == "backgroundGPSRecordingEnabled")
     }
 
+    @Test("Background GPS recording is only enabled for GPS walks")
+    func backgroundGPSRecordingPolicyScopesToGPSWalks() {
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .walk, userEnabled: true))
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .walk, userEnabled: false) == false)
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .videoWalk, userEnabled: true) == false)
+        #expect(BackgroundRecordingPolicy.isEnabledForRecording(mode: .videoWalk, userEnabled: false) == false)
+    }
+
+    @Test("Background GPS recording requires Always authorization")
+    func backgroundGPSRecordingPolicyRequiresAlwaysAuthorization() {
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedAlways
+        ))
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedWhenInUse
+        ) == false)
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: true,
+            isBackgroundRecordingEnabled: false,
+            authorizationStatus: .authorizedAlways
+        ) == false)
+        #expect(BackgroundRecordingPolicy.canContinueInBackground(
+            isRecording: false,
+            isBackgroundRecordingEnabled: true,
+            authorizationStatus: .authorizedAlways
+        ) == false)
+    }
+
     @Test("About info exposes app metadata and support contact")
     func aboutInfo() {
         let info = AboutInfo.current
@@ -74,6 +107,147 @@ struct ASMR_WalkTests {
         #expect(info.version.isEmpty == false)
         #expect(info.build.isEmpty == false)
         #expect(info.contactEmail == "heathdj@me.com")
+    }
+
+    @Test("Photos permission explanations describe app intent")
+    func photoLibraryPermissionExplanations() {
+        #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
+        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
+        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("replay them with your route"))
+    }
+
+    @Test("Video preview prepares automatically only after camera and microphone are authorized")
+    func videoPreviewPolicyPreparesForAuthorizedPrivacy() {
+        let snapshot = VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .authorized)
+
+        #expect(VideoCapturePreviewPolicy.decision(for: snapshot) == .prepare)
+    }
+
+    @Test("Video preview waits for user intent while camera or microphone permission is undetermined")
+    func videoPreviewPolicyWaitsForUserIntentBeforePrompting() {
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .notDetermined, microphone: .authorized)
+        ) == .waitForUserIntent)
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .notDetermined)
+        ) == .waitForUserIntent)
+    }
+
+    @Test("Video preview blocks when camera or microphone permission is denied")
+    func videoPreviewPolicyBlocksDeniedPrivacy() {
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .denied, microphone: .authorized)
+        ) == .blocked)
+        #expect(VideoCapturePreviewPolicy.decision(
+            for: VideoCaptureAuthorizationSnapshot(camera: .authorized, microphone: .restricted)
+        ) == .blocked)
+    }
+
+    @Test("Video stop outcome records Photos success")
+    func videoStopOutcomePhotosSuccess() throws {
+        let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
+        let outcome = VideoWalkStopOutcome.photosSaveSucceeded(
+            assetIdentifier: "photos-asset",
+            localVideoURL: videoURL
+        )
+
+        #expect(outcome == .savedToPhotos(assetIdentifier: "photos-asset", localVideoURL: videoURL))
+    }
+
+    @Test("Video stop outcome records Photos fallback")
+    func videoStopOutcomePhotosFallback() throws {
+        let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
+        let error = NSError(
+            domain: "PhotoSave",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Photos unavailable"]
+        )
+        let outcome = VideoWalkStopOutcome.photosSaveFailed(videoURL: videoURL, error: error)
+
+        #expect(outcome == .keptLocalVideo(videoURL: videoURL, message: "Photos unavailable"))
+    }
+
+    @Test("Video stop outcome records stop failure discard")
+    func videoStopOutcomeStopFailure() throws {
+        let error = NSError(
+            domain: "VideoStop",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Video file missing"]
+        )
+        let outcome = VideoWalkStopOutcome.stopFailed(error: error)
+
+        #expect(outcome == .discarded(message: "Video file missing"))
+    }
+
+    @Test("GPS lifecycle stops foreground-only walks when the scene deactivates", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func gpsLifecycleStopsForegroundOnlyWalks() {
+        #expect(RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
+            isRecordingWalk: true,
+            canContinueInBackground: false
+        ))
+        #expect(RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
+            isRecordingWalk: true,
+            canContinueInBackground: true
+        ) == false)
+        #expect(RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
+            isRecordingWalk: false,
+            canContinueInBackground: false
+        ) == false)
+    }
+
+    @Test("Video lifecycle stops when the scene deactivates", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func videoLifecycleStopsOnSceneDeactivation() {
+        #expect(RecordingLifecyclePolicy.shouldStopVideoWalkWhenSceneDeactivates(isRecordingVideoWalk: true))
+        #expect(RecordingLifecyclePolicy.shouldStopVideoWalkWhenSceneDeactivates(isRecordingVideoWalk: false) == false)
+    }
+
+    @Test("Privacy usage descriptions are specific")
+    func privacyUsageDescriptionsAreSpecific() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let infoPlistURL = projectRoot.appending(path: "ASMR-Walk-Info.plist")
+        let infoPlistData = try Data(contentsOf: infoPlistURL)
+        let infoPlist = try #require(PropertyListSerialization.propertyList(
+            from: infoPlistData,
+            format: nil
+        ) as? [String: Any])
+
+        #expect(infoPlist["NSLocationWhenInUseUsageDescription"] as? String == "ASMR Walk uses your location while recording to draw and save your walking route.")
+        #expect(infoPlist["NSLocationAlwaysAndWhenInUseUsageDescription"] as? String == "ASMR Walk uses background location only when you enable background GPS recording for walks.")
+        #expect(infoPlist["NSCameraUsageDescription"] as? String == "ASMR Walk uses the camera to record video walks.")
+        #expect(infoPlist["NSMicrophoneUsageDescription"] as? String == "ASMR Walk uses the microphone to record video walks.")
+        #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves finished video walks to Photos so they remain available outside the app.")
+        #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads saved video walks from Photos so you can replay them with your route.")
+    }
+
+    @Test("Delete confirmation explains Photos video ownership")
+    func deleteConfirmationForPhotosVideo() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoAssetIdentifier: "photos-asset-id"
+        )
+
+        #expect(recording.deleteConfirmationMessage.contains("video remains in Photos"))
+    }
+
+    @Test("Delete confirmation explains local fallback video cleanup")
+    func deleteConfirmationForLocalVideoFallback() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: URL(fileURLWithPath: "/tmp/video.mov")
+        )
+
+        #expect(recording.deleteConfirmationMessage.contains("app-managed video file"))
+    }
+
+    @Test("Delete confirmation explains route-only cleanup")
+    func deleteConfirmationForRouteOnlyWalk() {
+        let recording = WalkRecording(title: "Walk", mode: .walk)
+
+        #expect(recording.deleteConfirmationMessage == "This permanently removes the recording and its route.")
     }
 }
 
@@ -178,6 +352,210 @@ struct WalkRecordingSessionTests {
             speed: 1.2,
             timestamp: timestamp
         )
+    }
+}
+
+@MainActor
+struct RecordingCoordinatorTests {
+    @Test("A GPS walk blocks a second video walk from starting")
+    func gpsWalkBlocksVideoWalk() {
+        let coordinator = RecordingCoordinator(activeMode: .walk)
+
+        #expect(coordinator.hasActiveRecording)
+        #expect(coordinator.canStart(.walk))
+        #expect(coordinator.canStart(.videoWalk) == false)
+        #expect(coordinator.blockingMode(for: .videoWalk) == .walk)
+        #expect(coordinator.activeTab == .walk)
+    }
+
+    @Test("A video walk blocks a second GPS walk from starting")
+    func videoWalkBlocksGPSWalk() {
+        let coordinator = RecordingCoordinator(activeMode: .videoWalk)
+
+        #expect(coordinator.hasActiveRecording)
+        #expect(coordinator.canStart(.videoWalk))
+        #expect(coordinator.canStart(.walk) == false)
+        #expect(coordinator.blockingMode(for: .walk) == .videoWalk)
+        #expect(coordinator.activeTab == .videoWalk)
+    }
+
+    @Test("An idle coordinator allows either recording mode")
+    func idleCoordinatorAllowsAnyMode() {
+        let coordinator = RecordingCoordinator()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(coordinator.canStart(.walk))
+        #expect(coordinator.canStart(.videoWalk))
+        #expect(coordinator.blockingMode(for: .walk) == nil)
+        #expect(coordinator.blockingMode(for: .videoWalk) == nil)
+        #expect(coordinator.activeTab == nil)
+    }
+
+    @Test("Denied location can recover after Settings grants access", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func deniedLocationCanRecoverAfterSettingsGrant() {
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .denied)
+        let recorder = WalkRecorder(locationClient: locationClient)
+
+        recorder.startPreviewingLocation()
+
+        #expect(recorder.isLocationAccessDenied)
+        #expect(recorder.isPreviewingLocation == false)
+        #expect(recorder.errorMessage == "Location access is unavailable.")
+
+        locationClient.authorizationStatus = .authorizedWhenInUse
+        recorder.refreshAuthorizationStatus()
+        recorder.startPreviewingLocation(requestAuthorization: false)
+
+        #expect(recorder.isLocationAccessDenied == false)
+        #expect(recorder.isPreviewingLocation)
+        #expect(recorder.errorMessage == nil)
+        #expect(locationClient.didStartHeadingUpdates)
+    }
+
+    @Test("Background GPS requests Always when only When In Use is granted", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func backgroundGPSRequestsAlwaysUpgrade() {
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedWhenInUse)
+        let recorder = WalkRecorder(locationClient: locationClient)
+
+        recorder.setBackgroundRecordingEnabled(true)
+
+        #expect(locationClient.requestAlwaysAuthorizationCount == 1)
+        #expect(locationClient.requestWhenInUseAuthorizationCount == 0)
+        #expect(recorder.canContinueInBackground == false)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+    }
+
+    @Test("Background GPS enables updates only for Always-authorized GPS walks", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func backgroundGPSEnablesUpdatesForAlwaysAuthorizedWalks() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedAlways)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+
+        let didStart = await coordinator.start(
+            in: container.mainContext,
+            mode: .walk,
+            allowsBackgroundRecording: true
+        )
+
+        #expect(didStart)
+        #expect(recorder.canContinueInBackground)
+        #expect(locationClient.allowsBackgroundLocationUpdates)
+        #expect(locationClient.pausesLocationUpdatesAutomatically == false)
+        #expect(locationClient.backgroundActivityCount == 1)
+        let backgroundActivity = try #require(locationClient.backgroundActivities.first)
+
+        await coordinator.discard()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(recorder.phase == .ready)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(locationClient.pausesLocationUpdatesAutomatically)
+        #expect(backgroundActivity.didInvalidate)
+        #expect(locationClient.backgroundActivityCount == 1)
+    }
+
+    @Test("Saving an Always-authorized background GPS walk invalidates background activity without replacing it", .bug("https://github.com/heathdj/ASMRWalk/issues/29"))
+    func savingBackgroundGPSWalkInvalidatesBackgroundActivityWithoutReplacement() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedAlways)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+
+        let didStart = await coordinator.start(
+            in: container.mainContext,
+            mode: .walk,
+            allowsBackgroundRecording: true
+        )
+
+        try #require(didStart)
+        #expect(locationClient.allowsBackgroundLocationUpdates)
+        #expect(locationClient.backgroundActivityCount == 1)
+        let backgroundActivity = try #require(locationClient.backgroundActivities.first)
+
+        await coordinator.stopAndSave()
+
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(recorder.phase == .ready)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(locationClient.pausesLocationUpdatesAutomatically)
+        #expect(backgroundActivity.didInvalidate)
+        #expect(locationClient.backgroundActivityCount == 1)
+    }
+
+    @Test("Video walks stay foreground-only even when background GPS is enabled", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func videoWalksStayForegroundOnlyWhenBackgroundGPSIsEnabled() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedAlways)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+
+        let didStart = await coordinator.start(
+            in: container.mainContext,
+            mode: .videoWalk,
+            allowsBackgroundRecording: true
+        )
+
+        #expect(didStart)
+        #expect(recorder.canContinueInBackground == false)
+        #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(locationClient.backgroundActivityCount == 0)
+
+        await coordinator.discard()
+    }
+
+    @Test("Photos fallback saves the video URL through the coordinator flow", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func photosFallbackSavesLocalVideoThroughCoordinatorFlow() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedWhenInUse)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+        let videoURL = URL(fileURLWithPath: "/tmp/fallback-video.mov")
+        let camera = FakeVideoRecordingController(stopResult: .success(videoURL))
+        let photos = FakePhotoLibraryVideoStore(result: .failure(TestError(message: "Photos unavailable")))
+
+        let didStart = await coordinator.start(in: container.mainContext, mode: .videoWalk)
+        try #require(didStart)
+
+        let result = await VideoWalkStopFlow(
+            coordinator: coordinator,
+            camera: camera,
+            photoLibrary: photos
+        ).stop(confirmShortRecording: false)
+
+        #expect(result == .saved)
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(camera.messages.contains("Photos unavailable"))
+
+        let recording = try #require(try fetchOnlyRecording(in: container))
+        #expect(recording.videoURL == videoURL)
+        #expect(recording.videoAssetIdentifier == nil)
+    }
+
+    @Test("Camera stop failure discards the draft recording through the coordinator flow", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func cameraStopFailureDiscardsDraftRecordingThroughCoordinatorFlow() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedWhenInUse)
+        let recorder = WalkRecorder(locationClient: locationClient)
+        let coordinator = RecordingCoordinator(recorder: recorder)
+        let camera = FakeVideoRecordingController(stopResult: .failure(TestError(message: "Video stop failed")))
+        let photos = FakePhotoLibraryVideoStore(result: .success("unused"))
+
+        let didStart = await coordinator.start(in: container.mainContext, mode: .videoWalk)
+        try #require(didStart)
+
+        let result = await VideoWalkStopFlow(
+            coordinator: coordinator,
+            camera: camera,
+            photoLibrary: photos
+        ).stop(stopSessionWhenFinished: true, confirmShortRecording: false)
+
+        #expect(result == .failed)
+        #expect(coordinator.hasActiveRecording == false)
+        #expect(recorder.phase == .ready)
+        #expect(camera.messages.contains("Video stop failed"))
+        #expect(camera.didStopSession)
+        #expect(try fetchOnlyRecording(in: container) == nil)
     }
 }
 
@@ -309,6 +687,146 @@ struct WalkRecordingTests {
         #expect(try context.fetchCount(FetchDescriptor<LocationPoint>()) == 0)
     }
 
+    @Test("Persistence checkpoints append only new route points")
+    func persistenceCheckpointsAppendOnlyNewPoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "E94C5F79-B21C-4687-9345-D640978534E1"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 30,
+            distanceMeters: 90,
+            pointCount: 10
+        )
+        let secondCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 60,
+            distanceMeters: 180,
+            pointCount: 15
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(secondCheckpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 15)
+        #expect(recording.duration == 60)
+        #expect(recording.distanceMeters == 180)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == secondCheckpoint.points.map(\.timestamp))
+    }
+
+    @Test("Repeated persistence checkpoints do not duplicate points")
+    func repeatedPersistenceCheckpointsDoNotDuplicatePoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "5E19B546-9E52-4C93-9086-4C263FB8384D"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let checkpoint = makeSnapshot(
+            id: recordingID,
+            duration: 45,
+            distanceMeters: 135,
+            pointCount: 12
+        )
+
+        try await persistence.save(checkpoint)
+        try await persistence.save(checkpoint)
+        try await persistence.save(checkpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 12)
+        #expect(Set(recording.points.map(\.timestamp)).count == 12)
+    }
+
+    @Test("Final persistence save retains all points after partial checkpoints")
+    func finalPersistenceSaveRetainsAllPointsAfterPartialCheckpoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "8F23B3D8-6911-4193-A558-D52704386507"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 120,
+            distanceMeters: 360,
+            pointCount: 40
+        )
+        let finalSnapshot = makeSnapshot(
+            id: recordingID,
+            title: "Finished Walk",
+            duration: 180,
+            distanceMeters: 540,
+            pointCount: 75
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(finalSnapshot)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Finished Walk")
+        #expect(recording.points.count == 75)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == finalSnapshot.points.map(\.timestamp))
+    }
+
+    @Test("Final persistence save recovers points after a missed checkpoint")
+    func finalPersistenceSaveRecoversPointsAfterMissedCheckpoint() async throws {
+        let recordingID = try #require(UUID(uuidString: "9EB7066D-6430-4F2D-9639-A91E0505D294"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 120,
+            distanceMeters: 360,
+            pointCount: 40
+        )
+        _ = makeSnapshot(
+            id: recordingID,
+            duration: 150,
+            distanceMeters: 450,
+            pointCount: 60
+        )
+        let finalSnapshot = makeSnapshot(
+            id: recordingID,
+            duration: 210,
+            distanceMeters: 630,
+            pointCount: 90
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(finalSnapshot)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.points.count == 90)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == finalSnapshot.points.map(\.timestamp))
+        #expect(recording.duration == 210)
+        #expect(recording.distanceMeters == 630)
+    }
+
+    @Test("Persistence updates metadata without rewriting existing points")
+    func persistenceUpdatesMetadataWithoutRewritingExistingPoints() async throws {
+        let recordingID = try #require(UUID(uuidString: "2823E0B3-0866-43EA-A1D9-9404C28A0201"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let firstCheckpoint = makeSnapshot(
+            id: recordingID,
+            duration: 30,
+            distanceMeters: 90,
+            pointCount: 8
+        )
+        let metadataOnlyCheckpoint = makeSnapshot(
+            id: recordingID,
+            title: "Updated Metadata",
+            duration: 75,
+            distanceMeters: 90,
+            pointCount: 8
+        )
+
+        try await persistence.save(firstCheckpoint)
+        try await persistence.save(metadataOnlyCheckpoint)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Updated Metadata")
+        #expect(recording.duration == 75)
+        #expect(recording.points.count == 8)
+        #expect(recording.pointsInTimeOrder.map(\.timestamp) == metadataOnlyCheckpoint.points.map(\.timestamp))
+    }
+
     @Test("Sample data contains both recording modes")
     func sampleData() {
         #expect(SampleData.recordings.count == 2)
@@ -431,5 +949,191 @@ struct WalkRecordingTests {
             horizontalAccuracy: horizontalAccuracy,
             speed: speed
         )
+    }
+
+    private func makeSnapshot(
+        id: UUID,
+        title: String = "Checkpoint Walk",
+        createdAt: Date = Date(timeIntervalSince1970: 1_000),
+        duration: TimeInterval,
+        distanceMeters: Double,
+        pointCount: Int
+    ) -> WalkRecordingSnapshot {
+        WalkRecordingSnapshot(
+            id: id,
+            title: title,
+            createdAt: createdAt,
+            duration: duration,
+            distanceMeters: distanceMeters,
+            mode: .walk,
+            points: (0..<pointCount).map { index in
+                LocationPointSnapshot(
+                    timestamp: createdAt.addingTimeInterval(TimeInterval(index)),
+                    latitude: 33.4484 + (Double(index) * 0.0001),
+                    longitude: -112.0740 + (Double(index) * 0.0001),
+                    altitude: nil,
+                    horizontalAccuracy: 5,
+                    speed: 1.2
+                )
+            }
+        )
+    }
+
+    private func fetchRecording(id: UUID, in container: ModelContainer) throws -> WalkRecording? {
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<WalkRecording>(
+            predicate: #Predicate { recording in
+                recording.id == id
+            }
+        )
+        return try context.fetch(descriptor).first
+    }
+}
+
+private func makeTestContainer() throws -> ModelContainer {
+    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    return try ModelContainer(
+        for: WalkRecording.self,
+        LocationPoint.self,
+        configurations: configuration
+    )
+}
+
+private func fetchOnlyRecording(in container: ModelContainer) throws -> WalkRecording? {
+    let context = ModelContext(container)
+    let recordings = try context.fetch(FetchDescriptor<WalkRecording>())
+    return recordings.first
+}
+
+private struct TestError: LocalizedError {
+    let message: String
+
+    var errorDescription: String? {
+        message
+    }
+}
+
+@MainActor
+private final class FakeBackgroundActivity: WalkBackgroundActivity {
+    private(set) var didInvalidate = false
+
+    func invalidate() {
+        didInvalidate = true
+    }
+}
+
+@MainActor
+private final class FakeWalkLocationClient: WalkLocationClient {
+    var authorizationStatus: CLAuthorizationStatus
+    var allowsBackgroundLocationUpdates = false
+    var pausesLocationUpdatesAutomatically = true
+    var headingUpdatesAvailable = true
+    private(set) var requestWhenInUseAuthorizationCount = 0
+    private(set) var requestAlwaysAuthorizationCount = 0
+    private(set) var didStartHeadingUpdates = false
+    private(set) var didStopHeadingUpdates = false
+    private(set) var backgroundActivityCount = 0
+    private(set) var backgroundActivities: [FakeBackgroundActivity] = []
+    private weak var delegate: CLLocationManagerDelegate?
+
+    init(authorizationStatus: CLAuthorizationStatus) {
+        self.authorizationStatus = authorizationStatus
+    }
+
+    func setDelegate(_ delegate: CLLocationManagerDelegate?) {
+        self.delegate = delegate
+    }
+
+    func requestWhenInUseAuthorization() {
+        requestWhenInUseAuthorizationCount += 1
+    }
+
+    func requestAlwaysAuthorization() {
+        requestAlwaysAuthorizationCount += 1
+    }
+
+    func startUpdatingHeading() {
+        didStartHeadingUpdates = true
+    }
+
+    func stopUpdatingHeading() {
+        didStopHeadingUpdates = true
+    }
+
+    func liveUpdates() -> AsyncThrowingStream<WalkLocationUpdateSnapshot, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.finish()
+        }
+    }
+
+    func makeBackgroundActivity() -> any WalkBackgroundActivity {
+        backgroundActivityCount += 1
+        let activity = FakeBackgroundActivity()
+        backgroundActivities.append(activity)
+        return activity
+    }
+}
+
+@MainActor
+private final class FakeVideoRecordingController: VideoRecordingControlling {
+    let stopURL: URL?
+    let stopError: (any Error)?
+    private(set) var messages: [String] = []
+    private(set) var errors: [String] = []
+    private(set) var didStopSession = false
+
+    init(stopResult: Result<URL, TestError>) {
+        switch stopResult {
+        case let .success(url):
+            stopURL = url
+            stopError = nil
+        case let .failure(error):
+            stopURL = nil
+            stopError = error
+        }
+    }
+
+    func stopRecording() async throws -> URL {
+        if let stopURL {
+            return stopURL
+        }
+
+        throw stopError ?? TestError(message: "Video stop failed")
+    }
+
+    func report(_ error: Error) {
+        errors.append(error.localizedDescription)
+    }
+
+    func reportMessage(_ message: String) {
+        messages.append(message)
+    }
+
+    func stopSession() {
+        didStopSession = true
+    }
+}
+
+private struct FakePhotoLibraryVideoStore: PhotoLibraryVideoStoring {
+    let assetIdentifier: String?
+    let error: (any Error)?
+
+    init(result: Result<String, TestError>) {
+        switch result {
+        case let .success(assetIdentifier):
+            self.assetIdentifier = assetIdentifier
+            error = nil
+        case let .failure(error):
+            assetIdentifier = nil
+            self.error = error
+        }
+    }
+
+    func saveVideoToPhotoLibrary(from fileURL: URL) async throws -> String {
+        if let assetIdentifier {
+            return assetIdentifier
+        }
+
+        throw error ?? TestError(message: "Photos unavailable")
     }
 }

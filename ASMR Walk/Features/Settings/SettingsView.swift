@@ -40,7 +40,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Recording")
                 } footer: {
-                    Text("When enabled, GPS-only walks can continue while the app is backgrounded or the screen is locked. Always location permission is required.")
+                    Text("GPS Walk only. When enabled, GPS-only walks can continue while the app is backgrounded or the screen is locked. Always location permission is required. Video Walks stop when the app leaves the foreground.")
                 }
 
                 Section("Guide") {
