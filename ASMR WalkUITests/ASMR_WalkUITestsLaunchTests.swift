@@ -20,6 +20,7 @@ final class ASMR_WalkUITestsLaunchTests: XCTestCase {
     @MainActor
     func testLaunch() throws {
         let app = XCUIApplication()
+        app.launchEnvironment["ASMR_WALK_UI_TEST_ONBOARDING"] = "completed"
         app.launch()
 
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 2))
