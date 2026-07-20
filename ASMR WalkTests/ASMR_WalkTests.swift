@@ -203,6 +203,7 @@ struct ASMR_WalkTests {
         #expect(infoPlist["NSMicrophoneUsageDescription"] as? String == "ASMR Walk uses the microphone to record video walks.")
         #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.")
         #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads older Photos-backed video walks so you can replay them with your route.")
+        #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location"])
     }
 
     @Test("Delete confirmation explains Photos video ownership")

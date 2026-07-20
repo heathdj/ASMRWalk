@@ -319,6 +319,18 @@ The privacy policy moved from release paperwork into the app itself. Settings no
 
 That placement keeps the promise local-first and inspectable. If someone wants to know what the app does with location, video, Photos, and exports, they do not need to hunt through App Store metadata; the answer is one settings row away.
 
+### Background Modes Are Promises
+
+`UIBackgroundModes` is not a junk drawer. ASMR Walk needs `location` because the user can opt into GPS Walk recording while the app is backgrounded, but it does not schedule `BGProcessingTask` work. Keeping `processing` in the plist would tell Apple the app uses a background-processing capability it never actually exercises.
+
+The plist now declares only `location`, and the privacy test checks that exact list. That keeps the entitlement story crisp: background GPS exists, background processing does not.
+
+### App Store Copy Is Part of the Product
+
+The App Store draft had one last ghost from the Photos-first era: it said video walks were saved to Photos when access was available. That was no longer true after user testing moved videos into ASMR Walk's local storage with an explicit save-to-Photos action.
+
+The copy now says the same thing the app does: GPS and video walks stay local, video copies can be saved to Photos from History, background GPS is GPS Walk only, Video Walk is foreground-only, and version 1.0.1 is iPhone-only on iOS 26.0 or later. Review notes also point out the Settings privacy-policy link, because App Review should not have to infer where the policy lives.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

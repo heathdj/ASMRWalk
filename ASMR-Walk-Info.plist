@@ -17,7 +17,6 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
-		<string>processing</string>
 	</array>
 </dict>
 </plist>
