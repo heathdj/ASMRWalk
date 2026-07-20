@@ -313,6 +313,12 @@ The Video Walk onboarding page was still wearing yesterday's name tag. It promis
 
 That copy matters because onboarding sets the user's mental model before the first permission prompt. The updated text now says the video stays in ASMR Walk and can be copied to Photos later, which lines up with recording, playback, deletion, privacy strings, and the History detail button.
 
+### Privacy Should Be One Tap Away
+
+The privacy policy moved from release paperwork into the app itself. Settings now puts a **Privacy Policy** link directly below **About ASMR Walk**, which is where users already go when they want app identity, version, and support details.
+
+That placement keeps the promise local-first and inspectable. If someone wants to know what the app does with location, video, Photos, and exports, they do not need to hunt through App Store metadata; the answer is one settings row away.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

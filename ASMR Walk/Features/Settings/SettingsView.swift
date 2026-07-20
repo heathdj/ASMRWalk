@@ -12,6 +12,8 @@ struct SettingsView: View {
     @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
     @State private var isShowingAbout = false
 
+    private let privacyPolicyURL = URL(string: "https://bald-traveler.com/asmr-walk-privacy-policy/")
+
     var body: some View {
         NavigationStack {
             Form {
@@ -55,6 +57,13 @@ struct SettingsView: View {
                         isShowingAbout = true
                     }
                     .accessibilityIdentifier(AccessibilityID.aboutButton)
+
+                    if let privacyPolicyURL {
+                        Link(destination: privacyPolicyURL) {
+                            Label("Privacy Policy", systemImage: "hand.raised")
+                        }
+                        .accessibilityIdentifier(AccessibilityID.privacyPolicyLink)
+                    }
                 }
             }
             .navigationTitle("Settings")

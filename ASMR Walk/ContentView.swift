@@ -73,6 +73,7 @@ enum AccessibilityID {
     static let backgroundGPSRecordingToggle = "settings.backgroundGPSRecordingToggle"
     static let showOnboardingButton = "settings.showOnboardingButton"
     static let aboutButton = "settings.aboutButton"
+    static let privacyPolicyLink = "settings.privacyPolicyLink"
     static let aboutSheet = "settings.aboutSheet"
 }
 
