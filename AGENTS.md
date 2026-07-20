@@ -20,8 +20,8 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
 - `DockKitAccessoryService` owns DockKit accessory state and event streams for Video Walk; camera shutter toggles recording, camera zoom adjusts `VideoCaptureService`, and other accessory events intentionally no-op for now.
 - Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
-- New video walks should save finished `.mov` files into Photos and store the resulting `PHAsset.localIdentifier`; legacy sandbox `videoURL` remains as fallback.
-- Deleting a recording removes app metadata and routes; Photos-backed videos remain in Photos, while legacy/app-managed fallback `videoURL` files are deleted.
+- New video walks should keep finished `.mov` files in app-managed local storage and persist the local `videoURL`; saving a copy to Photos is an explicit History detail action.
+- Deleting a recording removes app metadata, routes, and app-managed local video files; any user-exported Photos copy remains in Photos.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
@@ -39,7 +39,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Inject services into features so location, camera, and export behavior can be tested.
 - Keep recording state in dedicated observable types, not inside large SwiftUI views.
 - Use standard SwiftUI controls first so the interface follows the iOS 26 Liquid Glass system automatically.
-- Store video files in app-managed storage and persist only their URLs.
+- Store video files in app-managed storage and persist their local URLs; Photos asset identifiers are export markers or legacy playback fallbacks, not the primary playback source.
 - Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
 - Starting a second recording mode while another is active should route the user back to the active recorder, not create another `WalkRecorder`.
 - Recording stop controls and live time/distance belong in the app-level active recording banner, not duplicated inside the Walk and Video Walk tabs.
@@ -59,14 +59,14 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - GPX exports include plugin-friendly extensions for duration, mode, video presence, accuracy, and optional speed while remaining readable by generic GPX tools.
 - GPS background recording is supported only when the user enables it, starts a GPS Walk, and grants Always location permission.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
-- Photos save/playback needs `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
-- Photos add and read usage strings must stay distinct: add-only explains saving finished video walks to Photos, read explains replaying saved video walks with routes.
+- Photos export and legacy Photos playback need `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.
+- Photos add and read usage strings must stay distinct: add-only explains user-initiated Save Video to Photos, read explains replaying older Photos-backed video walks with routes.
 - Background GPS recording needs `NSLocationAlwaysAndWhenInUseUsageDescription` and `UIBackgroundModes` containing `location`.
 - DockKit support is guarded with `#if canImport(DockKit)` so local SDKs without the framework still build; real accessory behavior must be verified on an iPhone and SDK that expose DockKit.
 - The Video Walk tab requests a landscape scene geometry and restores portrait when leaving; the target must continue supporting landscape orientations.
 - Disable the idle timer only while video recording is active, not for GPS-only walks.
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.
-- Delete messaging must distinguish Photos-backed videos, which remain in Photos, from app-managed fallback video files, which are removed with the recording.
+- Delete messaging must distinguish app-managed local video files, which are removed with the recording, from any Photos copies, which remain in Photos.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.
 - Adding analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any app-owned network upload requires revisiting `PrivacyInfo.xcprivacy`, App Privacy answers, and `PRIVACY_POLICY.md`.
 - Roadmap items must be labeled as future work in public docs, not mixed into implemented 1.0 capability lists.

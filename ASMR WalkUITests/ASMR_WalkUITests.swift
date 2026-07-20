@@ -83,6 +83,21 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testBackgroundGPSWhenInUseLocationShowsAlwaysRecovery() {
+        launchReturningUser(environment: ["ASMR_WALK_UI_TEST_BACKGROUND_GPS_NEEDS_ALWAYS": "1"])
+
+        openTab("Walk")
+
+        XCTAssertTrue(element("walk.screen").waitForExistence(timeout: 2))
+        let status = element("walk.status")
+        XCTAssertTrue(status.waitForExistence(timeout: 2))
+        XCTAssertTrue(statusValue(status).contains("Always location permission is required"))
+        XCTAssertTrue(app.buttons["Set Location to Always"].exists)
+        XCTAssertTrue(element("permissions.openSettings").exists)
+        XCTAssertTrue(element("walk.startButton").isEnabled)
+    }
+
+    @MainActor
     func testVideoWalkTabShowsReadyStateAndControls() {
         launchReturningUser()
 
@@ -248,5 +263,9 @@ final class ASMR_WalkUITests: XCTestCase {
 
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
+    }
+
+    private func statusValue(_ status: XCUIElement) -> String {
+        status.value as? String ?? ""
     }
 }

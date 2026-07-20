@@ -243,19 +243,27 @@ Background GPS is powerful and review-sensitive, so the app now routes every dec
 
 This matters most for Video Walk. The settings switch can be on, but video recording still stays foreground-only. Camera capture, screen behavior, and Photos finalization already have enough moving parts; letting video walks silently continue as background GPS sessions would blur the product promise and make App Store review harder to explain. The rule is now easy to test and easy to say: background means walking routes only.
 
+Permission recovery has its own tiny trapdoor. When someone leaves ASMR Walk, enables Location in Settings, and comes back, the Walk tab is still the same SwiftUI view. `onAppear` may not fire, so the old "Location access needed" message can hang around like a stale sign taped to an open door. The fix is to refresh and restart location preview whenever the scene becomes active. Background GPS also gets a clearer recovery path: if the user wants background walks but has only granted When In Use, the Walk tab now offers a direct Settings button for changing Location to Always.
+
 ### Testing the Weather, Not Just the Thermostat
 
 Issue #34 exposed a testing blind spot. The app had plenty of polite little tests for policy helpers and result factories, but the riskiest bugs live where services change state: location permission gets denied then granted, When In Use needs to upgrade to Always, the app backgrounds mid-recording, the camera fails to stop, or Photos refuses a save.
 
-The fix was to give those services test handles. `WalkRecorder` now talks to a `WalkLocationClient`, so tests can simulate Core Location authorization and background-update behavior without waking real GPS. Video stopping moved into `VideoWalkStopFlow`, where a fake camera and fake Photos store can drive the same coordinator path the app uses. Think of it as practicing the emergency drill with the actual stage directions, just with cardboard props instead of live hardware.
+The fix was to give those services test handles. `WalkRecorder` now talks to a `WalkLocationClient`, so tests can simulate Core Location authorization and background-update behavior without waking real GPS. Video stopping moved into `VideoWalkStopFlow`, where a fake camera can drive the same coordinator path the app uses. Think of it as practicing the emergency drill with the actual stage directions, just with cardboard props instead of live hardware.
 
 Those fake services quickly paid rent. QA found that discarding an Always-authorized background GPS walk could clear the session while the recorder still claimed to be recording, letting background updates spring back to life during cleanup. The fix is a lifecycle rule worth remembering: before you recompute background privileges, make the state machine tell the truth. Capture the files and IDs you need, invalidate the background activity, transition out of `.recording`, then let policy recompute from honest state.
 
-### Photos Own the Video, ASMR Walk Owns the Route
+### When Photos Owned the Video
 
-Video walks now have a split ownership model. The route, stats, and playback reference live in ASMR Walk; the finished movie usually lives in Photos. Deleting a recording is therefore like removing an index card from the app's catalog, not shredding the movie sitting in the user's library.
+One earlier design gave video walks a split ownership model: ASMR Walk kept the route, stats, and playback reference while Photos kept the finished movie. That made deletion more like removing an index card from the app's catalog than deleting the movie itself.
 
-The delete dialog now says that plainly. Photos-backed videos remain in Photos, while older app-managed fallback files are removed with their recording. The behavior did not change; the promise finally matches the machinery.
+That model taught the app to be precise about ownership. Legacy Photos-backed videos still remain in Photos when their ASMR Walk recording is deleted, and any user-saved Photos copy from the newer flow stays in Photos too.
+
+### The Video Came Back Home
+
+User testing flipped the video ownership model back to the simpler mental model: ASMR Walk records the video, ASMR Walk keeps the video, and Photos is an explicit export button instead of the default filing cabinet. New video walks now keep their `.mov` in app-managed storage and History playback uses that local file first. The detail screen offers **Save Video to Photos** when someone wants a copy in their library.
+
+That small shift removes a lot of surprise. Recording no longer depends on Photos permission, playback does not need to ask Photos for the video the app just made, and deleting an ASMR Walk recording can honestly remove the app-managed video while leaving any user-saved Photos copy alone.
 
 ### Privacy Strings Need Separate Jobs
 
@@ -267,7 +275,7 @@ This is a small copy change with real review weight. Privacy strings are not mar
 
 App Privacy labels are easy to overstate when an app touches sensitive APIs. ASMR Walk uses location, camera, microphone, and Photos, but version 1 does not run a developer backend, analytics pipeline, account system, ad network, or sync service. The important distinction is access versus collection.
 
-Routes and metadata live on the phone. Videos usually live in the user's Photos library. Data leaves ASMR Walk only when the user chooses to share a GPX file, open a Google Maps route link, or when Apple frameworks such as Photos do their own system-level work based on the user's settings. The release checklist now treats privacy review like checking a valve: verify what actually flows off device before declaring anything collected.
+Routes, metadata, and newly recorded videos live on the phone inside ASMR Walk. Data leaves ASMR Walk only when the user chooses to share a GPX file, open a Google Maps route link, save a video copy to Photos, or when Apple frameworks such as Photos do their own system-level work based on the user's settings. The release checklist now treats privacy review like checking a valve: verify what actually flows off device before declaring anything collected.
 
 ### Checkpoints Learned to Stop Recopying the Trail
 
@@ -297,7 +305,13 @@ The shared status card and active-recording banner now adapt instead of squeezin
 
 Documentation can drift like a trail map copied too many times. One page says background GPS exists, another still hints it is future work, and suddenly App Review, QA, and future engineering are all reading different maps.
 
-The release docs now use the same version-one story everywhere: ASMR Walk is iPhone-only, local-first, Photos-backed for finished video walks, GPS-only for optional background recording, and foreground-only for Video Walk. Roadmap items are labeled as future ideas instead of hanging around the feature list in disguise. `APP_STORE_COPY.md` now gives App Store Connect text the same source of truth as the README, checklist, and privacy policy.
+The release docs now use the same version-one story everywhere: ASMR Walk is iPhone-only, local-first, keeps finished video walks in the app with optional Photos export, GPS-only for optional background recording, and foreground-only for Video Walk. Roadmap items are labeled as future ideas instead of hanging around the feature list in disguise. `APP_STORE_COPY.md` now gives App Store Connect text the same source of truth as the README, checklist, and privacy policy.
+
+### Onboarding Should Tell the Current Truth
+
+The Video Walk onboarding page was still wearing yesterday's name tag. It promised that finished videos go straight to Photos, even after user testing moved the app to local video storage with an explicit **Save Video to Photos** action from History.
+
+That copy matters because onboarding sets the user's mental model before the first permission prompt. The updated text now says the video stays in ASMR Walk and can be copied to Photos later, which lines up with recording, playback, deletion, privacy strings, and the History detail button.
 
 ## Engineer's Wisdom
 

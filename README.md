@@ -4,7 +4,7 @@ ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walkin
 
 ## Version 1.0.1 Scope
 
-ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, Photos-backed video storage, local history, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
+ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
 
 ## Current Features
 
@@ -15,7 +15,7 @@ ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Wa
 - Saved video walk playback with a synchronized route-progress map overlay.
 - Local persistence with SwiftData.
 - Recording detail screens with route maps, duration, distance, route-point counts, and video indicators.
-- Delete support for saved recordings. Photos videos remain in Photos; app-managed fallback video files are removed with their recording.
+- Delete support for saved recordings. App-managed video files are removed with their recording; any user-saved Photos copies remain in Photos.
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing.
@@ -67,14 +67,14 @@ Expected privacy strings:
 | `NSLocationAlwaysAndWhenInUseUsageDescription` | ASMR Walk uses background location only when you enable background GPS recording for walks. |
 | `NSCameraUsageDescription` | ASMR Walk uses the camera to record video walks. |
 | `NSMicrophoneUsageDescription` | ASMR Walk uses the microphone to record video walks. |
-| `NSPhotoLibraryAddUsageDescription` | ASMR Walk saves finished video walks to Photos so they remain available outside the app. |
-| `NSPhotoLibraryUsageDescription` | ASMR Walk reads saved video walks from Photos so you can replay them with your route. |
+| `NSPhotoLibraryAddUsageDescription` | ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos. |
+| `NSPhotoLibraryUsageDescription` | ASMR Walk reads older Photos-backed video walks so you can replay them with your route. |
 
 iOS will terminate the app if camera or microphone capture is requested without those usage-description keys.
 
 See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
-Finished video walks are saved to the user's Photos library when Photos access is available. Deleting an ASMR Walk recording removes the route and app metadata, but it does not delete the Photos video; older app-managed fallback video files are deleted with their recording.
+Finished video walks are kept in ASMR Walk's app-managed storage for playback. From a video walk's History detail screen, the user can save a copy to Photos. Deleting an ASMR Walk recording removes the route, app metadata, and app-managed video file, but it does not delete any Photos copy the user saved.
 
 ## Privacy
 

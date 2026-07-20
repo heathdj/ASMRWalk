@@ -158,6 +158,10 @@ final class WalkRecorder: NSObject {
         authorizationStatus == .denied || authorizationStatus == .restricted
     }
 
+    var needsAlwaysLocationForBackgroundRecording: Bool {
+        isBackgroundRecordingEnabled && authorizationStatus == .authorizedWhenInUse
+    }
+
     var canContinueInBackground: Bool {
         BackgroundRecordingPolicy.canContinueInBackground(
             isRecording: isRecording,

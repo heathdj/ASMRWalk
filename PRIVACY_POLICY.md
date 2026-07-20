@@ -22,9 +22,9 @@ ASMR Walk uses the camera and microphone only for Video Walk recording. Video ca
 
 ## Photos
 
-When Photos access is available, ASMR Walk saves finished video walks to your Photos library and stores a Photos asset reference with the walk. ASMR Walk reads that Photos video later so you can replay it with the saved route.
+ASMR Walk keeps newly recorded video walks in app-managed local storage for playback with your saved route. From a video walk's History detail screen, you can choose to save a copy of that local video to your Photos library.
 
-Deleting an ASMR Walk recording removes the app's route and metadata. It does not delete the video from Photos. Older app-managed fallback video files are deleted with their ASMR Walk recording.
+Deleting an ASMR Walk recording removes the app's route, metadata, and app-managed video file. It does not delete any copy you chose to save to Photos. ASMR Walk may still read older Photos-backed video walks created by earlier versions so they can replay with their saved routes.
 
 Photos may use Apple's own services, such as iCloud Photos, depending on your device settings. ASMR Walk does not operate those services.
 

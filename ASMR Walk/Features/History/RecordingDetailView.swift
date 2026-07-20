@@ -4,9 +4,13 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RecordingDetailView: View {
+    @Environment(\.modelContext) private var modelContext
     let recording: WalkRecording
+    @State private var photoSaveStatus: PhotoSaveStatus?
+    @State private var isSavingVideoToPhotos = false
 
     var body: some View {
         ScrollView {
@@ -56,6 +60,10 @@ struct RecordingDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.red.opacity(0.1), in: .rect(cornerRadius: 16))
 
+                    if recording.localVideoFileExists {
+                        saveVideoToPhotosButton
+                    }
+
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Route Review")
                             .font(.headline)
@@ -70,6 +78,13 @@ struct RecordingDetailView: View {
         }
         .navigationTitle(recording.title)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Video Export", isPresented: isShowingPhotoSaveStatus) {
+            Button("OK", role: .cancel) {
+                photoSaveStatus = nil
+            }
+        } message: {
+            Text(photoSaveStatus?.message ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu("Export", systemImage: "square.and.arrow.up") {
@@ -99,6 +114,75 @@ struct RecordingDetailView: View {
 
     private var routeExport: WalkRouteExport {
         WalkRouteExport(recording: recording)
+    }
+
+    private var isShowingPhotoSaveStatus: Binding<Bool> {
+        Binding {
+            photoSaveStatus != nil
+        } set: { isPresented in
+            if isPresented == false {
+                photoSaveStatus = nil
+            }
+        }
+    }
+
+    private var saveVideoToPhotosButton: some View {
+        Button {
+            saveVideoToPhotos()
+        } label: {
+            Label(saveVideoToPhotosTitle, systemImage: recording.videoAssetIdentifier == nil ? "photo.badge.plus" : "checkmark.circle")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(.red)
+        .disabled(isSavingVideoToPhotos || recording.videoAssetIdentifier != nil)
+        .accessibilityIdentifier(AccessibilityID.saveVideoToPhotosButton)
+    }
+
+    private var saveVideoToPhotosTitle: String {
+        if isSavingVideoToPhotos {
+            return "Saving Video to Photos"
+        }
+
+        if recording.videoAssetIdentifier != nil {
+            return "Video Saved to Photos"
+        }
+
+        return "Save Video to Photos"
+    }
+
+    private func saveVideoToPhotos() {
+        guard let videoURL = recording.videoURL, FileManager.default.fileExists(atPath: videoURL.path) else {
+            photoSaveStatus = .failure("The local video file could not be found.")
+            return
+        }
+
+        isSavingVideoToPhotos = true
+        Task {
+            do {
+                let assetIdentifier = try await PhotoLibraryVideoStore.saveVideoToPhotoLibrary(from: videoURL)
+                recording.videoAssetIdentifier = assetIdentifier
+                try modelContext.save()
+                photoSaveStatus = .success
+            } catch {
+                photoSaveStatus = .failure(error.localizedDescription)
+            }
+            isSavingVideoToPhotos = false
+        }
+    }
+}
+
+private enum PhotoSaveStatus: Equatable {
+    case success
+    case failure(String)
+
+    var message: String {
+        switch self {
+        case .success:
+            "A copy of this video walk was saved to Photos. ASMR Walk will continue playing the local copy."
+        case let .failure(message):
+            message
+        }
     }
 }
 

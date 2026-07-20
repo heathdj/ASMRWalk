@@ -19,8 +19,8 @@ Use this before uploading `1.0.1` to App Store Connect.
   - [ ] `NSPhotoLibraryAddUsageDescription`
   - [ ] `NSPhotoLibraryUsageDescription`
 - [ ] Confirm the generated Info settings, not just `ASMR-Walk-Info.plist`, contain the privacy strings used at runtime.
-- [ ] Confirm archived `Info.plist` Photos add text explains saving finished video walks to Photos.
-- [ ] Confirm archived `Info.plist` Photos read text explains replaying saved video walks with routes.
+- [ ] Confirm archived `Info.plist` Photos add text explains user-initiated Save Video to Photos.
+- [ ] Confirm archived `Info.plist` Photos read text explains replaying older Photos-backed video walks with routes.
 - [ ] Confirm archived `Info.plist` location, camera, microphone, and Photos strings use sentence case and ending punctuation.
 
 ## Build And Test
@@ -73,17 +73,18 @@ Run these on a physical iPhone before submission:
 - [ ] Grant camera and microphone permission, return to Video Walk, and confirm the live camera preview starts automatically.
 - [ ] Confirm the camera preview is live when returning to the Video Walk tab.
 - [ ] Confirm DockKit shutter can start a video walk after returning to the Video Walk tab.
-- [ ] Confirm the saved video appears in Photos.
-- [ ] Confirm the recording stores a Photos asset reference and playback loads from Photos.
-- [ ] Confirm legacy/local video fallback still works for older recordings if available.
-- [ ] Confirm delete messaging states Photos videos remain in Photos.
-- [ ] Confirm delete messaging states legacy/app-managed fallback videos are removed with their recording.
+- [ ] Confirm the saved video walk remains playable from app-managed local storage.
+- [ ] From History detail, tap Save Video to Photos and confirm a copy appears in Photos.
+- [ ] Confirm playback still loads from the local app-managed video after saving a Photos copy.
+- [ ] Confirm legacy Photos-backed video playback still works for older recordings if available.
+- [ ] Confirm delete messaging states app-managed local video files are removed with their recording.
+- [ ] Confirm delete messaging states any user-saved Photos copy remains in Photos.
 - [ ] Deny camera or microphone permission and confirm the app shows a Settings recovery button.
-- [ ] Deny Photos permission and confirm video recording fails gracefully or falls back without crashing.
+- [ ] Deny Photos permission and confirm Save Video to Photos fails gracefully without affecting local playback.
 - [ ] Run VoiceOver through Walk, Video Walk, and the active recording banner and confirm recording state is understandable without relying on color.
 - [ ] Run Accessibility Inspector on Walk, Video Walk, History, and Settings. Resolve or document any remaining issues.
 - [ ] Open a saved video walk and confirm playback plus route overlay works.
-- [ ] Delete a video walk and confirm the app recording is removed. Photos-library videos are user-owned and should remain in Photos unless a separate delete-from-Photos feature is added.
+- [ ] Delete a video walk and confirm the app recording and local video file are removed. User-saved Photos copies should remain in Photos unless a separate delete-from-Photos feature is added.
 - [ ] Export a Google Maps URL.
 - [ ] Export a GPX file through the share sheet.
 - [ ] Inspect an exported GPX file and confirm ASMR Walk extensions include duration, recording mode, `hasVideo`, recording ID, horizontal accuracy, and speed when available.
@@ -91,7 +92,7 @@ Run these on a physical iPhone before submission:
 
 ### Automated Coverage Gate
 
-- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, Photos fallback semantics, checkpoint recovery, and large-route persistence.
+- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, and large-route persistence.
 - [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect
@@ -104,14 +105,15 @@ Run these on a physical iPhone before submission:
 - [ ] Confirm App Privacy answers do not mark locally stored routes, videos, Photos references, camera input, microphone input, or location as developer-collected data unless a future upload, analytics, sync, or backend feature is added.
 - [ ] Document network behavior: no direct app-owned network calls, no analytics SDK, no account backend, no CloudKit sync.
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
-- [ ] Document Apple framework behavior separately: Photos may resolve iCloud-backed video assets depending on the user's Photos settings.
+- [ ] Document Apple framework behavior separately: Photos may use iCloud Photos for copies the user saves or older Photos-backed videos.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
 - [ ] Confirm App Store copy says ASMR Walk 1.0.1 is iPhone-only.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
-- [ ] Mention that video walks are saved to the user's Photos library.
-- [ ] Mention that deleting an ASMR Walk recording does not delete the Photos video.
+- [ ] Mention that video walks are stored locally in ASMR Walk by default.
+- [ ] Mention that users can save a copy of a video walk to Photos from History detail.
+- [ ] Mention that deleting an ASMR Walk recording removes the app-managed local video but does not delete user-saved Photos copies.
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
 - [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any other off-device collection.
 
@@ -124,4 +126,4 @@ Run these on a physical iPhone before submission:
 - Background route recording is GPS-only and opt-in.
 - No background Video Walk recording.
 - No burned-in video map overlay export.
-- No delete-from-Photos management for videos saved to the user's Photos library.
+- No delete-from-Photos management for video copies saved to the user's Photos library.

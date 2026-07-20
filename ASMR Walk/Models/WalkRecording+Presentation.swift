@@ -15,7 +15,11 @@ extension WalkRecording {
     }
 
     var deleteConfirmationMessage: String {
-        if videoAssetIdentifier != nil {
+        if videoAssetIdentifier != nil, videoURL != nil {
+            return "This permanently removes the recording, route, and app-managed video file. The saved Photos copy remains in Photos."
+        }
+
+        if videoAssetIdentifier != nil, videoURL == nil {
             return "This permanently removes the ASMR Walk recording and route. The video remains in Photos."
         }
 
@@ -24,6 +28,14 @@ extension WalkRecording {
         }
 
         return "This permanently removes the recording and its route."
+    }
+
+    var localVideoFileExists: Bool {
+        guard let videoURL else {
+            return false
+        }
+
+        return FileManager.default.fileExists(atPath: videoURL.path)
     }
 }
 

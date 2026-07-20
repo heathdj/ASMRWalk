@@ -53,6 +53,7 @@ enum AccessibilityID {
     static let historyList = "history.list"
     static let recordingDetail = "history.recordingDetail"
     static let exportRecordingButton = "history.exportRecordingButton"
+    static let saveVideoToPhotosButton = "history.saveVideoToPhotosButton"
     static let videoPlayback = "history.videoPlayback"
     static let videoRouteOverlay = "history.videoRouteOverlay"
     static let openSettingsButton = "permissions.openSettings"

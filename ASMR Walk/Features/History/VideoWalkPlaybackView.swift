@@ -65,7 +65,7 @@ struct VideoWalkPlaybackView: View {
     }
 
     private var playbackIdentifier: String {
-        recording.videoAssetIdentifier ?? recording.videoURL?.absoluteString ?? "missing-video"
+        recording.videoURL?.absoluteString ?? recording.videoAssetIdentifier ?? "missing-video"
     }
 
     private func configurePlayer() async {
@@ -76,13 +76,13 @@ struct VideoWalkPlaybackView: View {
 
         do {
             let player: AVPlayer
-            if let assetIdentifier = recording.videoAssetIdentifier {
-                loadingMessage = PhotoLibraryVideoStore.readAccessExplanation
-                let playerItem = try await PhotoLibraryVideoStore.playerItem(for: assetIdentifier)
-                player = AVPlayer(playerItem: playerItem)
-            } else if let videoURL = recording.videoURL,
+            if let videoURL = recording.videoURL,
                       FileManager.default.fileExists(atPath: videoURL.path) {
                 player = AVPlayer(url: videoURL)
+            } else if let assetIdentifier = recording.videoAssetIdentifier {
+                loadingMessage = PhotoLibraryVideoStore.legacyReadAccessExplanation
+                let playerItem = try await PhotoLibraryVideoStore.playerItem(for: assetIdentifier)
+                player = AVPlayer(playerItem: playerItem)
             } else {
                 throw CocoaError(.fileNoSuchFile)
             }

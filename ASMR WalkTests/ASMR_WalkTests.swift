@@ -111,9 +111,9 @@ struct ASMR_WalkTests {
 
     @Test("Photos permission explanations describe app intent")
     func photoLibraryPermissionExplanations() {
-        #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("saves finished video walks to Photos"))
-        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("reads saved video walks from Photos"))
-        #expect(PhotoLibraryVideoStore.readAccessExplanation.contains("replay them with your route"))
+        #expect(PhotoLibraryVideoStore.saveAccessExplanation.contains("when you choose Save Video to Photos"))
+        #expect(PhotoLibraryVideoStore.legacyReadAccessExplanation.contains("older Photos-backed video walks"))
+        #expect(PhotoLibraryVideoStore.legacyReadAccessExplanation.contains("replay them with your route"))
     }
 
     @Test("Video preview prepares automatically only after camera and microphone are authorized")
@@ -143,28 +143,12 @@ struct ASMR_WalkTests {
         ) == .blocked)
     }
 
-    @Test("Video stop outcome records Photos success")
-    func videoStopOutcomePhotosSuccess() throws {
+    @Test("Video stop outcome records local video")
+    func videoStopOutcomeLocalVideo() throws {
         let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
-        let outcome = VideoWalkStopOutcome.photosSaveSucceeded(
-            assetIdentifier: "photos-asset",
-            localVideoURL: videoURL
-        )
+        let outcome = VideoWalkStopOutcome.keptLocalVideo(videoURL: videoURL)
 
-        #expect(outcome == .savedToPhotos(assetIdentifier: "photos-asset", localVideoURL: videoURL))
-    }
-
-    @Test("Video stop outcome records Photos fallback")
-    func videoStopOutcomePhotosFallback() throws {
-        let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
-        let error = NSError(
-            domain: "PhotoSave",
-            code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "Photos unavailable"]
-        )
-        let outcome = VideoWalkStopOutcome.photosSaveFailed(videoURL: videoURL, error: error)
-
-        #expect(outcome == .keptLocalVideo(videoURL: videoURL, message: "Photos unavailable"))
+        #expect(outcome == .keptLocalVideo(videoURL: videoURL))
     }
 
     @Test("Video stop outcome records stop failure discard")
@@ -217,8 +201,8 @@ struct ASMR_WalkTests {
         #expect(infoPlist["NSLocationAlwaysAndWhenInUseUsageDescription"] as? String == "ASMR Walk uses background location only when you enable background GPS recording for walks.")
         #expect(infoPlist["NSCameraUsageDescription"] as? String == "ASMR Walk uses the camera to record video walks.")
         #expect(infoPlist["NSMicrophoneUsageDescription"] as? String == "ASMR Walk uses the microphone to record video walks.")
-        #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves finished video walks to Photos so they remain available outside the app.")
-        #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads saved video walks from Photos so you can replay them with your route.")
+        #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.")
+        #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads older Photos-backed video walks so you can replay them with your route.")
     }
 
     @Test("Delete confirmation explains Photos video ownership")
@@ -241,6 +225,19 @@ struct ASMR_WalkTests {
         )
 
         #expect(recording.deleteConfirmationMessage.contains("app-managed video file"))
+    }
+
+    @Test("Delete confirmation explains local video cleanup without removing Photos copies")
+    func deleteConfirmationForLocalVideoWithPhotosCopy() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: URL(fileURLWithPath: "/tmp/video.mov"),
+            videoAssetIdentifier: "photos-asset-id"
+        )
+
+        #expect(recording.deleteConfirmationMessage.contains("app-managed video file"))
+        #expect(recording.deleteConfirmationMessage.contains("Photos copy remains"))
     }
 
     @Test("Delete confirmation explains route-only cleanup")
@@ -423,6 +420,7 @@ struct RecordingCoordinatorTests {
         #expect(locationClient.requestWhenInUseAuthorizationCount == 0)
         #expect(recorder.canContinueInBackground == false)
         #expect(locationClient.allowsBackgroundLocationUpdates == false)
+        #expect(recorder.needsAlwaysLocationForBackgroundRecording)
     }
 
     @Test("Background GPS enables updates only for Always-authorized GPS walks", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
@@ -504,28 +502,26 @@ struct RecordingCoordinatorTests {
         await coordinator.discard()
     }
 
-    @Test("Photos fallback saves the video URL through the coordinator flow", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
-    func photosFallbackSavesLocalVideoThroughCoordinatorFlow() async throws {
+    @Test("Video stop saves the local video URL through the coordinator flow", .bug("https://github.com/heathdj/ASMRWalk/issues/34"))
+    func videoStopSavesLocalVideoThroughCoordinatorFlow() async throws {
         let container = try makeTestContainer()
         let locationClient = FakeWalkLocationClient(authorizationStatus: .authorizedWhenInUse)
         let recorder = WalkRecorder(locationClient: locationClient)
         let coordinator = RecordingCoordinator(recorder: recorder)
-        let videoURL = URL(fileURLWithPath: "/tmp/fallback-video.mov")
+        let videoURL = URL(fileURLWithPath: "/tmp/local-video.mov")
         let camera = FakeVideoRecordingController(stopResult: .success(videoURL))
-        let photos = FakePhotoLibraryVideoStore(result: .failure(TestError(message: "Photos unavailable")))
 
         let didStart = await coordinator.start(in: container.mainContext, mode: .videoWalk)
         try #require(didStart)
 
         let result = await VideoWalkStopFlow(
             coordinator: coordinator,
-            camera: camera,
-            photoLibrary: photos
+            camera: camera
         ).stop(confirmShortRecording: false)
 
         #expect(result == .saved)
         #expect(coordinator.hasActiveRecording == false)
-        #expect(camera.messages.contains("Photos unavailable"))
+        #expect(camera.messages.contains("Video walk saved in ASMR Walk."))
 
         let recording = try #require(try fetchOnlyRecording(in: container))
         #expect(recording.videoURL == videoURL)
@@ -539,15 +535,13 @@ struct RecordingCoordinatorTests {
         let recorder = WalkRecorder(locationClient: locationClient)
         let coordinator = RecordingCoordinator(recorder: recorder)
         let camera = FakeVideoRecordingController(stopResult: .failure(TestError(message: "Video stop failed")))
-        let photos = FakePhotoLibraryVideoStore(result: .success("unused"))
 
         let didStart = await coordinator.start(in: container.mainContext, mode: .videoWalk)
         try #require(didStart)
 
         let result = await VideoWalkStopFlow(
             coordinator: coordinator,
-            camera: camera,
-            photoLibrary: photos
+            camera: camera
         ).stop(stopSessionWhenFinished: true, confirmShortRecording: false)
 
         #expect(result == .failed)
@@ -1111,29 +1105,5 @@ private final class FakeVideoRecordingController: VideoRecordingControlling {
 
     func stopSession() {
         didStopSession = true
-    }
-}
-
-private struct FakePhotoLibraryVideoStore: PhotoLibraryVideoStoring {
-    let assetIdentifier: String?
-    let error: (any Error)?
-
-    init(result: Result<String, TestError>) {
-        switch result {
-        case let .success(assetIdentifier):
-            self.assetIdentifier = assetIdentifier
-            error = nil
-        case let .failure(error):
-            assetIdentifier = nil
-            self.error = error
-        }
-    }
-
-    func saveVideoToPhotoLibrary(from fileURL: URL) async throws -> String {
-        if let assetIdentifier {
-            return assetIdentifier
-        }
-
-        throw error ?? TestError(message: "Photos unavailable")
     }
 }

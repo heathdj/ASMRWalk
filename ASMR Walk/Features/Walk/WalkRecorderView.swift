@@ -35,6 +35,10 @@ struct WalkRecorderView: View {
                         openSettingsButton(label: "Open Location Settings")
                     }
 
+                    if shouldShowAlwaysLocationSettingsButton {
+                        openSettingsButton(label: "Set Location to Always")
+                    }
+
                     Spacer()
 
                     if isRecordingWalk == false {
@@ -48,11 +52,7 @@ struct WalkRecorderView: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(AccessibilityID.walkScreen)
             .onAppear {
-                if isBlockedByVideoWalk == false {
-                    recorder.refreshAuthorizationStatus()
-                    recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
-                    recorder.startPreviewingLocation(requestAuthorization: false)
-                }
+                refreshWalkAvailability()
             }
             .onDisappear {
                 recorder.stopPreviewingLocation()
@@ -77,7 +77,7 @@ struct WalkRecorderView: View {
             }
             .onChange(of: scenePhase) {
                 if scenePhase == .active {
-                    recorder.refreshAuthorizationStatus()
+                    refreshWalkAvailability()
                 } else if RecordingLifecyclePolicy.shouldStopGPSWalkWhenSceneDeactivates(
                     isRecordingWalk: isRecordingWalk,
                     canContinueInBackground: recorder.canContinueInBackground
@@ -154,12 +154,18 @@ struct WalkRecorderView: View {
         if Self.shouldShowDeniedLocationForUITests {
             return "Location access needed"
         }
+        if Self.shouldShowBackgroundGPSNeedsAlwaysForUITests {
+            return recorder.statusTitle
+        }
         return isBlockedByVideoWalk ? "Video walk recording" : recorder.statusTitle
     }
 
     private var statusDetail: String {
         if Self.shouldShowDeniedLocationForUITests {
             return "Enable location access in Settings to record a route."
+        }
+        if Self.shouldShowBackgroundGPSNeedsAlwaysForUITests {
+            return "Always location permission is required for background recording."
         }
         return isBlockedByVideoWalk ? "Finish the active video walk before starting a GPS walk." : recorder.statusDetail
     }
@@ -186,12 +192,37 @@ struct WalkRecorderView: View {
         recorder.isLocationAccessDenied || Self.shouldShowDeniedLocationForUITests
     }
 
+    private var shouldShowAlwaysLocationSettingsButton: Bool {
+        isBlockedByVideoWalk == false
+            && isLocationAccessDenied == false
+            && isRecordingWalk == false
+            && (recorder.needsAlwaysLocationForBackgroundRecording || Self.shouldShowBackgroundGPSNeedsAlwaysForUITests)
+    }
+
     private static var shouldShowDeniedLocationForUITests: Bool {
         #if DEBUG
         ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_LOCATION"] == "1"
         #else
         false
         #endif
+    }
+
+    private static var shouldShowBackgroundGPSNeedsAlwaysForUITests: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_BACKGROUND_GPS_NEEDS_ALWAYS"] == "1"
+        #else
+        false
+        #endif
+    }
+
+    private func refreshWalkAvailability() {
+        guard isBlockedByVideoWalk == false else {
+            return
+        }
+
+        recorder.refreshAuthorizationStatus()
+        recorder.setBackgroundRecordingEnabled(isBackgroundGPSRecordingEnabled, requestAuthorization: false)
+        recorder.startPreviewingLocation(requestAuthorization: false)
     }
 
     private func openSettingsButton(label: String) -> some View {
