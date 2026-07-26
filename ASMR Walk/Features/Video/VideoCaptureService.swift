@@ -280,7 +280,17 @@ final class VideoCaptureService: NSObject {
             throw CaptureError.cannotAddOutput
         }
         session.addOutput(movieOutput)
+        configureVideoStabilization()
         activeVideoDevice = camera
+    }
+
+    private func configureVideoStabilization() {
+        guard let connection = movieOutput.connection(with: .video),
+              connection.isVideoStabilizationSupported else {
+            return
+        }
+
+        connection.preferredVideoStabilizationMode = .auto
     }
 
     private func resetCapturePipeline() {

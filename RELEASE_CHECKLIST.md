@@ -67,12 +67,14 @@ Run these on a physical iPhone before submission:
 - [ ] Inspect Video Walk in landscape with accessibility Dynamic Type sizes and confirm the square route map does not overlap the REC indicator, status card, or start control.
 - [ ] Start and save a video walk.
 - [ ] Stop a video walk before 10 seconds and confirm Save/Discard behavior.
+- [ ] On a supported physical iPhone, confirm Video Walk recording uses video stabilization (`activeVideoStabilizationMode` is not `.off`) while saved video orientation remains correct.
+- [ ] Confirm Video Walk stabilization field-of-view crop and low-light quality remain acceptable.
 - [ ] Confirm the screen stays awake only while video recording is active.
 - [ ] Confirm the small green recording indicator appears while video recording.
 - [ ] Open Video Walk before granting camera or microphone permission and confirm the tab does not trigger system prompts.
 - [ ] Grant camera and microphone permission, return to Video Walk, and confirm the live camera preview starts automatically.
 - [ ] Confirm the camera preview is live when returning to the Video Walk tab.
-- [ ] Confirm DockKit shutter can start a video walk after returning to the Video Walk tab.
+- [ ] Confirm DockKit shutter can start a video walk after returning to the Video Walk tab and DockKit zoom still behaves correctly while stabilization is enabled.
 - [ ] Confirm the saved video walk remains playable from app-managed local storage.
 - [ ] From History detail, tap Save Video to Photos and confirm a copy appears in Photos.
 - [ ] Confirm playback still loads from the local app-managed video after saving a Photos copy.

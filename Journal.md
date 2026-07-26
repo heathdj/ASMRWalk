@@ -331,6 +331,12 @@ The App Store draft had one last ghost from the Photos-first era: it said video 
 
 The copy now says the same thing the app does: GPS and video walks stay local, video copies can be saved to Photos from History, background GPS is GPS Walk only, Video Walk is foreground-only, and version 1.0.1 is iPhone-only on iOS 26.0 or later. Review notes also point out the Settings privacy-policy link, because App Review should not have to infer where the policy lives.
 
+### Walking Video Needs a Steadier Hand
+
+AVFoundation does not quietly stabilize recorded movie output just because the app is filming a walk. The movie connection's preferred stabilization mode defaults to off, which means the camera can be technically correct while the footage still carries every footstep.
+
+Video Walk now asks the movie output connection for `.auto` stabilization whenever the active device and format support it. That lets AVFoundation choose the right stabilization mode for the phone instead of hard-coding a mode that may not fit every capture format. The release checklist carries the part automation cannot prove well: record on a real iPhone, confirm stabilization is active, and make sure orientation, crop, low-light quality, and DockKit zoom still feel right.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
