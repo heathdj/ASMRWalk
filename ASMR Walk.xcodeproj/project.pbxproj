@@ -428,6 +428,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ASMR-Walk-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ASMR Walk";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSCameraUsageDescription = "ASMR Walk uses the camera to record video walks.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ASMR Walk uses background location only when you enable background GPS recording for walks.";
@@ -475,6 +476,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ASMR-Walk-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "ASMR Walk";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
 				INFOPLIST_KEY_NSCameraUsageDescription = "ASMR Walk uses the camera to record video walks.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "ASMR Walk uses background location only when you enable background GPS recording for walks.";
