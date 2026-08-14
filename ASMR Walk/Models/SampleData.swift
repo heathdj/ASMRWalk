@@ -15,6 +15,9 @@ enum SampleData {
                 duration: 2_145,
                 distanceMeters: 3_420,
                 mode: .walk,
+                walkDescription: "A calm morning route near the downtown canal.",
+                generatedPlaceName: "Downtown Phoenix",
+                metadataGeneratedAt: Date(timeIntervalSince1970: 1_769_947_260),
                 points: canalRoute
             ),
             WalkRecording(
@@ -23,6 +26,9 @@ enum SampleData {
                 duration: 1_320,
                 distanceMeters: 1_980,
                 mode: .videoWalk,
+                walkDescription: "A sunset video walk through the neighborhood.",
+                generatedPlaceName: "Phoenix",
+                metadataGeneratedAt: Date(timeIntervalSince1970: 1_769_886_060),
                 videoURL: URL(filePath: "/sample/sunset-walk.mov"),
                 points: sunsetRoute
             )

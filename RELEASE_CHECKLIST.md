@@ -1,15 +1,15 @@
 # ASMR Walk Release Checklist
 
-Use this before uploading `1.0.1` to App Store Connect.
+Use this before uploading `1.1.0` to App Store Connect.
 
 ## Required Target Settings
 
 - [ ] Bundle identifier is final.
-- [ ] Version is `1.0.1`.
+- [ ] Version is `1.1.0`.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.
-- [ ] Targeted device family is iPhone only for version 1.0.1.
+- [ ] Targeted device family is iPhone only for version 1.1.0.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
@@ -52,6 +52,9 @@ Run these on a physical iPhone before submission:
 ### Physical Device Only
 
 - [ ] Start and save a GPS-only walk.
+- [ ] Confirm a saved GPS-only walk receives a useful place-based title and editable description when MapKit reverse geocoding succeeds.
+- [ ] Confirm a saved walk keeps its fallback date/time title when place lookup fails or returns no usable place name.
+- [ ] Edit a saved recording title and description from History detail, leave and reopen the detail screen, and confirm the edits persist.
 - [ ] Stop a GPS-only walk before 10 seconds and confirm Save/Discard behavior.
 - [ ] Deny location permission and confirm the app shows a Settings recovery button.
 - [ ] Background the app during a walk and confirm the foreground-only recording behavior is acceptable.
@@ -90,6 +93,7 @@ Run these on a physical iPhone before submission:
 - [ ] Export a Google Maps URL.
 - [ ] Export a GPX file through the share sheet.
 - [ ] Inspect an exported GPX file and confirm ASMR Walk extensions include duration, recording mode, `hasVideo`, recording ID, horizontal accuracy, and speed when available.
+- [ ] Inspect an exported GPX file for a described recording and confirm `<desc>` and `asmrwalk:description` include the editable recording description.
 - [ ] Confirm exported GPX does not include local sandbox video URLs.
 
 ### Automated Coverage Gate
@@ -108,8 +112,9 @@ Run these on a physical iPhone before submission:
 - [ ] Document network behavior: no direct app-owned network calls, no analytics SDK, no account backend, no CloudKit sync.
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
 - [ ] Document Apple framework behavior separately: Photos may use iCloud Photos for copies the user saves or older Photos-backed videos.
+- [ ] Document Apple framework behavior separately: MapKit may reverse geocode a saved route point to suggest editable titles and descriptions.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
-- [ ] Confirm App Store copy says ASMR Walk 1.0.1 is iPhone-only.
+- [ ] Confirm App Store copy says ASMR Walk 1.1.0 is iPhone-only.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
@@ -119,7 +124,7 @@ Run these on a physical iPhone before submission:
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
 - [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any other off-device collection.
 
-## Known Version 1.0.1 Scope
+## Known Version 1.1.0 Scope
 
 - No iCloud sync.
 - No iPad support.

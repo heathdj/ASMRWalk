@@ -19,6 +19,7 @@ struct WalkRouteExport {
 
     let recordingID: UUID
     let title: String
+    let walkDescription: String
     let createdAt: Date
     let duration: TimeInterval
     let mode: RecordingMode
@@ -29,6 +30,7 @@ struct WalkRouteExport {
     init(recording: WalkRecording) {
         recordingID = recording.id
         title = recording.title
+        walkDescription = recording.walkDescription
         createdAt = recording.createdAt
         duration = recording.duration
         mode = recording.mode
@@ -92,8 +94,8 @@ struct WalkRouteExport {
         return """
         <?xml version="1.0" encoding="UTF-8"?>
         <gpx version="1.1" creator="ASMR Walk" xmlns="http://www.topografix.com/GPX/1/1" xmlns:asmrwalk="https://asmrwalk.app/gpx/1">
-        <metadata><name>\(title.xmlEscaped)</name><time>\(createdAt.ISO8601Format())</time></metadata>
-        <trk><name>\(title.xmlEscaped)</name>\(trackExtensionsXML)<trkseg>
+        <metadata><name>\(title.xmlEscaped)</name>\(descriptionXML)<time>\(createdAt.ISO8601Format())</time></metadata>
+        <trk><name>\(title.xmlEscaped)</name>\(descriptionXML)\(trackExtensionsXML)<trkseg>
         \(trackPoints)
         </trkseg></trk>
         </gpx>
@@ -102,8 +104,24 @@ struct WalkRouteExport {
 
     private var trackExtensionsXML: String {
         """
-        <extensions><asmrwalk:recordingID>\(recordingID.uuidString.xmlEscaped)</asmrwalk:recordingID><asmrwalk:durationSeconds>\(duration.gpxNumberText)</asmrwalk:durationSeconds><asmrwalk:recordingMode>\(mode.rawValue.xmlEscaped)</asmrwalk:recordingMode><asmrwalk:hasVideo>\(hasVideo ? "true" : "false")</asmrwalk:hasVideo></extensions>
+        <extensions><asmrwalk:recordingID>\(recordingID.uuidString.xmlEscaped)</asmrwalk:recordingID><asmrwalk:durationSeconds>\(duration.gpxNumberText)</asmrwalk:durationSeconds><asmrwalk:recordingMode>\(mode.rawValue.xmlEscaped)</asmrwalk:recordingMode><asmrwalk:hasVideo>\(hasVideo ? "true" : "false")</asmrwalk:hasVideo>\(descriptionExtensionXML)</extensions>
         """
+    }
+
+    private var descriptionXML: String {
+        guard walkDescription.isEmpty == false else {
+            return ""
+        }
+
+        return "<desc>\(walkDescription.xmlEscaped)</desc>"
+    }
+
+    private var descriptionExtensionXML: String {
+        guard walkDescription.isEmpty == false else {
+            return ""
+        }
+
+        return "<asmrwalk:description>\(walkDescription.xmlEscaped)</asmrwalk:description>"
     }
 
     private var filename: String {

@@ -19,6 +19,11 @@ final class WalkRecording {
     var duration: TimeInterval
     var distanceMeters: Double
     var mode: RecordingMode
+    var walkDescription: String
+    var generatedPlaceName: String?
+    var metadataGeneratedAt: Date?
+    var isTitleUserEdited: Bool
+    var isDescriptionUserEdited: Bool
     var videoURL: URL?
     var videoAssetIdentifier: String?
 
@@ -32,6 +37,11 @@ final class WalkRecording {
         duration: TimeInterval = 0,
         distanceMeters: Double = 0,
         mode: RecordingMode,
+        walkDescription: String = "",
+        generatedPlaceName: String? = nil,
+        metadataGeneratedAt: Date? = nil,
+        isTitleUserEdited: Bool = false,
+        isDescriptionUserEdited: Bool = false,
         videoURL: URL? = nil,
         videoAssetIdentifier: String? = nil,
         points: [LocationPoint] = []
@@ -42,6 +52,11 @@ final class WalkRecording {
         self.duration = duration
         self.distanceMeters = distanceMeters
         self.mode = mode
+        self.walkDescription = walkDescription
+        self.generatedPlaceName = generatedPlaceName
+        self.metadataGeneratedAt = metadataGeneratedAt
+        self.isTitleUserEdited = isTitleUserEdited
+        self.isDescriptionUserEdited = isDescriptionUserEdited
         self.videoURL = videoURL
         self.videoAssetIdentifier = videoAssetIdentifier
         self.points = points

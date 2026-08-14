@@ -196,13 +196,15 @@ struct ASMR_WalkTests {
             from: infoPlistData,
             format: nil
         ) as? [String: Any])
+        let projectSettingsURL = projectRoot.appending(path: "ASMR Walk.xcodeproj/project.pbxproj")
+        let projectSettingsText = try String(contentsOf: projectSettingsURL, encoding: .utf8)
 
-        #expect(infoPlist["NSLocationWhenInUseUsageDescription"] as? String == "ASMR Walk uses your location while recording to draw and save your walking route.")
-        #expect(infoPlist["NSLocationAlwaysAndWhenInUseUsageDescription"] as? String == "ASMR Walk uses background location only when you enable background GPS recording for walks.")
-        #expect(infoPlist["NSCameraUsageDescription"] as? String == "ASMR Walk uses the camera to record video walks.")
-        #expect(infoPlist["NSMicrophoneUsageDescription"] as? String == "ASMR Walk uses the microphone to record video walks.")
-        #expect(infoPlist["NSPhotoLibraryAddUsageDescription"] as? String == "ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.")
-        #expect(infoPlist["NSPhotoLibraryUsageDescription"] as? String == "ASMR Walk reads older Photos-backed video walks so you can replay them with your route.")
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = \"ASMR Walk uses your location while recording to draw and save your walking route.\";"))
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = \"ASMR Walk uses background location only when you enable background GPS recording for walks.\";"))
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSCameraUsageDescription = \"ASMR Walk uses the camera to record video walks.\";"))
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSMicrophoneUsageDescription = \"ASMR Walk uses the microphone to record video walks.\";"))
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = \"ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.\";"))
+        #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryUsageDescription = \"ASMR Walk reads older Photos-backed video walks so you can replay them with your route.\";"))
         #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location"])
     }
 
@@ -572,6 +574,11 @@ struct WalkRecordingTests {
         #expect(recording.duration == 300)
         #expect(recording.distanceMeters == 800)
         #expect(recording.mode == .walk)
+        #expect(recording.walkDescription == "")
+        #expect(recording.generatedPlaceName == nil)
+        #expect(recording.metadataGeneratedAt == nil)
+        #expect(recording.isTitleUserEdited == false)
+        #expect(recording.isDescriptionUserEdited == false)
         #expect(recording.points.isEmpty)
         #expect(recording.hasVideo == false)
     }
@@ -647,6 +654,124 @@ struct WalkRecordingTests {
 
         #expect(point.coordinate.latitude == point.latitude)
         #expect(point.coordinate.longitude == point.longitude)
+    }
+
+    @Test("Generated recording metadata prefers places of interest")
+    func generatedRecordingMetadata() throws {
+        let metadata = try #require(WalkRecordingMetadataBuilder.metadata(
+            for: WalkPlaceMetadata(
+                areasOfInterest: ["Papago Park"],
+                name: "625 N Galvin Parkway",
+                subLocality: "Camelback East",
+                locality: "Phoenix",
+                administrativeArea: "Arizona",
+                country: "United States"
+            ),
+            mode: .videoWalk,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            duration: 125,
+            distanceMeters: 840,
+            generatedAt: Date(timeIntervalSince1970: 2_000)
+        ))
+
+        #expect(metadata.title == "Papago Park Video Walk")
+        #expect(metadata.placeName == "Papago Park")
+        #expect(metadata.walkDescription.contains("Video Walk near Papago Park"))
+        #expect(metadata.walkDescription.contains("2:05"))
+        #expect(metadata.generatedAt == Date(timeIntervalSince1970: 2_000))
+    }
+
+    @Test("Generated recording metadata falls back when no place name exists")
+    func generatedRecordingMetadataRequiresPlaceName() {
+        let metadata = WalkRecordingMetadataBuilder.metadata(
+            for: WalkPlaceMetadata(),
+            mode: .walk,
+            createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+            duration: 125,
+            distanceMeters: 840
+        )
+
+        #expect(metadata == nil)
+    }
+
+    @Test("Route metadata uses the middle point for place lookup")
+    func routeMetadataRepresentativeCoordinate() throws {
+        let createdAt = Date(timeIntervalSince1970: 1_000)
+        let snapshot = makeSnapshot(
+            id: UUID(),
+            createdAt: createdAt,
+            duration: 30,
+            distanceMeters: 90,
+            pointCount: 5
+        )
+
+        let coordinate = try #require(WalkRecordingMetadataGenerator.representativeCoordinate(from: snapshot.points))
+
+        #expect(coordinate.latitude == snapshot.points[2].latitude)
+        #expect(coordinate.longitude == snapshot.points[2].longitude)
+    }
+
+    @Test("Metadata generator updates saved recordings when place lookup succeeds")
+    func metadataGeneratorUpdatesSavedRecordings() async throws {
+        let recordingID = try #require(UUID(uuidString: "45C81AB1-0404-4C6A-AAB2-14AD16437F32"))
+        let generatedAt = Date(timeIntervalSince1970: 4_000)
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let snapshot = makeSnapshot(
+            id: recordingID,
+            title: "Aug 13, 2026 Walk",
+            createdAt: Date(timeIntervalSince1970: 1_800),
+            duration: 95,
+            distanceMeters: 420,
+            pointCount: 5,
+            latitude: 33.5000,
+            longitude: -112.1000
+        )
+
+        try await persistence.save(snapshot)
+
+        await WalkRecordingMetadataGenerator.generate(
+            for: snapshot,
+            in: container,
+            geocoder: FakeWalkPlaceGeocoder(metadata: WalkPlaceMetadata(name: "Encanto Park")),
+            date: generatedAt
+        )
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Encanto Park Walk")
+        #expect(recording.walkDescription.contains("Walk near Encanto Park"))
+        #expect(recording.generatedPlaceName == "Encanto Park")
+        #expect(recording.metadataGeneratedAt == generatedAt)
+    }
+
+    @Test("Metadata generator leaves saved recordings alone when place lookup fails")
+    func metadataGeneratorIgnoresLookupFailures() async throws {
+        let recordingID = try #require(UUID(uuidString: "075250E1-CF1B-49E6-AC6A-317A7A046470"))
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let snapshot = makeSnapshot(
+            id: recordingID,
+            title: "Fallback Walk",
+            duration: 95,
+            distanceMeters: 420,
+            pointCount: 5,
+            latitude: 33.6000,
+            longitude: -112.2000
+        )
+
+        try await persistence.save(snapshot)
+
+        await WalkRecordingMetadataGenerator.generate(
+            for: snapshot,
+            in: container,
+            geocoder: FailingWalkPlaceGeocoder()
+        )
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.title == "Fallback Walk")
+        #expect(recording.walkDescription.isEmpty)
+        #expect(recording.generatedPlaceName == nil)
+        #expect(recording.metadataGeneratedAt == nil)
     }
 
     @Test("Recordings can be inserted, fetched, updated, and deleted")
@@ -822,6 +947,49 @@ struct WalkRecordingTests {
         #expect(recording.pointsInTimeOrder.map(\.timestamp) == metadataOnlyCheckpoint.points.map(\.timestamp))
     }
 
+    @Test("Persistence applies generated metadata without overwriting user edits")
+    func persistenceAppliesGeneratedMetadataWithoutOverwritingUserEdits() async throws {
+        let recordingID = try #require(UUID(uuidString: "EF7D1418-0606-4013-9503-A4B3F609D17A"))
+        let generatedAt = Date(timeIntervalSince1970: 2_000)
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let snapshot = makeSnapshot(
+            id: recordingID,
+            title: "Default Walk",
+            duration: 75,
+            distanceMeters: 210,
+            pointCount: 8
+        )
+
+        try await persistence.save(snapshot)
+        let context = ModelContext(container)
+        let descriptor = FetchDescriptor<WalkRecording>(
+            predicate: #Predicate { recording in
+                recording.id == recordingID
+            }
+        )
+        let recording = try #require(try context.fetch(descriptor).first)
+        recording.title = "User Title"
+        recording.isTitleUserEdited = true
+        try context.save()
+
+        try await persistence.updateGeneratedMetadata(
+            recordingID: recordingID,
+            metadata: WalkGeneratedRecordingMetadata(
+                title: "Generated Title",
+                walkDescription: "Generated description.",
+                placeName: "Papago Park",
+                generatedAt: generatedAt
+            )
+        )
+
+        let updatedRecording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(updatedRecording.title == "User Title")
+        #expect(updatedRecording.walkDescription == "Generated description.")
+        #expect(updatedRecording.generatedPlaceName == "Papago Park")
+        #expect(updatedRecording.metadataGeneratedAt == generatedAt)
+    }
+
     @Test("Sample data contains both recording modes")
     func sampleData() {
         #expect(SampleData.recordings.count == 2)
@@ -906,6 +1074,23 @@ struct WalkRecordingTests {
         #expect(gpxText.contains("/private/var/mobile") == false)
     }
 
+    @Test("GPX export includes recording descriptions")
+    func gpxExportIncludesDescription() {
+        let recording = WalkRecording(
+            title: "Described Walk",
+            mode: .walk,
+            walkDescription: "A quiet canal walk near Phoenix & Tempe.",
+            points: [
+                makePoint(timestamp: 100)
+            ]
+        )
+
+        let gpxText = WalkRouteExport(recording: recording).gpxText
+
+        #expect(gpxText.contains("<desc>A quiet canal walk near Phoenix &amp; Tempe.</desc>"))
+        #expect(gpxText.contains("<asmrwalk:description>A quiet canal walk near Phoenix &amp; Tempe.</asmrwalk:description>"))
+    }
+
     @Test("GPX export uses POSIX-safe number formatting for elevation")
     func gpxExportElevationFormatting() {
         let recording = WalkRecording(
@@ -952,7 +1137,9 @@ struct WalkRecordingTests {
         createdAt: Date = Date(timeIntervalSince1970: 1_000),
         duration: TimeInterval,
         distanceMeters: Double,
-        pointCount: Int
+        pointCount: Int,
+        latitude: Double = 33.4484,
+        longitude: Double = -112.0740
     ) -> WalkRecordingSnapshot {
         WalkRecordingSnapshot(
             id: id,
@@ -964,8 +1151,8 @@ struct WalkRecordingTests {
             points: (0..<pointCount).map { index in
                 LocationPointSnapshot(
                     timestamp: createdAt.addingTimeInterval(TimeInterval(index)),
-                    latitude: 33.4484 + (Double(index) * 0.0001),
-                    longitude: -112.0740 + (Double(index) * 0.0001),
+                    latitude: latitude + (Double(index) * 0.0001),
+                    longitude: longitude + (Double(index) * 0.0001),
                     altitude: nil,
                     horizontalAccuracy: 5,
                     speed: 1.2
@@ -1000,11 +1187,25 @@ private func fetchOnlyRecording(in container: ModelContainer) throws -> WalkReco
     return recordings.first
 }
 
-private struct TestError: LocalizedError {
+nonisolated private struct TestError: LocalizedError {
     let message: String
 
     var errorDescription: String? {
         message
+    }
+}
+
+nonisolated private struct FakeWalkPlaceGeocoder: WalkPlaceGeocoding {
+    let metadata: WalkPlaceMetadata
+
+    func place(for coordinate: WalkRouteMetadataCoordinate) async throws -> WalkPlaceMetadata {
+        metadata
+    }
+}
+
+nonisolated private struct FailingWalkPlaceGeocoder: WalkPlaceGeocoding {
+    func place(for coordinate: WalkRouteMetadataCoordinate) async throws -> WalkPlaceMetadata {
+        throw TestError(message: "Place lookup failed")
     }
 }
 
