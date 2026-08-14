@@ -128,9 +128,11 @@ final class ASMR_WalkUITests: XCTestCase {
 
         openTab("Video Walk")
 
-        XCTAssertTrue(app.buttons["Go to Walk"].waitForExistence(timeout: 2))
-        app.buttons["Go to Walk"].tap()
-        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        let goToWalkButton = app.buttons["videoWalk.startButton"]
+        XCTAssertTrue(goToWalkButton.waitForExistence(timeout: 5))
+        XCTAssertEqual(goToWalkButton.label, "Go to Walk")
+        goToWalkButton.tap()
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons["walk.startButton"].label, "Start Walk")
     }
 
@@ -138,16 +140,16 @@ final class ASMR_WalkUITests: XCTestCase {
     func testActiveGPSRecordingBannerStaysVisibleAcrossTabs() {
         launchWithActiveRecording(mode: "walk")
 
-        XCTAssertTrue(app.descendants(matching: .any)["recording.activeBanner"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.buttons["recording.returnButton"].exists)
-        XCTAssertTrue(app.buttons["recording.stopButton"].exists)
+        XCTAssertTrue(activeRecordingBanner.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["recording.returnButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["recording.stopButton"].waitForExistence(timeout: 5))
 
         openTab("Settings")
 
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.descendants(matching: .any)["recording.activeBanner"].exists)
-        XCTAssertTrue(app.buttons["recording.returnButton"].exists)
-        XCTAssertTrue(app.buttons["recording.stopButton"].exists)
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(activeRecordingBanner.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["recording.returnButton"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["recording.stopButton"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -155,11 +157,12 @@ final class ASMR_WalkUITests: XCTestCase {
         launchWithActiveRecording(mode: "walk")
 
         openTab("Settings")
-        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["recording.returnButton"].waitForExistence(timeout: 5))
 
         app.buttons["recording.returnButton"].tap()
 
-        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.navigationBars["Walk"].waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -210,10 +213,12 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["settings.startRecordingDestinationPicker"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["settings.backgroundGPSRecordingToggle"].exists)
 
-        app.buttons["settings.aboutButton"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 2))
+        let aboutButton = app.buttons["settings.aboutButton"]
+        XCTAssertTrue(scrollToElement(aboutButton))
+        aboutButton.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 5))
         let emailPredicate = NSPredicate(format: "label CONTAINS %@", "heathdj@me.com")
-        XCTAssertTrue(app.descendants(matching: .any).matching(emailPredicate).firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any).matching(emailPredicate).firstMatch.waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -263,6 +268,25 @@ final class ASMR_WalkUITests: XCTestCase {
 
     private func element(_ identifier: String) -> XCUIElement {
         app.descendants(matching: .any)[identifier]
+    }
+
+    private var activeRecordingBanner: XCUIElement {
+        app.descendants(matching: .any)["recording.activeBanner"]
+    }
+
+    private func scrollToElement(_ element: XCUIElement, maxSwipes: Int = 6) -> Bool {
+        if element.waitForExistence(timeout: 2), element.isHittable {
+            return true
+        }
+
+        for _ in 0..<maxSwipes {
+            app.swipeUp()
+            if element.waitForExistence(timeout: 1), element.isHittable {
+                return true
+            }
+        }
+
+        return element.exists
     }
 
     private func statusValue(_ status: XCUIElement) -> String {

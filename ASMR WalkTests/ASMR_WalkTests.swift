@@ -205,7 +205,28 @@ struct ASMR_WalkTests {
     }
 
     private func repositoryRoot() -> URL? {
-        var candidate = URL(fileURLWithPath: #filePath)
+        let environment = ProcessInfo.processInfo.environment
+        let candidates = [
+            URL(fileURLWithPath: #filePath),
+            URL(fileURLWithPath: FileManager.default.currentDirectoryPath),
+            Bundle.main.bundleURL,
+            environment["SRCROOT"].map(URL.init(fileURLWithPath:)),
+            environment["SOURCE_ROOT"].map(URL.init(fileURLWithPath:)),
+            environment["PROJECT_DIR"].map(URL.init(fileURLWithPath:)),
+            environment["CI_WORKSPACE"].map { URL(fileURLWithPath: $0).appending(path: "repository") }
+        ].compactMap { $0 }
+
+        for candidate in candidates {
+            if let root = repositoryRoot(startingAt: candidate) {
+                return root
+            }
+        }
+
+        return nil
+    }
+
+    private func repositoryRoot(startingAt url: URL) -> URL? {
+        var candidate = url.hasDirectoryPath ? url : url.deletingLastPathComponent()
 
         while candidate.path != candidate.deletingLastPathComponent().path {
             let projectSettingsURL = candidate.appending(path: "ASMR Walk.xcodeproj/project.pbxproj")
