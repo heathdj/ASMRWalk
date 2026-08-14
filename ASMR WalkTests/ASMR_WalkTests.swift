@@ -187,15 +187,7 @@ struct ASMR_WalkTests {
 
     @Test("Privacy usage descriptions are specific")
     func privacyUsageDescriptionsAreSpecific() throws {
-        let projectRoot = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-        let infoPlistURL = projectRoot.appending(path: "ASMR-Walk-Info.plist")
-        let infoPlistData = try Data(contentsOf: infoPlistURL)
-        let infoPlist = try #require(PropertyListSerialization.propertyList(
-            from: infoPlistData,
-            format: nil
-        ) as? [String: Any])
+        let projectRoot = try #require(repositoryRoot())
         let projectSettingsURL = projectRoot.appending(path: "ASMR Walk.xcodeproj/project.pbxproj")
         let projectSettingsText = try String(contentsOf: projectSettingsURL, encoding: .utf8)
 
@@ -205,7 +197,44 @@ struct ASMR_WalkTests {
         #expect(projectSettingsText.contains("INFOPLIST_KEY_NSMicrophoneUsageDescription = \"ASMR Walk uses the microphone to record video walks.\";"))
         #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = \"ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.\";"))
         #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryUsageDescription = \"ASMR Walk reads older Photos-backed video walks so you can replay them with your route.\";"))
-        #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location"])
+        #expect(projectSettingsText.contains("INFOPLIST_FILE = \"ASMR-Walk-Info.plist\";"))
+
+        if let infoPlist = try staticInfoPlist(in: projectRoot) {
+            #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location"])
+        }
+    }
+
+    private func repositoryRoot() -> URL? {
+        var candidate = URL(fileURLWithPath: #filePath)
+
+        while candidate.path != candidate.deletingLastPathComponent().path {
+            let projectSettingsURL = candidate.appending(path: "ASMR Walk.xcodeproj/project.pbxproj")
+            if FileManager.default.fileExists(atPath: projectSettingsURL.path) {
+                return candidate
+            }
+
+            candidate.deleteLastPathComponent()
+        }
+
+        return nil
+    }
+
+    private func staticInfoPlist(in projectRoot: URL) throws -> [String: Any]? {
+        let candidates = [
+            projectRoot.appending(path: "ASMR-Walk-Info.plist"),
+            projectRoot.appending(path: "ASMR Walk/ASMR-Walk-Info.plist"),
+            projectRoot.appending(path: "ASMR Walk/ASMR Walk/ASMR-Walk-Info.plist")
+        ]
+
+        guard let infoPlistURL = candidates.first(where: { FileManager.default.fileExists(atPath: $0.path) }) else {
+            return nil
+        }
+
+        let infoPlistData = try Data(contentsOf: infoPlistURL)
+        return try PropertyListSerialization.propertyList(
+            from: infoPlistData,
+            format: nil
+        ) as? [String: Any]
     }
 
     @Test("Delete confirmation explains Photos video ownership")
