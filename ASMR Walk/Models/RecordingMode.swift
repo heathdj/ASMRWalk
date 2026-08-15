@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum RecordingMode: String, Codable, CaseIterable, Sendable {
+nonisolated enum RecordingMode: String, Codable, CaseIterable, Sendable {
     case walk
     case videoWalk
 

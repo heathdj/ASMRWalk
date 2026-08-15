@@ -329,13 +329,21 @@ The plist now declares only `location`, and the privacy test checks that exact l
 
 The App Store draft had one last ghost from the Photos-first era: it said video walks were saved to Photos when access was available. That was no longer true after user testing moved videos into ASMR Walk's local storage with an explicit save-to-Photos action.
 
-The copy now says the same thing the app does: GPS and video walks stay local, video copies can be saved to Photos from History, background GPS is GPS Walk only, Video Walk is foreground-only, and version 1.0.1 is iPhone-only on iOS 26.0 or later. Review notes also point out the Settings privacy-policy link, because App Review should not have to infer where the policy lives.
+The copy now says the same thing the app does: GPS and video walks stay local, video copies can be saved to Photos from History, background GPS is GPS Walk only, Video Walk is foreground-only, and the current release is iPhone-only on iOS 26.0 or later. Review notes also point out the Settings privacy-policy link, because App Review should not have to infer where the policy lives.
 
 ### Walking Video Needs a Steadier Hand
 
 AVFoundation does not quietly stabilize recorded movie output just because the app is filming a walk. The movie connection's preferred stabilization mode defaults to off, which means the camera can be technically correct while the footage still carries every footstep.
 
 Video Walk now asks the movie output connection for `.auto` stabilization whenever the active device and format support it. That lets AVFoundation choose the right stabilization mode for the phone instead of hard-coding a mode that may not fit every capture format. The release checklist carries the part automation cannot prove well: record on a real iPhone, confirm stabilization is active, and make sure orientation, crop, low-light quality, and DockKit zoom still feel right.
+
+### A Walk Deserves a Better Name Than a Timestamp
+
+Issue 11 is the app learning to label the shoebox. A saved walk used to come home with a technically correct title like "Aug 13 Walk," which is fine for the database and useless when a person is scanning history two weeks later. The new path waits until the recording is safely saved, picks a representative point from the route, and asks MapKit for nearby place information. If the lookup succeeds, "Video Walk" can become something like "Papago Park Video Walk," with a short editable description beside it.
+
+The important engineering move is that metadata generation is a guest, not the landlord. `WalkRecorder` saves the route first, then kicks off best-effort metadata in the background. If MapKit is unavailable, slow, or returns nothing useful, the recording stays saved with its fallback title. If the user edits the title or description, generated metadata no longer gets to barge back in and repaint the label.
+
+SwiftData had its own small trap here: an `@Model` cannot use a stored property named `description`, so the model stores the field as `walkDescription`. GPX export now includes that text in both standard `<desc>` elements and ASMR Walk extensions, which means the friendly label travels with the route when the user chooses to share it.
 
 ## Engineer's Wisdom
 

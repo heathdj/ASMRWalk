@@ -11,6 +11,7 @@ struct RecordingDetailView: View {
     let recording: WalkRecording
     @State private var photoSaveStatus: PhotoSaveStatus?
     @State private var isSavingVideoToPhotos = false
+    @State private var isShowingMetadataEditor = false
 
     var body: some View {
         ScrollView {
@@ -34,6 +35,8 @@ struct RecordingDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+
+                recordingMetadataCard
 
                 HStack(spacing: 12) {
                     DetailMetric(
@@ -78,6 +81,9 @@ struct RecordingDetailView: View {
         }
         .navigationTitle(recording.title)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isShowingMetadataEditor) {
+            RecordingMetadataEditView(recording: recording)
+        }
         .alert("Video Export", isPresented: isShowingPhotoSaveStatus) {
             Button("OK", role: .cancel) {
                 photoSaveStatus = nil
@@ -114,6 +120,44 @@ struct RecordingDetailView: View {
 
     private var routeExport: WalkRouteExport {
         WalkRouteExport(recording: recording)
+    }
+
+    private var recordingMetadataCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Details")
+                    .font(.headline)
+
+                Spacer()
+
+                Button("Edit", systemImage: "pencil") {
+                    isShowingMetadataEditor = true
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier(AccessibilityID.editRecordingMetadataButton)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(recording.title)
+                    .font(.title3.weight(.semibold))
+
+                if recording.walkDescription.isEmpty {
+                    Text("No description added.")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(recording.walkDescription)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let generatedPlaceName = recording.generatedPlaceName {
+                    Label(generatedPlaceName, systemImage: "location")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(.quaternary, in: .rect(cornerRadius: 16))
     }
 
     private var isShowingPhotoSaveStatus: Binding<Bool> {
@@ -209,5 +253,91 @@ private struct DetailMetric: View {
         .padding()
         .background(.quaternary, in: .rect(cornerRadius: 16))
         .accessibilityElement(children: .combine)
+    }
+}
+
+private struct RecordingMetadataEditView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var recording: WalkRecording
+    @State private var title: String
+    @State private var walkDescription: String
+    @State private var saveErrorMessage = ""
+    @State private var isShowingSaveError = false
+
+    init(recording: WalkRecording) {
+        self.recording = recording
+        _title = State(initialValue: recording.title)
+        _walkDescription = State(initialValue: recording.walkDescription)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title") {
+                    TextField("Walk title", text: $title)
+                        .textInputAutocapitalization(.words)
+                }
+
+                Section {
+                    TextEditor(text: $walkDescription)
+                        .frame(minHeight: 140)
+                } header: {
+                    Text("Description")
+                } footer: {
+                    Text("Descriptions are included in GPX exports and future publishing workflows.")
+                }
+            }
+            .navigationTitle("Edit Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(trimmedTitle.isEmpty)
+                    .accessibilityIdentifier(AccessibilityID.saveRecordingMetadataButton)
+                }
+            }
+            .alert("Unable to Save Details", isPresented: $isShowingSaveError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(saveErrorMessage)
+            }
+        }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedDescription: String {
+        walkDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func save() {
+        if trimmedTitle != recording.title {
+            recording.title = trimmedTitle
+            recording.isTitleUserEdited = true
+        }
+
+        if trimmedDescription != recording.walkDescription {
+            recording.walkDescription = trimmedDescription
+            recording.isDescriptionUserEdited = true
+        }
+
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            saveErrorMessage = error.localizedDescription
+            isShowingSaveError = true
+        }
     }
 }

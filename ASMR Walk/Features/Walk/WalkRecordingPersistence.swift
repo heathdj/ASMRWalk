@@ -39,6 +39,27 @@ actor WalkRecordingPersistence {
         try modelContext.save()
     }
 
+    func updateGeneratedMetadata(
+        recordingID: UUID,
+        metadata: WalkGeneratedRecordingMetadata
+    ) throws {
+        guard let recording = try fetchRecording(id: recordingID) else {
+            return
+        }
+
+        if recording.isTitleUserEdited == false {
+            recording.title = metadata.title
+        }
+
+        if recording.isDescriptionUserEdited == false {
+            recording.walkDescription = metadata.walkDescription
+        }
+
+        recording.generatedPlaceName = metadata.placeName
+        recording.metadataGeneratedAt = metadata.generatedAt
+        try modelContext.save()
+    }
+
     private func recording(for snapshot: WalkRecordingSnapshot) throws -> WalkRecording {
         if let recording = try fetchRecording(id: snapshot.id) {
             return recording

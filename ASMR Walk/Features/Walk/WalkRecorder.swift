@@ -135,6 +135,7 @@ final class WalkRecorder: NSObject {
     private var clockTask: Task<Void, Never>?
     private var backgroundActivitySession: (any WalkBackgroundActivity)?
     private var persistence: WalkRecordingPersistence?
+    private var modelContainer: ModelContainer?
     private var acceptedPointsSinceSave = 0
     private var secondsSinceSave = 0
 
@@ -297,6 +298,7 @@ final class WalkRecorder: NSObject {
         let persistence = WalkRecordingPersistence(modelContainer: modelContext.container)
         self.session = session
         self.persistence = persistence
+        modelContainer = modelContext.container
         syncLiveSnapshot()
 
         do {
@@ -304,6 +306,7 @@ final class WalkRecorder: NSObject {
         } catch {
             self.session = nil
             self.persistence = nil
+            modelContainer = nil
             errorMessage = "Unable to start recording: \(error.localizedDescription)"
             return
         }
@@ -362,7 +365,13 @@ final class WalkRecorder: NSObject {
 
         do {
             try await persistence.save(snapshot)
+            let modelContainer = modelContainer
             reset()
+            if let modelContainer {
+                Task {
+                    await WalkRecordingMetadataGenerator.generate(for: snapshot, in: modelContainer)
+                }
+            }
         } catch {
             phase = .recording
             errorMessage = "Unable to save walk: \(error.localizedDescription)"
@@ -561,6 +570,7 @@ final class WalkRecorder: NSObject {
         stopBackgroundActivitySession()
         session = nil
         persistence = nil
+        modelContainer = nil
         syncLiveSnapshot()
         acceptedPointsSinceSave = 0
         secondsSinceSave = 0

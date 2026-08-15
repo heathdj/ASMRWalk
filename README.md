@@ -2,9 +2,9 @@
 
 ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walking routes, can pair a route with a walk video, stores recordings locally with SwiftData, and exports routes for use outside the app.
 
-## Version 1.0.1 Scope
+## Version 1.1.0 Scope
 
-ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
+ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
 
 ## Current Features
 
@@ -14,11 +14,12 @@ ASMR Walk 1.0.1 is intentionally iPhone-only and local-first. It supports GPS Wa
 - Video walk recording with camera preview, microphone audio, landscape-first UI, and live route overlay.
 - Saved video walk playback with a synchronized route-progress map overlay.
 - Local persistence with SwiftData.
-- Recording detail screens with route maps, duration, distance, route-point counts, and video indicators.
+- Recording detail screens with editable titles and descriptions, route maps, duration, distance, route-point counts, and video indicators.
+- Best-effort place metadata generation after saving a walk, with fallback date/time titles when lookup is unavailable.
 - Delete support for saved recordings. App-managed video files are removed with their recording; any user-saved Photos copies remain in Photos.
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
-- GPX file export for higher-fidelity route sharing.
+- GPX file export for higher-fidelity route sharing, including recording descriptions when present.
 
 ## Tech Stack
 
@@ -46,7 +47,7 @@ ASMR Walk/
 - Xcode with iOS 26 SDK support.
 - iOS 26 iPhone simulator or physical iPhone.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
-- Version 1.0.1 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
+- Version 1.1.0 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
 
 ## Setup
 
@@ -78,7 +79,7 @@ Finished video walks are kept in ASMR Walk's app-managed storage for playback. F
 
 ## Privacy
 
-ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, and video references stay on the device unless the user saves video to Photos or explicitly exports or shares a route.
+ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, and video references stay on the device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit reverse-geocoding service for a place name so it can suggest a useful title and description.
 
 See `PRIVACY_POLICY.md` for the public privacy-policy source. Before App Store submission, publish that policy at a stable URL and enter the URL in App Store Connect.
 
@@ -101,6 +102,7 @@ The unit test suite covers:
 
 - Tab metadata.
 - SwiftData recording lifecycle.
+- Generated and editable recording metadata.
 - GPS route filtering and distance accumulation.
 - Video-walk recording metadata.
 - Google Maps route export.
@@ -115,11 +117,11 @@ The app uses a native static launch screen configured through the target Info se
 - Exported Google Maps URLs sample waypoints; GPX remains the complete route export.
 - The map overlay is rendered in the app and is not burned into exported video.
 - Video Walk does not continue recording in the background.
-- iPad, Apple Watch, HealthKit, and iCloud sync are not part of version 1.0.1.
+- iPad, Apple Watch, HealthKit, and iCloud sync are not part of version 1.1.0.
 
 ## Roadmap
 
-These are future ideas, not shipped 1.0.1 features:
+These are future ideas, not shipped 1.1.0 features:
 
 - iCloud sync.
 - Route thumbnails.
