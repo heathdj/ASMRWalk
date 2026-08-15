@@ -52,6 +52,9 @@ Run these on a physical iPhone before submission:
 ### Physical Device Only
 
 - [ ] Start and save a GPS-only walk.
+- [ ] Confirm a saved GPS-only walk receives a route thumbnail in History and on the detail screen.
+- [ ] Confirm a saved video walk receives a route thumbnail while local video playback still works.
+- [ ] Confirm thumbnail generation failures leave the recording saved and usable.
 - [ ] Confirm a saved GPS-only walk receives a useful place-based title and editable description when MapKit reverse geocoding succeeds.
 - [ ] Confirm a saved walk keeps its fallback date/time title when place lookup fails or returns no usable place name.
 - [ ] Edit a saved recording title and description from History detail, leave and reopen the detail screen, and confirm the edits persist.
@@ -90,6 +93,7 @@ Run these on a physical iPhone before submission:
 - [ ] Run Accessibility Inspector on Walk, Video Walk, History, and Settings. Resolve or document any remaining issues.
 - [ ] Open a saved video walk and confirm playback plus route overlay works.
 - [ ] Delete a video walk and confirm the app recording and local video file are removed. User-saved Photos copies should remain in Photos unless a separate delete-from-Photos feature is added.
+- [ ] Delete a recording with a route thumbnail and confirm the app-managed thumbnail file is removed.
 - [ ] Export a Google Maps URL.
 - [ ] Export a GPX file through the share sheet.
 - [ ] Inspect an exported GPX file and confirm ASMR Walk extensions include duration, recording mode, `hasVideo`, recording ID, horizontal accuracy, and speed when available.
@@ -112,12 +116,13 @@ Run these on a physical iPhone before submission:
 - [ ] Document network behavior: no direct app-owned network calls, no analytics SDK, no account backend, no CloudKit sync.
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
 - [ ] Document Apple framework behavior separately: Photos may use iCloud Photos for copies the user saves or older Photos-backed videos.
-- [ ] Document Apple framework behavior separately: MapKit may reverse geocode a saved route point to suggest editable titles and descriptions.
+- [ ] Document Apple framework behavior separately: MapKit may load map imagery for route thumbnails and reverse geocode a saved route point to suggest editable titles and descriptions.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
 - [ ] Confirm App Store copy says ASMR Walk 1.1.0 is iPhone-only.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
+- [ ] Mention that route thumbnails are stored locally.
 - [ ] Mention that video walks are stored locally in ASMR Walk by default.
 - [ ] Mention that users can save a copy of a video walk to Photos from History detail.
 - [ ] Mention that deleting an ASMR Walk recording removes the app-managed local video but does not delete user-saved Photos copies.

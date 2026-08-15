@@ -629,6 +629,8 @@ struct WalkRecordingTests {
         #expect(recording.metadataGeneratedAt == nil)
         #expect(recording.isTitleUserEdited == false)
         #expect(recording.isDescriptionUserEdited == false)
+        #expect(recording.thumbnailURL == nil)
+        #expect(recording.thumbnailStyleVersion == 0)
         #expect(recording.points.isEmpty)
         #expect(recording.hasVideo == false)
     }
@@ -660,6 +662,20 @@ struct WalkRecordingTests {
 
         #expect(walk.hasVideo == false)
         #expect(videoWalk.hasVideo)
+    }
+
+    @Test("Local file cleanup includes video and thumbnail assets")
+    func localFileCleanupIncludesVideoAndThumbnailAssets() {
+        let videoURL = URL(filePath: "/tmp/video.mov")
+        let thumbnailURL = URL(filePath: "/tmp/thumbnail.jpg")
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: videoURL,
+            thumbnailURL: thumbnailURL
+        )
+
+        #expect(WalkRecordingLocalFiles.removableURLs(for: recording) == [videoURL, thumbnailURL])
     }
 
     @Test("Short recordings use a 10 second save confirmation threshold")
@@ -1038,6 +1054,42 @@ struct WalkRecordingTests {
         #expect(updatedRecording.walkDescription == "Generated description.")
         #expect(updatedRecording.generatedPlaceName == "Papago Park")
         #expect(updatedRecording.metadataGeneratedAt == generatedAt)
+    }
+
+    @Test("Persistence stores generated route thumbnail URLs")
+    func persistenceStoresGeneratedRouteThumbnailURLs() async throws {
+        let recordingID = try #require(UUID(uuidString: "CC9044A6-89AF-4BA9-9B8F-C4CC25E4313F"))
+        let thumbnailURL = URL(filePath: "/tmp/route-thumbnail.jpg")
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let snapshot = makeSnapshot(
+            id: recordingID,
+            title: "Thumbnail Walk",
+            duration: 75,
+            distanceMeters: 210,
+            pointCount: 8
+        )
+
+        try await persistence.save(snapshot)
+        try await persistence.updateThumbnailURL(
+            recordingID: recordingID,
+            thumbnailURL: thumbnailURL,
+            styleVersion: WalkRouteThumbnailGenerator.styleVersion
+        )
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.thumbnailURL == thumbnailURL)
+        #expect(recording.thumbnailStyleVersion == WalkRouteThumbnailGenerator.styleVersion)
+    }
+
+    @Test("Route thumbnail filenames are tied to recording IDs")
+    func routeThumbnailFilenamesAreTiedToRecordingIDs() throws {
+        let recordingID = try #require(UUID(uuidString: "C88807DA-8957-4B6F-A6C7-1D1C37BA9515"))
+        let url = try WalkRouteThumbnailGenerator.thumbnailURL(recordingID: recordingID)
+
+        #expect(WalkRouteThumbnailGenerator.styleVersion == 1)
+        #expect(url.lastPathComponent == "\(recordingID.uuidString).jpg")
+        #expect(url.deletingLastPathComponent().lastPathComponent == "Route Thumbnails")
     }
 
     @Test("Sample data contains both recording modes")

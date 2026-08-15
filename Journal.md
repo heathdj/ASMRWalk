@@ -345,6 +345,14 @@ The important engineering move is that metadata generation is a guest, not the l
 
 SwiftData had its own small trap here: an `@Model` cannot use a stored property named `description`, so the model stores the field as `walkDescription`. GPX export now includes that text in both standard `<desc>` elements and ASMR Walk extensions, which means the friendly label travels with the route when the user chooses to share it.
 
+### Thumbnails Are Tiny Trail Postcards
+
+Issue 47 gives History a visual memory. A list of walk titles and dates is useful, but a small route thumbnail works like a postcard tucked into the journal: one glance tells you whether this was the canal loop, the park lap, or the wandering zigzag that happened because the coffee shop was closed.
+
+The thumbnail generator follows the same rule as place metadata: save the walk first, then do the decorative work. `MKMapSnapshotter` captures the map image, ASMR Walk draws the recorded route and endpoints over it, and the finished JPEG lands in app-managed storage while SwiftData keeps only the local `thumbnailURL`. If MapKit cannot render a snapshot, the recording still saves and the UI falls back to the familiar mode icon.
+
+Cleanup needed its own little checklist. Video files and thumbnails are both app-managed local files, so deletion now asks `WalkRecordingLocalFiles` for everything that belongs to the recording and removes those files after SwiftData deletes the row. The route stays local-first, the thumbnail stays lightweight, and no one has to wonder why a deleted walk left a tiny souvenir behind.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

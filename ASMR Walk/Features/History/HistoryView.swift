@@ -14,6 +14,7 @@ struct HistoryView: View {
     @State private var recordingPendingDeletion: WalkRecording?
     @State private var deletionErrorMessage = ""
     @State private var isShowingDeletionError = false
+    @State private var thumbnailRefreshIDs: Set<UUID> = []
 
     init(startRecording: @escaping () -> Void = {}) {
         self.startRecording = startRecording
@@ -31,6 +32,9 @@ struct HistoryView: View {
             .navigationTitle("History")
             .navigationDestination(for: WalkRecording.self) { recording in
                 RecordingDetailView(recording: recording)
+            }
+            .task {
+                await refreshRouteThumbnails()
             }
             .alert("Delete Walk?", isPresented: deleteConfirmation) {
                 Button("Delete", role: .destructive) {
@@ -98,18 +102,35 @@ struct HistoryView: View {
         }
 
         let recordingID = recordingPendingDeletion.id
-        let videoURL = recordingPendingDeletion.videoURL
+        let removableURLs = WalkRecordingLocalFiles.removableURLs(for: recordingPendingDeletion)
         let persistence = WalkRecordingPersistence(modelContainer: modelContext.container)
 
         do {
             try await persistence.deleteRecording(id: recordingID)
-            if let videoURL {
-                try? FileManager.default.removeItem(at: videoURL)
+            for url in removableURLs {
+                try? FileManager.default.removeItem(at: url)
             }
             self.recordingPendingDeletion = nil
         } catch {
             deletionErrorMessage = error.localizedDescription
             isShowingDeletionError = true
+        }
+    }
+
+    private func refreshRouteThumbnails() async {
+        let modelContainer = modelContext.container
+        let snapshots = recordings.compactMap { recording -> WalkRecordingSnapshot? in
+            guard recording.needsRouteThumbnailRefresh,
+                  thumbnailRefreshIDs.contains(recording.id) == false else {
+                return nil
+            }
+
+            thumbnailRefreshIDs.insert(recording.id)
+            return recording.snapshotForThumbnailGeneration
+        }
+
+        for snapshot in snapshots {
+            await WalkRouteThumbnailGenerator.generate(for: snapshot, in: modelContainer)
         }
     }
 }
@@ -119,12 +140,7 @@ private struct RecordingRow: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: recording.mode.systemImage)
-                .font(.title2)
-                .foregroundStyle(recording.hasVideo ? .red : .green)
-                .frame(width: 44, height: 44)
-                .background(.quaternary, in: .rect(cornerRadius: 12))
-                .accessibilityHidden(true)
+            RouteThumbnailView(recording: recording, size: CGSize(width: 64, height: 52))
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -153,5 +169,35 @@ private struct RecordingRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
+    }
+}
+
+private extension WalkRecording {
+    var needsRouteThumbnailRefresh: Bool {
+        points.count > 1
+            && (thumbnailURL == nil || thumbnailStyleVersion < WalkRouteThumbnailGenerator.styleVersion)
+    }
+
+    var snapshotForThumbnailGeneration: WalkRecordingSnapshot {
+        WalkRecordingSnapshot(
+            id: id,
+            title: title,
+            createdAt: createdAt,
+            duration: duration,
+            distanceMeters: distanceMeters,
+            mode: mode,
+            videoURL: videoURL,
+            videoAssetIdentifier: videoAssetIdentifier,
+            points: pointsInTimeOrder.map { point in
+                LocationPointSnapshot(
+                    timestamp: point.timestamp,
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                    altitude: point.altitude,
+                    horizontalAccuracy: point.horizontalAccuracy,
+                    speed: point.speed
+                )
+            }
+        )
     }
 }
