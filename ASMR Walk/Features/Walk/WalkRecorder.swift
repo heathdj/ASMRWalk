@@ -369,7 +369,9 @@ final class WalkRecorder: NSObject {
             reset()
             if let modelContainer {
                 Task {
-                    await WalkRecordingMetadataGenerator.generate(for: snapshot, in: modelContainer)
+                    async let metadataGeneration: Void = WalkRecordingMetadataGenerator.generate(for: snapshot, in: modelContainer)
+                    async let thumbnailGeneration: Void = WalkRouteThumbnailGenerator.generate(for: snapshot, in: modelContainer)
+                    _ = await (metadataGeneration, thumbnailGeneration)
                 }
             }
         } catch {

@@ -26,6 +26,8 @@ final class WalkRecording {
     var isDescriptionUserEdited: Bool
     var videoURL: URL?
     var videoAssetIdentifier: String?
+    var thumbnailURL: URL?
+    var thumbnailStyleVersion: Int
 
     @Relationship(deleteRule: .cascade, inverse: \LocationPoint.recording)
     var points: [LocationPoint]
@@ -44,6 +46,8 @@ final class WalkRecording {
         isDescriptionUserEdited: Bool = false,
         videoURL: URL? = nil,
         videoAssetIdentifier: String? = nil,
+        thumbnailURL: URL? = nil,
+        thumbnailStyleVersion: Int = 0,
         points: [LocationPoint] = []
     ) {
         self.id = id
@@ -59,6 +63,8 @@ final class WalkRecording {
         self.isDescriptionUserEdited = isDescriptionUserEdited
         self.videoURL = videoURL
         self.videoAssetIdentifier = videoAssetIdentifier
+        self.thumbnailURL = thumbnailURL
+        self.thumbnailStyleVersion = thumbnailStyleVersion
         self.points = points
     }
 

@@ -60,6 +60,16 @@ actor WalkRecordingPersistence {
         try modelContext.save()
     }
 
+    func updateThumbnailURL(recordingID: UUID, thumbnailURL: URL, styleVersion: Int) throws {
+        guard let recording = try fetchRecording(id: recordingID) else {
+            return
+        }
+
+        recording.thumbnailURL = thumbnailURL
+        recording.thumbnailStyleVersion = styleVersion
+        try modelContext.save()
+    }
+
     private func recording(for snapshot: WalkRecordingSnapshot) throws -> WalkRecording {
         if let recording = try fetchRecording(id: snapshot.id) {
             return recording

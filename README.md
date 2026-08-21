@@ -4,7 +4,7 @@ ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walkin
 
 ## Version 1.1.0 Scope
 
-ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
+ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, route thumbnails, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
 
 ## Current Features
 
@@ -15,8 +15,9 @@ ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Wa
 - Saved video walk playback with a synchronized route-progress map overlay.
 - Local persistence with SwiftData.
 - Recording detail screens with editable titles and descriptions, route maps, duration, distance, route-point counts, and video indicators.
+- Generated route thumbnails for saved walks in History, detail views, and GPX share previews.
 - Best-effort place metadata generation after saving a walk, with fallback date/time titles when lookup is unavailable.
-- Delete support for saved recordings. App-managed video files are removed with their recording; any user-saved Photos copies remain in Photos.
+- Delete support for saved recordings. App-managed video and thumbnail files are removed with their recording; any user-saved Photos copies remain in Photos.
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing, including recording descriptions when present.
@@ -79,7 +80,7 @@ Finished video walks are kept in ASMR Walk's app-managed storage for playback. F
 
 ## Privacy
 
-ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, and video references stay on the device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit reverse-geocoding service for a place name so it can suggest a useful title and description.
+ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, route thumbnails, and video references stay on the device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit services for map imagery and a place name so it can generate a route thumbnail and suggest a useful title and description.
 
 See `PRIVACY_POLICY.md` for the public privacy-policy source. Before App Store submission, publish that policy at a stable URL and enter the URL in App Store Connect.
 
@@ -103,6 +104,7 @@ The unit test suite covers:
 - Tab metadata.
 - SwiftData recording lifecycle.
 - Generated and editable recording metadata.
+- Route thumbnail path and persistence helpers.
 - GPS route filtering and distance accumulation.
 - Video-walk recording metadata.
 - Google Maps route export.
@@ -124,7 +126,6 @@ The app uses a native static launch screen configured through the target Info se
 These are future ideas, not shipped 1.1.0 features:
 
 - iCloud sync.
-- Route thumbnails.
 - HealthKit workout integration.
 - Apple Watch companion recording.
 - Burned-in video map overlay export.

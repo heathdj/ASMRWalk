@@ -21,7 +21,8 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - `DockKitAccessoryService` owns DockKit accessory state and event streams for Video Walk; camera shutter toggles recording, camera zoom adjusts `VideoCaptureService`, and other accessory events intentionally no-op for now.
 - Video Walk locks the app-supported orientation mask to landscape-right while the tab is visible, and uses that same explicit capture orientation for both `AVCaptureVideoPreviewLayer` and movie output rotation.
 - New video walks should keep finished `.mov` files in app-managed local storage and persist the local `videoURL`; saving a copy to Photos is an explicit History detail action.
-- Deleting a recording removes app metadata, routes, and app-managed local video files; any user-exported Photos copy remains in Photos.
+- Route thumbnails are app-managed local image files generated after final save and persisted as `thumbnailURL`.
+- Deleting a recording removes app metadata, routes, app-managed thumbnails, and app-managed local video files; any user-exported Photos copy remains in Photos.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
@@ -32,7 +33,8 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
 - Version 1 is local-first with no developer-operated backend, accounts, analytics, advertising, or sync; App Privacy answers should be based on actual off-device collection, not protected APIs used only on device.
 - Finished recordings may receive best-effort generated place metadata after the final save; lookup failures must not block saving, and generated metadata must not overwrite user-edited titles or descriptions.
-- README, release checklist, privacy policy, and App Store copy must keep the same release scope language for device family, Photos ownership, background GPS, place metadata, and roadmap items.
+- Finished recordings may receive best-effort route thumbnails after the final save; thumbnail generation failures must not block saving.
+- README, release checklist, privacy policy, and App Store copy must keep the same release scope language for device family, Photos ownership, background GPS, route thumbnails, place metadata, and roadmap items.
 
 ## Conventions
 
@@ -41,6 +43,7 @@ ASMR Walk is an iPhone walking journal. It will record GPS routes, optionally pa
 - Keep recording state in dedicated observable types, not inside large SwiftUI views.
 - Use standard SwiftUI controls first so the interface follows the iOS 26 Liquid Glass system automatically.
 - Store video files in app-managed storage and persist their local URLs; Photos asset identifiers are export markers or legacy playback fallbacks, not the primary playback source.
+- Store route thumbnails as app-managed image files and persist only their local URLs in SwiftData.
 - Prompt on explicit stop before saving recordings shorter than 10 seconds; lifecycle interruptions should save automatically.
 - Starting a second recording mode while another is active should route the user back to the active recorder, not create another `WalkRecorder`.
 - Recording stop controls and live time/distance belong in the app-level active recording banner, not duplicated inside the Walk and Video Walk tabs.
@@ -69,7 +72,9 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - Disable the idle timer only while video recording is active, not for GPS-only walks.
 - Confirm that a video file exists before saving a video walk record; incomplete video sessions should not appear in history.
 - Delete messaging must distinguish app-managed local video files, which are removed with the recording, from any Photos copies, which remain in Photos.
+- Local recording cleanup should use `WalkRecordingLocalFiles` so app-managed thumbnails and videos are removed together.
 - MapKit reverse geocoding can suggest titles and descriptions after saving; cache rounded-coordinate results and treat the lookup as Apple framework behavior, not app-owned backend collection.
+- MapKit snapshots can generate route thumbnails after saving; treat map tile loading as Apple framework behavior, not app-owned backend collection.
 - Route points need accuracy and distance filtering before they affect distance totals or persistence.
 - Adding analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any app-owned network upload requires revisiting `PrivacyInfo.xcprivacy`, App Privacy answers, and `PRIVACY_POLICY.md`.
 - Roadmap items must be labeled as future work in public docs, not mixed into implemented release capability lists.

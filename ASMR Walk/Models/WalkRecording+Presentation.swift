@@ -37,6 +37,14 @@ extension WalkRecording {
 
         return FileManager.default.fileExists(atPath: videoURL.path)
     }
+
+    var localThumbnailFileExists: Bool {
+        guard let thumbnailURL else {
+            return false
+        }
+
+        return FileManager.default.fileExists(atPath: thumbnailURL.path)
+    }
 }
 
 extension TimeInterval {
@@ -58,5 +66,11 @@ extension Double {
     var distanceText: String {
         Measurement(value: max(0, self), unit: UnitLength.meters)
             .formatted(.measurement(width: .abbreviated, usage: .road))
+    }
+}
+
+enum WalkRecordingLocalFiles {
+    static func removableURLs(for recording: WalkRecording) -> [URL] {
+        [recording.videoURL, recording.thumbnailURL].compactMap { $0 }
     }
 }

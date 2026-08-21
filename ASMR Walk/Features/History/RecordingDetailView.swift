@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct RecordingDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -104,11 +105,20 @@ struct RecordingDetailView: View {
                         }
                     }
 
-                    ShareLink(
-                        item: routeExport.gpxFile,
-                        preview: SharePreview(recording.title, icon: Image(systemName: "map"))
-                    ) {
-                        Label("GPX Route File", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    if let thumbnailImage {
+                        ShareLink(
+                            item: routeExport.gpxFile,
+                            preview: SharePreview(recording.title, image: Image(uiImage: thumbnailImage))
+                        ) {
+                            Label("GPX Route File", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                        }
+                    } else {
+                        ShareLink(
+                            item: routeExport.gpxFile,
+                            preview: SharePreview(recording.title, icon: Image(systemName: "map"))
+                        ) {
+                            Label("GPX Route File", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                        }
                     }
                 }
                 .disabled(recording.points.isEmpty)
@@ -120,6 +130,14 @@ struct RecordingDetailView: View {
 
     private var routeExport: WalkRouteExport {
         WalkRouteExport(recording: recording)
+    }
+
+    private var thumbnailImage: UIImage? {
+        guard let thumbnailURL = recording.thumbnailURL else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: thumbnailURL.path)
     }
 
     private var recordingMetadataCard: some View {
@@ -138,6 +156,8 @@ struct RecordingDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
+                RouteThumbnailView(recording: recording, size: CGSize(width: 128, height: 88))
+
                 Text(recording.title)
                     .font(.title3.weight(.semibold))
 
