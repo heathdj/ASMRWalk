@@ -28,7 +28,6 @@ nonisolated struct WalkRouteMetadataCoordinate: Equatable, Hashable, Sendable {
 }
 
 nonisolated struct WalkPlaceMetadata: Equatable, Sendable {
-    var areasOfInterest: [String] = []
     var name: String?
     var subLocality: String?
     var locality: String?
@@ -195,13 +194,7 @@ nonisolated enum WalkRecordingMetadataBuilder {
 
 nonisolated private extension WalkPlaceMetadata {
     var displayName: String? {
-        let candidates = areasOfInterest + [
-            name,
-            subLocality,
-            locality,
-            administrativeArea,
-            country
-        ].compactMap { $0 }
+        let candidates = [name, subLocality, locality, administrativeArea, country].compactMap { $0 }
 
         return candidates
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
