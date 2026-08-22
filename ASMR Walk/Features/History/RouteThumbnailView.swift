@@ -10,9 +10,11 @@ struct RouteThumbnailView: View {
     let recording: WalkRecording
     let size: CGSize
 
+    @State private var image: UIImage?
+
     var body: some View {
         Group {
-            if let image = thumbnailImage {
+            if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
@@ -27,14 +29,16 @@ struct RouteThumbnailView: View {
                 .stroke(.primary.opacity(0.12), lineWidth: 1)
         }
         .accessibilityHidden(true)
-    }
-
-    private var thumbnailImage: UIImage? {
-        guard let thumbnailURL = recording.thumbnailURL else {
-            return nil
+        .task(id: recording.thumbnailURL) {
+            guard let url = recording.thumbnailURL else {
+                image = nil
+                return
+            }
+            let path = url.path
+            image = await Task.detached(priority: .utility) {
+                UIImage(contentsOfFile: path)
+            }.value
         }
-
-        return UIImage(contentsOfFile: thumbnailURL.path)
     }
 
     private var fallback: some View {

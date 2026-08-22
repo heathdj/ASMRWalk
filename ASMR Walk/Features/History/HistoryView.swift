@@ -125,8 +125,12 @@ struct HistoryView: View {
             return recording.snapshotForThumbnailGeneration
         }
 
-        for snapshot in snapshots {
-            await WalkRouteThumbnailGenerator.generate(for: snapshot, in: modelContainer)
+        await withTaskGroup(of: Void.self) { group in
+            for snapshot in snapshots {
+                group.addTask {
+                    await WalkRouteThumbnailGenerator.generate(for: snapshot, in: modelContainer)
+                }
+            }
         }
     }
 }
