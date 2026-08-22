@@ -76,6 +76,8 @@ private enum OnboardingPage: CaseIterable, Identifiable {
     case walk
     case videoWalk
     case history
+    case deleteHistory
+    case backgroundGPS
 
     var id: Self { self }
 
@@ -87,6 +89,10 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             "Video Walk"
         case .history:
             "History"
+        case .deleteHistory:
+            "Deleting Walks"
+        case .backgroundGPS:
+            "Background GPS"
         }
     }
 
@@ -98,6 +104,10 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             "Capture video while ASMR Walk tracks the route beside it. Finished videos stay in the app, and you can save a copy to Photos from History."
         case .history:
             "Review saved walks, replay routes on the map, watch video walks, and export GPX files when you need the route elsewhere."
+        case .deleteHistory:
+            "To remove a walk from History, swipe left on it and tap Delete. A confirmation will appear before anything is permanently removed."
+        case .backgroundGPS:
+            "GPS walks keep recording even when you leave the app. Enable \"Always\" location access in Settings → Privacy & Security → Location Services → ASMR Walk to ensure your route is captured the whole way."
         }
     }
 
@@ -109,6 +119,10 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             "video.fill"
         case .history:
             "clock.arrow.circlepath"
+        case .deleteHistory:
+            "trash.circle"
+        case .backgroundGPS:
+            "location.circle"
         }
     }
 
@@ -120,6 +134,10 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             .blue
         case .history:
             .indigo
+        case .deleteHistory:
+            .red
+        case .backgroundGPS:
+            .teal
         }
     }
 
@@ -131,6 +149,10 @@ private enum OnboardingPage: CaseIterable, Identifiable {
             AccessibilityID.onboardingVideoWalkPage
         case .history:
             AccessibilityID.onboardingHistoryPage
+        case .deleteHistory:
+            AccessibilityID.onboardingDeleteHistoryPage
+        case .backgroundGPS:
+            AccessibilityID.onboardingBackgroundGPSPage
         }
     }
 }
