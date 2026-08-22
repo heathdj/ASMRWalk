@@ -106,7 +106,7 @@ struct ASMR_WalkTests {
         #expect(info.appName.isEmpty == false)
         #expect(info.version.isEmpty == false)
         #expect(info.build.isEmpty == false)
-        #expect(info.contactEmail == "heathdj@me.com")
+        #expect(info.contactEmail == "support@bald-traveler.com")
     }
 
     @Test("Photos permission explanations describe app intent")

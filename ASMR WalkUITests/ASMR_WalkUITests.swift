@@ -30,6 +30,12 @@ final class ASMR_WalkUITests: XCTestCase {
         app.buttons["Next"].tap()
         XCTAssertTrue(element("onboarding.page.history").waitForExistence(timeout: 2))
 
+        app.buttons["Next"].tap()
+        XCTAssertTrue(element("onboarding.page.deleteHistory").waitForExistence(timeout: 2))
+
+        app.buttons["Next"].tap()
+        XCTAssertTrue(element("onboarding.page.backgroundGPS").waitForExistence(timeout: 2))
+
         app.buttons["Start Using ASMR Walk"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 2))
     }
@@ -217,7 +223,7 @@ final class ASMR_WalkUITests: XCTestCase {
         XCTAssertTrue(scrollToElement(aboutButton))
         aboutButton.tap()
         XCTAssertTrue(app.descendants(matching: .any)["settings.aboutSheet"].waitForExistence(timeout: 5))
-        let emailPredicate = NSPredicate(format: "label CONTAINS %@", "heathdj@me.com")
+        let emailPredicate = NSPredicate(format: "label CONTAINS %@", "support@bald-traveler.com")
         XCTAssertTrue(app.descendants(matching: .any).matching(emailPredicate).firstMatch.waitForExistence(timeout: 5))
     }
 
