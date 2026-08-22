@@ -89,7 +89,7 @@ struct AboutInfo: Equatable {
                 ?? "ASMR Walk",
             version: dictionary["CFBundleShortVersionString"] as? String ?? "Unknown",
             build: dictionary["CFBundleVersion"] as? String ?? "Unknown",
-            contactEmail: "heathdj@me.com"
+            contactEmail: "support@bald-traveler.com"
         )
     }
 }
