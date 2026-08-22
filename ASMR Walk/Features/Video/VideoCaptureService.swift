@@ -71,12 +71,15 @@ final class VideoCaptureService: NSObject {
     private(set) var isRecording = false
     private(set) var errorMessage: String?
     private(set) var successMessage: String?
+    private(set) var audioLevel: Float = 0
+    private(set) var audioInputName: String?
     private(set) var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
     private(set) var microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
     private var movieOutput = AVCaptureMovieFileOutput()
     private var stopContinuation: CheckedContinuation<URL, Error>?
     private var activeVideoDevice: AVCaptureDevice?
+    private var meterTask: Task<Void, Never>?
 
     var isPermissionDenied: Bool {
         cameraAuthorizationStatus == .denied
@@ -157,6 +160,7 @@ final class VideoCaptureService: NSObject {
             try Task.checkCancellation()
             isReady = true
             errorMessage = nil
+            startAudioMetering()
         } catch is CancellationError {
             stopSession()
         } catch {
@@ -296,9 +300,36 @@ final class VideoCaptureService: NSObject {
     }
 
     private func resetCapturePipeline() {
+        stopAudioMetering()
         activeVideoDevice = nil
         movieOutput = AVCaptureMovieFileOutput()
         session = AVCaptureSession()
+    }
+
+    private func startAudioMetering() {
+        guard meterTask == nil else { return }
+        meterTask = Task { @MainActor [weak self] in
+            while Task.isCancelled == false {
+                try? await Task.sleep(for: .milliseconds(100))
+                guard let self, Task.isCancelled == false else { return }
+                let channels = self.movieOutput.connection(with: .audio)?.audioChannels ?? []
+                if channels.isEmpty == false {
+                    let avg = channels.map(\.averagePowerLevel).reduce(0, +) / Float(channels.count)
+                    // Map dBFS range (-60…0) to linear 0…1; below -60 dBFS treated as silence
+                    self.audioLevel = max(0, min(1, (avg + 60) / 60))
+                } else {
+                    self.audioLevel = 0
+                }
+                self.audioInputName = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portName
+            }
+        }
+    }
+
+    private func stopAudioMetering() {
+        meterTask?.cancel()
+        meterTask = nil
+        audioLevel = 0
+        audioInputName = nil
     }
 
     private func startSession() async {

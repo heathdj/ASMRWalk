@@ -15,9 +15,13 @@ final class DockKitAccessoryService {
     private(set) var isAccessoryConnected = false
     private(set) var accessoryName: String?
     private(set) var errorMessage: String?
+    private(set) var batteryLevel: Double?
+    private(set) var isLowBattery = false
+    private(set) var isCharging = false
 
     private var stateTask: Task<Void, Never>?
     private var eventTask: Task<Void, Never>?
+    private var batteryTask: Task<Void, Never>?
     private var lastShutterEventTime = Date.distantPast
 
     func start(
@@ -41,10 +45,15 @@ final class DockKitAccessoryService {
     func stop() {
         stateTask?.cancel()
         eventTask?.cancel()
+        batteryTask?.cancel()
         stateTask = nil
         eventTask = nil
+        batteryTask = nil
         isAccessoryConnected = false
         accessoryName = nil
+        batteryLevel = nil
+        isLowBattery = false
+        isCharging = false
     }
 
 #if canImport(DockKit)
@@ -74,11 +83,17 @@ final class DockKitAccessoryService {
                         shutterAction: shutterAction,
                         zoomAction: zoomAction
                     )
+                    subscribeToBatteryStates(from: accessory)
                 case .undocked:
                     eventTask?.cancel()
                     eventTask = nil
+                    batteryTask?.cancel()
+                    batteryTask = nil
                     isAccessoryConnected = false
                     accessoryName = nil
+                    batteryLevel = nil
+                    isLowBattery = false
+                    isCharging = false
                 @unknown default:
                     break
                 }
@@ -100,6 +115,24 @@ final class DockKitAccessoryService {
             errorMessage = nil
         } catch {
             errorMessage = "Unable to disable DockKit system tracking: \(error.localizedDescription)"
+        }
+    }
+
+    private func subscribeToBatteryStates(from accessory: DockAccessory) {
+        batteryTask?.cancel()
+        batteryTask = Task { @MainActor [weak self] in
+            do {
+                for await batteryState in try accessory.batteryStates {
+                    guard Task.isCancelled == false else { return }
+                    self?.batteryLevel = batteryState.batteryLevel
+                    self?.isLowBattery = batteryState.lowBattery
+                    self?.isCharging = batteryState.chargeState == .charging
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                // Battery state is best-effort; ignore errors
+            }
         }
     }
 
