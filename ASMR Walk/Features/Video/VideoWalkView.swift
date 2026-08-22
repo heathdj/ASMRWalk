@@ -186,7 +186,7 @@ struct VideoWalkView: View {
     }
 
     private var shouldShowStatusCard: Bool {
-        shouldShowRecordingIndicator == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil
+        shouldShowRecordingIndicator == false || isStopping || camera.errorMessage != nil || walkRecorder.errorMessage != nil || camera.successMessage != nil
     }
 
     private var recordingIndicator: some View {
@@ -298,6 +298,9 @@ struct VideoWalkView: View {
         if isRecordingVideoWalk {
             return "Recording video walk"
         }
+        if camera.successMessage != nil {
+            return "Video walk saved"
+        }
         if camera.errorMessage != nil || walkRecorder.errorMessage != nil {
             return "Video unavailable"
         }
@@ -323,6 +326,9 @@ struct VideoWalkView: View {
             return "Enable camera, microphone, and location access in Settings to record a video walk."
         }
 
+        if let successMessage = camera.successMessage {
+            return successMessage
+        }
         if let errorMessage = camera.errorMessage ?? walkRecorder.errorMessage {
             return errorMessage
         }

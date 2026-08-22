@@ -20,6 +20,12 @@ struct CameraPreview: UIViewRepresentable {
     func updateUIView(_ uiView: PreviewView, context: Context) {
         uiView.configure(session: session, videoRotationAngle: videoRotationAngle)
     }
+
+    static func dismantleUIView(_ uiView: PreviewView, coordinator: ()) {
+        // Detach before dealloc — AVCaptureSession asserts if the preview
+        // layer is still connected when the session's ref count hits zero.
+        uiView.previewLayer.session = nil
+    }
 }
 
 final class PreviewView: UIView {

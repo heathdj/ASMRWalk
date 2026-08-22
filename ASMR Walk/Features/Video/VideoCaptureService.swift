@@ -70,6 +70,7 @@ final class VideoCaptureService: NSObject {
     private(set) var isReady = false
     private(set) var isRecording = false
     private(set) var errorMessage: String?
+    private(set) var successMessage: String?
     private(set) var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
     private(set) var microphoneAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .audio)
 
@@ -184,6 +185,7 @@ final class VideoCaptureService: NSObject {
         movieOutput.startRecording(to: url, recordingDelegate: self)
         isRecording = true
         errorMessage = nil
+        successMessage = nil
     }
 
     func report(_ error: Error) {
@@ -191,11 +193,11 @@ final class VideoCaptureService: NSObject {
     }
 
     func reportMessage(_ message: String) {
-        errorMessage = message
+        successMessage = message
     }
 
     func stopRecording() async throws -> URL {
-        guard movieOutput.isRecording else {
+        guard movieOutput.isRecording, stopContinuation == nil else {
             throw CaptureError.notReady
         }
 

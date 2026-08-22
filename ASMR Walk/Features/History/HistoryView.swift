@@ -34,9 +34,7 @@ struct HistoryView: View {
             }
             .alert("Delete Walk?", isPresented: deleteConfirmation) {
                 Button("Delete", role: .destructive) {
-                    Task {
-                        await deletePendingRecording()
-                    }
+                    deletePendingRecording()
                 }
                 Button("Cancel", role: .cancel) {
                     recordingPendingDeletion = nil
@@ -92,17 +90,15 @@ struct HistoryView: View {
         )
     }
 
-    private func deletePendingRecording() async {
+    private func deletePendingRecording() {
         guard let recordingPendingDeletion else {
             return
         }
 
-        let recordingID = recordingPendingDeletion.id
         let videoURL = recordingPendingDeletion.videoURL
-        let persistence = WalkRecordingPersistence(modelContainer: modelContext.container)
-
         do {
-            try await persistence.deleteRecording(id: recordingID)
+            modelContext.delete(recordingPendingDeletion)
+            try modelContext.save()
             if let videoURL {
                 try? FileManager.default.removeItem(at: videoURL)
             }
