@@ -47,6 +47,8 @@ enum AccessibilityID {
     static let onboardingWalkPage = "onboarding.page.walk"
     static let onboardingVideoWalkPage = "onboarding.page.videoWalk"
     static let onboardingHistoryPage = "onboarding.page.history"
+    static let onboardingDeleteHistoryPage = "onboarding.page.deleteHistory"
+    static let onboardingBackgroundGPSPage = "onboarding.page.backgroundGPS"
     static let onboardingPrimaryButton = "onboarding.primaryButton"
     static let onboardingSkipButton = "onboarding.skipButton"
     static let historyEmptyState = "history.emptyState"
