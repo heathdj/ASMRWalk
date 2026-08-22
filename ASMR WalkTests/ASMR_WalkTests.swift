@@ -106,7 +106,7 @@ struct ASMR_WalkTests {
         #expect(info.appName.isEmpty == false)
         #expect(info.version.isEmpty == false)
         #expect(info.build.isEmpty == false)
-        #expect(info.contactEmail == "heathdj@me.com")
+        #expect(info.contactEmail == "support@bald-traveler.com")
     }
 
     @Test("Photos permission explanations describe app intent")
@@ -722,12 +722,11 @@ struct WalkRecordingTests {
         #expect(point.coordinate.longitude == point.longitude)
     }
 
-    @Test("Generated recording metadata prefers places of interest")
+    @Test("Generated recording metadata uses place name for title")
     func generatedRecordingMetadata() throws {
         let metadata = try #require(WalkRecordingMetadataBuilder.metadata(
             for: WalkPlaceMetadata(
-                areasOfInterest: ["Papago Park"],
-                name: "625 N Galvin Parkway",
+                name: "Papago Park",
                 subLocality: "Camelback East",
                 locality: "Phoenix",
                 administrativeArea: "Arizona",

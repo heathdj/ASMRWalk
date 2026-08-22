@@ -211,6 +211,9 @@ struct VideoWalkView: View {
                     openSettingsButton
                 }
                 Spacer(minLength: 0)
+                if camera.isReady || isRecordingVideoWalk {
+                    hardwareStatusIndicators
+                }
             }
             .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? availableSize.width * 0.54 : .infinity, alignment: .leading)
 
@@ -270,6 +273,22 @@ struct VideoWalkView: View {
         .tint(.red)
         .disabled(isRecordingButtonDisabled)
         .accessibilityIdentifier(AccessibilityID.startVideoWalkButton)
+    }
+
+    private var hardwareStatusIndicators: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if dockKitAccessory.isAccessoryConnected {
+                GimbalStatusIndicator(
+                    batteryLevel: dockKitAccessory.batteryLevel,
+                    isLowBattery: dockKitAccessory.isLowBattery,
+                    isCharging: dockKitAccessory.isCharging
+                )
+            }
+            MicLevelIndicator(
+                level: camera.audioLevel,
+                inputName: camera.audioInputName
+            )
+        }
     }
 
     private var openSettingsButton: some View {
@@ -573,5 +592,93 @@ private struct PulsingRecordingIndicator: View {
         }
 
         return .black.opacity(0.7)
+    }
+}
+
+private struct GimbalStatusIndicator: View {
+    let batteryLevel: Double?
+    let isLowBattery: Bool
+    let isCharging: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "gyroscope")
+            Image(systemName: batterySystemImage)
+                .foregroundStyle(isLowBattery ? .red : .white)
+            if let batteryLevel {
+                Text(batteryLevel, format: .percent.precision(.fractionLength(0)))
+                    .monospacedDigit()
+            }
+        }
+        .font(.caption.weight(.medium))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.6), in: .capsule)
+        .foregroundStyle(.white)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var batterySystemImage: String {
+        if isCharging { return "battery.100percent.bolt" }
+        guard let level = batteryLevel else { return "battery.0percent" }
+        switch level {
+        case 0.75...: return "battery.100percent"
+        case 0.5...:  return "battery.75percent"
+        case 0.25...: return "battery.50percent"
+        default:      return "battery.25percent"
+        }
+    }
+
+    private var accessibilityLabel: String {
+        var parts = ["Gimbal"]
+        if let level = batteryLevel {
+            parts.append("\(Int(level * 100))% battery")
+        }
+        if isCharging { parts.append("charging") }
+        if isLowBattery { parts.append("low battery") }
+        return parts.joined(separator: ", ")
+    }
+}
+
+private struct MicLevelIndicator: View {
+    let level: Float
+    let inputName: String?
+
+    private let barCount = 8
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "mic.fill")
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(0..<barCount, id: \.self) { index in
+                    let threshold = Float(index + 1) / Float(barCount)
+                    Capsule()
+                        .fill(barColor(for: index))
+                        .opacity(level >= threshold ? 1 : 0.25)
+                        .frame(width: 3, height: CGFloat(6 + index * 2))
+                }
+            }
+            if let inputName {
+                Text(inputName)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: 80, alignment: .leading)
+            }
+        }
+        .font(.caption.weight(.medium))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(.black.opacity(0.6), in: .capsule)
+        .foregroundStyle(.white)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(inputName.map { "Microphone: \($0)" } ?? "Microphone level")
+    }
+
+    private func barColor(for index: Int) -> Color {
+        let threshold = Float(index + 1) / Float(barCount)
+        if threshold > 0.875 { return .red }
+        if threshold > 0.625 { return .yellow }
+        return .green
     }
 }
