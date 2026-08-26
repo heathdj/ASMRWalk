@@ -708,6 +708,7 @@ struct WalkRecordingTests {
         #expect(recording.duration == 60)
         #expect(recording.distanceMeters == 180)
         #expect(recording.pointsInTimeOrder.map(\.timestamp) == secondCheckpoint.points.map(\.timestamp))
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<WalkRecording>()) == 1)
     }
 
     @Test("Repeated persistence checkpoints do not duplicate points")
@@ -729,6 +730,34 @@ struct WalkRecordingTests {
         let recording = try #require(try fetchRecording(id: recordingID, in: container))
         #expect(recording.points.count == 12)
         #expect(Set(recording.points.map(\.timestamp)).count == 12)
+        #expect(try ModelContext(container).fetchCount(FetchDescriptor<WalkRecording>()) == 1)
+    }
+
+    @Test("Schema hardening retains route data and local file references")
+    func schemaHardeningRetainsLocalRecordingData() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let videoURL = URL(filePath: "/tmp/local-video.mov")
+        let recording = WalkRecording(
+            title: "Beta Walk",
+            duration: 180,
+            distanceMeters: 540,
+            mode: .videoWalk,
+            videoURL: videoURL,
+            points: [
+                makePoint(timestamp: 100),
+                makePoint(timestamp: 120)
+            ]
+        )
+
+        context.insert(recording)
+        try context.save()
+
+        let fetched = try #require(try fetchRecording(id: recording.id, in: container))
+        #expect(fetched.title == "Beta Walk")
+        #expect(fetched.videoURL == videoURL)
+        #expect(fetched.points.count == 2)
+        #expect(fetched.pointsInTimeOrder.map(\.timestamp) == recording.pointsInTimeOrder.map(\.timestamp))
     }
 
     @Test("Final persistence save retains all points after partial checkpoints")
