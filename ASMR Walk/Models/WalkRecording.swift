@@ -10,27 +10,35 @@ import SwiftData
 final class WalkRecording {
     static let shortRecordingThreshold: TimeInterval = 10
 
-    #Unique<WalkRecording>([\.id])
     #Index<WalkRecording>([\.createdAt])
 
-    var id: UUID
-    var title: String
-    var createdAt: Date
-    var duration: TimeInterval
-    var distanceMeters: Double
-    var mode: RecordingMode
-    var walkDescription: String
+    var id: UUID = UUID()
+    var title: String = ""
+    var createdAt: Date = Date.now
+    var duration: TimeInterval = 0
+    var distanceMeters: Double = 0
+    var mode: RecordingMode = RecordingMode.walk
+    var walkDescription: String = ""
     var generatedPlaceName: String?
     var metadataGeneratedAt: Date?
-    var isTitleUserEdited: Bool
-    var isDescriptionUserEdited: Bool
+    var isTitleUserEdited: Bool = false
+    var isDescriptionUserEdited: Bool = false
     var videoURL: URL?
     var videoAssetIdentifier: String?
     var thumbnailURL: URL?
-    var thumbnailStyleVersion: Int
+    var thumbnailStyleVersion: Int = 0
 
-    @Relationship(deleteRule: .cascade, inverse: \LocationPoint.recording)
-    var points: [LocationPoint]
+    @Relationship(deleteRule: .cascade, originalName: "points", inverse: \LocationPoint.recording)
+    private var storedPoints: [LocationPoint]?
+
+    var points: [LocationPoint] {
+        get {
+            storedPoints ?? []
+        }
+        set {
+            storedPoints = newValue
+        }
+    }
 
     init(
         id: UUID = UUID(),
@@ -65,7 +73,7 @@ final class WalkRecording {
         self.videoAssetIdentifier = videoAssetIdentifier
         self.thumbnailURL = thumbnailURL
         self.thumbnailStyleVersion = thumbnailStyleVersion
-        self.points = points
+        self.storedPoints = points
     }
 
     var hasVideo: Bool {
@@ -81,6 +89,6 @@ final class WalkRecording {
     }
 
     func addPoint(_ point: LocationPoint) {
-        points.append(point)
+        storedPoints = points + [point]
     }
 }
