@@ -267,6 +267,14 @@ So the app moved the route-point relationship behind an optional stored relation
 
 The lesson is release timing. A migration tested by beta users is a controlled rehearsal. The same migration sprung on a larger public audience is opening night with wet paint.
 
+### iCloud Sync Gets a Bouncer
+
+ASMR Walk's first iCloud sync pass chose a very specific door: SwiftData syncs the walk records and route breadcrumbs through the user's private CloudKit database, while the heavy `.mov` files stay in app-managed local storage. That keeps the library portable without turning every video walk into an accidental bandwidth and storage bill.
+
+The Settings tab now checks the iCloud account state and explains whether sync is available, missing, restricted, or temporarily unavailable. Think of it as a bouncer at the library door: local recording still works, but the app tells you whether the cross-device room is open.
+
+Conflict handling also got its first real clock. User-edited titles and descriptions now carry edit timestamps, while older edited recordings fall back to their creation date. That gives future sync conflict logic a defensible ordering without letting generated place metadata walk over someone's hand-written title.
+
 ### The Video Came Back Home
 
 User testing flipped the video ownership model back to the simpler mental model: ASMR Walk records the video, ASMR Walk keeps the video, and Photos is an explicit export button instead of the default filing cabinet. New video walks now keep their `.mov` in app-managed storage and History playback uses that local file first. The detail screen offers **Save Video to Photos** when someone wants a copy in their library.

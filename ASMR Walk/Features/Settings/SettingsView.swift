@@ -3,6 +3,7 @@
 //  ASMR Walk
 //
 
+import CloudKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -10,6 +11,7 @@ struct SettingsView: View {
     @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var selectedStartDestinationRawValue = StartRecordingDestination.walk.rawValue
     @AppStorage(BackgroundGPSRecording.storageKey) private var isBackgroundGPSRecordingEnabled = BackgroundGPSRecording.defaultValue
+    @State private var cloudSyncStatus = CloudSyncStatus()
     @State private var isShowingAbout = false
 
     private let privacyPolicyURL = URL(string: "https://bald-traveler.com/asmr-walk-privacy-policy/")
@@ -26,6 +28,17 @@ struct SettingsView: View {
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier(AccessibilityID.themePicker)
+                }
+
+                Section {
+                    LabeledContent {
+                        Text(cloudSyncStatus.state.title)
+                    } label: {
+                        Label("iCloud Library", systemImage: cloudSyncStatus.state.systemImage)
+                    }
+                    .accessibilityIdentifier(AccessibilityID.cloudSyncStatus)
+                } footer: {
+                    Text(cloudSyncStatus.state.message)
                 }
 
                 Section {
@@ -69,6 +82,13 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .sheet(isPresented: $isShowingAbout) {
                 AboutView(info: .current)
+            }
+            .task {
+                await cloudSyncStatus.refresh()
+
+                for await _ in NotificationCenter.default.notifications(named: .CKAccountChanged) {
+                    await cloudSyncStatus.refresh()
+                }
             }
         }
         .accessibilityIdentifier(AccessibilityID.settingsScreen)

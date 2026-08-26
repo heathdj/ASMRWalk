@@ -148,10 +148,10 @@ private struct RecordingRow: View {
                         .font(.headline)
 
                     if recording.hasVideo {
-                        Image(systemName: "video.fill")
+                        Image(systemName: recording.localVideoFileExists ? "video.fill" : "video.slash")
                             .font(.caption)
                             .foregroundStyle(.red)
-                            .accessibilityLabel("Includes video")
+                            .accessibilityLabel(recording.videoAvailabilityTitle)
                     }
                 }
 
@@ -175,7 +175,7 @@ private struct RecordingRow: View {
 private extension WalkRecording {
     var needsRouteThumbnailRefresh: Bool {
         points.count > 1
-            && (thumbnailURL == nil || thumbnailStyleVersion < WalkRouteThumbnailGenerator.styleVersion)
+            && (localThumbnailFileExists == false || thumbnailStyleVersion < WalkRouteThumbnailGenerator.styleVersion)
     }
 
     var snapshotForThumbnailGeneration: WalkRecordingSnapshot {

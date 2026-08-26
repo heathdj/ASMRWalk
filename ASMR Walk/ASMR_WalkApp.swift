@@ -27,7 +27,10 @@ struct ASMR_WalkApp: App {
 
     private static func makeModelContainer() -> ModelContainer {
         let schema = Schema([WalkRecording.self, LocationPoint.self])
-        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+        let configuration = ModelConfiguration(
+            schema: schema,
+            cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier)
+        )
 
         do {
             return try ModelContainer(for: schema, configurations: [configuration])

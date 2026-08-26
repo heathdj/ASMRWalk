@@ -1,10 +1,12 @@
 # ASMR Walk
 
-ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walking routes, can pair a route with a walk video, stores recordings locally with SwiftData, and exports routes for use outside the app.
+ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walking routes, can pair a route with a walk video, syncs recording metadata and route data through iCloud, keeps videos local, and exports routes for use outside the app.
 
 ## Version 1.1.0 Scope
 
-ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, local history, route thumbnails, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, iCloud sync, analytics, accounts, advertising, or a developer-operated backend.
+ASMR Walk 1.1.0 is intentionally iPhone-only and uses the user's private iCloud account to sync recording metadata and route data. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, synced history metadata/routes, route thumbnails, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, analytics, developer-operated accounts, advertising, developer-operated storage, or a developer-operated backend.
+
+iCloud library sync is not gated by a StoreKit subscription in this implementation; it is available when the user is signed in to iCloud and CloudKit is available.
 
 ## Current Features
 
@@ -13,19 +15,22 @@ ASMR Walk 1.1.0 is intentionally iPhone-only and local-first. It supports GPS Wa
 - Optional background GPS recording for GPS-only walks, gated by a Settings toggle and Always location permission.
 - Video walk recording with camera preview, microphone audio, landscape-first UI, and live route overlay.
 - Saved video walk playback with a synchronized route-progress map overlay.
-- Local persistence with SwiftData.
+- SwiftData persistence with private iCloud sync for recording metadata and route points.
 - Recording detail screens with editable titles and descriptions, route maps, duration, distance, route-point counts, and video indicators.
+- Settings iCloud status so users can see whether their private iCloud account is available for library sync.
 - Generated route thumbnails for saved walks in History, detail views, and GPX share previews.
 - Best-effort place metadata generation after saving a walk, with fallback date/time titles when lookup is unavailable.
 - Delete support for saved recordings. App-managed video and thumbnail files are removed with their recording; any user-saved Photos copies remain in Photos.
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing, including recording descriptions when present.
+- Video files remain local to the device where they were recorded unless the user saves a copy to Photos.
 
 ## Tech Stack
 
 - SwiftUI for the app UI.
 - SwiftData for local persistence.
+- CloudKit for private iCloud sync of recording metadata and route data.
 - MapKit for live and saved route maps.
 - Core Location for GPS tracking.
 - AVFoundation for video and microphone capture.
@@ -48,6 +53,7 @@ ASMR Walk/
 - Xcode with iOS 26 SDK support.
 - iOS 26 iPhone simulator or physical iPhone.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
+- An iCloud account and CloudKit-capable provisioning are required to validate sync across devices.
 - Version 1.1.0 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
 
 ## Setup
@@ -60,6 +66,8 @@ Before running recording features, confirm the app target includes these generat
 - `Privacy - Location Always and When In Use Usage Description`
 - `Privacy - Camera Usage Description`
 - `Privacy - Microphone Usage Description`
+- `Background Modes`: Location updates and Remote notifications
+- `iCloud`: CloudKit with container `iCloud.com.bald-traveler.ASMRWalk`
 
 Expected privacy strings:
 
@@ -76,11 +84,11 @@ iOS will terminate the app if camera or microphone capture is requested without 
 
 See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
-Finished video walks are kept in ASMR Walk's app-managed storage for playback. From a video walk's History detail screen, the user can save a copy to Photos. Deleting an ASMR Walk recording removes the route, app metadata, and app-managed video file, but it does not delete any Photos copy the user saved.
+Finished video walks are kept in ASMR Walk's app-managed storage for playback. iCloud sync carries the recording details and route, not the `.mov` file. From a video walk's History detail screen, the user can save a copy to Photos. Deleting an ASMR Walk recording removes the route, app metadata, and app-managed video file on that device, but it does not delete any Photos copy the user saved.
 
 ## Privacy
 
-ASMR Walk is local-first. The app does not include developer-operated accounts, analytics, advertising, sync, or backend upload code. Route data, recording metadata, route thumbnails, and video references stay on the device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit services for map imagery and a place name so it can generate a route thumbnail and suggest a useful title and description.
+ASMR Walk does not include developer-operated accounts, analytics, advertising, or backend upload code. Route data and recording metadata may sync through the user's private iCloud database. Video files stay on the recording device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit services for map imagery and a place name so it can generate a route thumbnail and suggest a useful title and description.
 
 See `PRIVACY_POLICY.md` for the public privacy-policy source. Before App Store submission, publish that policy at a stable URL and enter the URL in App Store Connect.
 
@@ -95,6 +103,8 @@ The Video Walk tab requests landscape orientation when opened and restores portr
 
 Background GPS recording requires the `location` background mode, the Background GPS Recording setting, and Always location permission. It applies only to GPS-only walks; Video Walk recordings remain foreground-only and stop when the app leaves the foreground.
 
+iCloud sync requires the CloudKit entitlement, the `iCloud.com.bald-traveler.ASMRWalk` container, and the `remote-notification` background mode. Sync uses the user's private iCloud database and may be temporarily unavailable when the device is signed out of iCloud or iCloud is restricted.
+
 ## Testing
 
 Use Xcode's test action for the `ASMR Walk` scheme.
@@ -105,6 +115,7 @@ The unit test suite covers:
 - SwiftData recording lifecycle.
 - Generated and editable recording metadata.
 - Route thumbnail path and persistence helpers.
+- iCloud sync configuration and account-status presentation.
 - GPS route filtering and distance accumulation.
 - Video-walk recording metadata.
 - Google Maps route export.
@@ -119,13 +130,13 @@ The app uses a native static launch screen configured through the target Info se
 - Exported Google Maps URLs sample waypoints; GPX remains the complete route export.
 - The map overlay is rendered in the app and is not burned into exported video.
 - Video Walk does not continue recording in the background.
-- iPad, Apple Watch, HealthKit, and iCloud sync are not part of version 1.1.0.
+- iCloud sync does not sync full video files; videos remain on the recording device unless the user saves or shares a copy.
+- iPad, Apple Watch, and HealthKit are not part of version 1.1.0.
 
 ## Roadmap
 
 These are future ideas, not shipped 1.1.0 features:
 
-- iCloud sync.
 - HealthKit workout integration.
 - Apple Watch companion recording.
 - Burned-in video map overlay export.

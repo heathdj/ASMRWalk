@@ -45,6 +45,50 @@ extension WalkRecording {
 
         return FileManager.default.fileExists(atPath: thumbnailURL.path)
     }
+
+    var videoStorage: WalkRecordingVideoStoragePolicy {
+        WalkRecordingVideoStoragePolicy(rawValue: videoStoragePolicy) ?? .localOnly
+    }
+
+    var titleConflictTimestamp: Date? {
+        guard isTitleUserEdited else {
+            return nil
+        }
+
+        return titleEditedAt ?? createdAt
+    }
+
+    var descriptionConflictTimestamp: Date? {
+        guard isDescriptionUserEdited else {
+            return nil
+        }
+
+        return descriptionEditedAt ?? createdAt
+    }
+
+    var videoAvailabilityTitle: String {
+        guard hasVideo else {
+            return "No Video"
+        }
+
+        if localVideoFileExists {
+            return "Video on This Device"
+        }
+
+        return "Video Not on This Device"
+    }
+
+    var videoAvailabilityMessage: String {
+        guard hasVideo else {
+            return "This recording has route data only."
+        }
+
+        if localVideoFileExists {
+            return "The video file is stored locally on this device. Route data and recording details can sync through iCloud."
+        }
+
+        return "The route and recording details can sync through iCloud, but the video file stays on the device where it was recorded."
+    }
 }
 
 extension TimeInterval {
