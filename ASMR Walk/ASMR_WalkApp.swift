@@ -11,16 +11,29 @@ import SwiftData
 @main
 struct ASMR_WalkApp: App {
     @UIApplicationDelegateAdaptor(AppOrientationDelegate.self) private var appOrientationDelegate
+    private let modelContainer: ModelContainer
 
     init() {
         UITestLaunchConfiguration.apply()
+        modelContainer = Self.makeModelContainer()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [WalkRecording.self, LocationPoint.self])
+        .modelContainer(modelContainer)
+    }
+
+    private static func makeModelContainer() -> ModelContainer {
+        let schema = Schema([WalkRecording.self, LocationPoint.self])
+        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Unable to create ASMR Walk model container: \(error.localizedDescription)")
+        }
     }
 }
 
