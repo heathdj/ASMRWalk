@@ -25,6 +25,12 @@ final class WalkRecording {
     var isDescriptionUserEdited: Bool = false
     var titleEditedAt: Date?
     var descriptionEditedAt: Date?
+    var recordingSource: String = WalkRecordingSource.iPhone.rawValue
+    var captureDeviceName: String?
+    var routeStartedAt: Date?
+    var routeEndedAt: Date?
+    var externalVideoReference: String?
+    var externalVideoStartedAt: Date?
     var videoURL: URL?
     var videoAssetIdentifier: String?
     var videoStoragePolicy: String = WalkRecordingVideoStoragePolicy.localOnly.rawValue
@@ -57,6 +63,12 @@ final class WalkRecording {
         isDescriptionUserEdited: Bool = false,
         titleEditedAt: Date? = nil,
         descriptionEditedAt: Date? = nil,
+        recordingSource: WalkRecordingSource = .iPhone,
+        captureDeviceName: String? = nil,
+        routeStartedAt: Date? = nil,
+        routeEndedAt: Date? = nil,
+        externalVideoReference: String? = nil,
+        externalVideoStartedAt: Date? = nil,
         videoURL: URL? = nil,
         videoAssetIdentifier: String? = nil,
         videoStoragePolicy: WalkRecordingVideoStoragePolicy = .localOnly,
@@ -77,6 +89,12 @@ final class WalkRecording {
         self.isDescriptionUserEdited = isDescriptionUserEdited
         self.titleEditedAt = titleEditedAt
         self.descriptionEditedAt = descriptionEditedAt
+        self.recordingSource = recordingSource.rawValue
+        self.captureDeviceName = captureDeviceName
+        self.routeStartedAt = routeStartedAt
+        self.routeEndedAt = routeEndedAt
+        self.externalVideoReference = externalVideoReference
+        self.externalVideoStartedAt = externalVideoStartedAt
         self.videoURL = videoURL
         self.videoAssetIdentifier = videoAssetIdentifier
         self.videoStoragePolicy = videoStoragePolicy.rawValue
@@ -99,6 +117,20 @@ final class WalkRecording {
 
     func addPoint(_ point: LocationPoint) {
         storedPoints = points + [point]
+    }
+}
+
+enum WalkRecordingSource: String, Codable, CaseIterable, Sendable {
+    case iPhone
+    case appleWatch
+
+    var title: String {
+        switch self {
+        case .iPhone:
+            "iPhone"
+        case .appleWatch:
+            "Apple Watch"
+        }
     }
 }
 

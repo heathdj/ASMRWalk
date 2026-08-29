@@ -26,7 +26,3 @@ struct ContentView: View {
         .accessibilityElement(children: .combine)
     }
 }
-
-#Preview {
-    ContentView()
-}

@@ -24,6 +24,12 @@ struct WalkRouteExport {
     let duration: TimeInterval
     let mode: RecordingMode
     let hasVideo: Bool
+    let recordingSource: WalkRecordingSource
+    let captureDeviceName: String?
+    let routeStartedAt: Date
+    let routeEndedAt: Date
+    let externalVideoReference: String?
+    let externalVideoStartedAt: Date?
     let points: [Point]
 
     @MainActor
@@ -35,6 +41,12 @@ struct WalkRouteExport {
         duration = recording.duration
         mode = recording.mode
         hasVideo = recording.hasVideo
+        recordingSource = recording.source
+        captureDeviceName = recording.captureDeviceName
+        routeStartedAt = recording.routeTimingStart
+        routeEndedAt = recording.routeTimingEnd
+        externalVideoReference = recording.externalVideoReference
+        externalVideoStartedAt = recording.externalVideoStartedAt
         points = recording.pointsInTimeOrder.map {
             Point(
                 timestamp: $0.timestamp,
@@ -104,8 +116,27 @@ struct WalkRouteExport {
 
     private var trackExtensionsXML: String {
         """
-        <extensions><asmrwalk:recordingID>\(recordingID.uuidString.xmlEscaped)</asmrwalk:recordingID><asmrwalk:durationSeconds>\(duration.gpxNumberText)</asmrwalk:durationSeconds><asmrwalk:recordingMode>\(mode.rawValue.xmlEscaped)</asmrwalk:recordingMode><asmrwalk:hasVideo>\(hasVideo ? "true" : "false")</asmrwalk:hasVideo>\(descriptionExtensionXML)</extensions>
+        <extensions><asmrwalk:recordingID>\(recordingID.uuidString.xmlEscaped)</asmrwalk:recordingID><asmrwalk:durationSeconds>\(duration.gpxNumberText)</asmrwalk:durationSeconds><asmrwalk:recordingMode>\(mode.rawValue.xmlEscaped)</asmrwalk:recordingMode><asmrwalk:recordingSource>\(recordingSource.rawValue.xmlEscaped)</asmrwalk:recordingSource>\(captureDeviceXML)<asmrwalk:routeStartedAt>\(routeStartedAt.ISO8601Format())</asmrwalk:routeStartedAt><asmrwalk:routeEndedAt>\(routeEndedAt.ISO8601Format())</asmrwalk:routeEndedAt><asmrwalk:hasVideo>\(hasVideo ? "true" : "false")</asmrwalk:hasVideo>\(descriptionExtensionXML)\(externalVideoXML)</extensions>
         """
+    }
+
+    private var captureDeviceXML: String {
+        guard let captureDeviceName, captureDeviceName.isEmpty == false else {
+            return ""
+        }
+
+        return "<asmrwalk:captureDeviceName>\(captureDeviceName.xmlEscaped)</asmrwalk:captureDeviceName>"
+    }
+
+    private var externalVideoXML: String {
+        var values = ""
+        if let externalVideoReference, externalVideoReference.isEmpty == false {
+            values += "<asmrwalk:externalVideoReference>\(externalVideoReference.xmlEscaped)</asmrwalk:externalVideoReference>"
+        }
+        if let externalVideoStartedAt {
+            values += "<asmrwalk:externalVideoStartedAt>\(externalVideoStartedAt.ISO8601Format())</asmrwalk:externalVideoStartedAt>"
+        }
+        return values
     }
 
     private var descriptionXML: String {

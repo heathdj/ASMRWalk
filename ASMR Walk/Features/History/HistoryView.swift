@@ -186,6 +186,12 @@ private extension WalkRecording {
             duration: duration,
             distanceMeters: distanceMeters,
             mode: mode,
+            recordingSource: source,
+            captureDeviceName: captureDeviceName,
+            routeStartedAt: routeStartedAt,
+            routeEndedAt: routeEndedAt,
+            externalVideoReference: externalVideoReference,
+            externalVideoStartedAt: externalVideoStartedAt,
             videoURL: videoURL,
             videoAssetIdentifier: videoAssetIdentifier,
             points: pointsInTimeOrder.map { point in

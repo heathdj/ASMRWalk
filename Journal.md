@@ -375,6 +375,12 @@ Issue 65 starts the Apple Watch chapter without trying to solve the whole hike i
 
 The first pass also revealed a classic template-name hiccup: two Watch app folders appeared, but only `ASMRWalk Watch App` was actually wired into the project. The unused duplicate was removed before it could become fossilized confusion. The Watch app now opens to a tiny ASMR Walk-branded shell, which is exactly enough for target setup: a front door, not the full recording dashboard. GPS recording, Watch UI polish, sync, and release validation each have their own issue because a watchOS feature is easier to build when every part gets its own trail marker.
 
+### Metadata Is the Sync Handshake
+
+Issue 66 gives future Watch walks and external-camera shoots a passport before they start traveling through the app. The recording model now stores where a route came from, what device captured it, and the timing anchors that can line a route up with footage recorded somewhere else.
+
+The important constraint is CloudKit manners: every new field is optional or safely defaulted. Existing iPhone recordings keep behaving like iPhone recordings, and old synced rows do not need a dramatic migration ceremony. GPX export also carries the new source and timing fields, because the Mac importer and FCP plugin should not have to guess whether a route came from an iPhone, an Apple Watch, or a walk paired with an external camera clip.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
