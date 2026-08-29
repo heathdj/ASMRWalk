@@ -369,6 +369,12 @@ The thumbnail generator follows the same rule as place metadata: save the walk f
 
 Cleanup needed its own little checklist. Video files and thumbnails are both app-managed local files, so deletion now asks `WalkRecordingLocalFiles` for everything that belongs to the recording and removes those files after SwiftData deletes the row. The route stays local-first, the thumbnail stays lightweight, and no one has to wonder why a deleted walk left a tiny souvenir behind.
 
+### The Watch App Gets a Front Door
+
+Issue 65 starts the Apple Watch chapter without trying to solve the whole hike in one stride. The owner-driven Xcode work added the Watch target, because target creation is one of those places where the project file is more like wet cement than a normal source file. Let Xcode shape it; then inspect what it made.
+
+The first pass also revealed a classic template-name hiccup: two Watch app folders appeared, but only `ASMRWalk Watch App` was actually wired into the project. The unused duplicate was removed before it could become fossilized confusion. The Watch app now opens to a tiny ASMR Walk-branded shell, which is exactly enough for target setup: a front door, not the full recording dashboard. GPS recording, Watch UI polish, sync, and release validation each have their own issue because a watchOS feature is easier to build when every part gets its own trail marker.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
