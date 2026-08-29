@@ -75,6 +75,7 @@ enum AccessibilityID {
     static let themePicker = "settings.themePicker"
     static let startRecordingDestinationPicker = "settings.startRecordingDestinationPicker"
     static let backgroundGPSRecordingToggle = "settings.backgroundGPSRecordingToggle"
+    static let cloudSyncStatus = "settings.cloudSyncStatus"
     static let showOnboardingButton = "settings.showOnboardingButton"
     static let aboutButton = "settings.aboutButton"
     static let privacyPolicyLink = "settings.privacyPolicyLink"

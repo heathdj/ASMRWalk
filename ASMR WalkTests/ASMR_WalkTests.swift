@@ -8,6 +8,7 @@
 import Foundation
 import CoreLocation
 import AVFoundation
+import CloudKit
 import SwiftUI
 import SwiftData
 import Testing
@@ -198,9 +199,18 @@ struct ASMR_WalkTests {
         #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = \"ASMR Walk saves a copy of a video walk to Photos when you choose Save Video to Photos.\";"))
         #expect(projectSettingsText.contains("INFOPLIST_KEY_NSPhotoLibraryUsageDescription = \"ASMR Walk reads older Photos-backed video walks so you can replay them with your route.\";"))
         #expect(projectSettingsText.contains("INFOPLIST_FILE = \"ASMR-Walk-Info.plist\";"))
+        #expect(projectSettingsText.contains("CODE_SIGN_ENTITLEMENTS = \"ASMR Walk/ASMR Walk.entitlements\";"))
+
+        let entitlementsURL = projectRoot.appending(path: "ASMR Walk/ASMR Walk.entitlements")
+        let entitlementsData = try Data(contentsOf: entitlementsURL)
+        let entitlements = try #require(
+            PropertyListSerialization.propertyList(from: entitlementsData, format: nil) as? [String: Any]
+        )
+        #expect(entitlements["com.apple.developer.icloud-services"] as? [String] == ["CloudKit"])
+        #expect(entitlements["com.apple.developer.icloud-container-identifiers"] as? [String] == [CloudSyncConfiguration.containerIdentifier])
 
         if let infoPlist = try staticInfoPlist(in: projectRoot) {
-            #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location"])
+            #expect(infoPlist["UIBackgroundModes"] as? [String] == ["location", "remote-notification"])
         }
     }
 
@@ -258,6 +268,21 @@ struct ASMR_WalkTests {
         ) as? [String: Any]
     }
 
+    @Test("Cloud sync uses the configured private container")
+    func cloudSyncConfiguration() {
+        #expect(CloudSyncConfiguration.containerIdentifier == "iCloud.com.bald-traveler.ASMRWalk")
+    }
+
+    @Test("Cloud sync maps iCloud account states to user-visible states")
+    func cloudSyncAccountStateMapping() {
+        #expect(CloudSyncStatus.state(for: .available) == .available)
+        #expect(CloudSyncStatus.state(for: .noAccount) == .noAccount)
+        #expect(CloudSyncStatus.state(for: .restricted) == .restricted)
+        #expect(CloudSyncStatus.state(for: .temporarilyUnavailable) == .temporarilyUnavailable)
+        #expect(CloudSyncStatus.state(for: .couldNotDetermine) == .couldNotDetermine)
+        #expect(CloudSyncAccountState.available.message.contains("Video files stay on the device"))
+    }
+
     @Test("Delete confirmation explains Photos video ownership")
     func deleteConfirmationForPhotosVideo() {
         let recording = WalkRecording(
@@ -267,6 +292,53 @@ struct ASMR_WalkTests {
         )
 
         #expect(recording.deleteConfirmationMessage.contains("video remains in Photos"))
+    }
+
+    @Test("Local-only video messaging explains cross-device availability")
+    func localOnlyVideoMessaging() {
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: URL(filePath: "/tmp/missing-local-video.mov")
+        )
+
+        #expect(recording.videoStorage == .localOnly)
+        #expect(recording.videoAvailabilityTitle == "Video Not on This Device")
+        #expect(recording.videoAvailabilityMessage.contains("video file stays on the device where it was recorded"))
+    }
+
+    @Test("Missing local thumbnails are detectable after sync")
+    func missingLocalThumbnailDetection() {
+        let recording = WalkRecording(
+            title: "Synced Walk",
+            mode: .walk,
+            thumbnailURL: URL(filePath: "/tmp/missing-route-thumbnail.jpg"),
+            thumbnailStyleVersion: WalkRouteThumbnailGenerator.styleVersion
+        )
+
+        #expect(recording.localThumbnailFileExists == false)
+    }
+
+    @Test("Conflict timestamps fall back for existing user-edited recordings")
+    func conflictTimestampFallback() {
+        let createdAt = Date(timeIntervalSince1970: 1_000)
+        let recording = WalkRecording(
+            title: "Edited Walk",
+            createdAt: createdAt,
+            mode: .walk,
+            isTitleUserEdited: true,
+            isDescriptionUserEdited: true
+        )
+
+        #expect(recording.titleConflictTimestamp == createdAt)
+        #expect(recording.descriptionConflictTimestamp == createdAt)
+
+        let editedAt = Date(timeIntervalSince1970: 2_000)
+        recording.titleEditedAt = editedAt
+        recording.descriptionEditedAt = editedAt
+
+        #expect(recording.titleConflictTimestamp == editedAt)
+        #expect(recording.descriptionConflictTimestamp == editedAt)
     }
 
     @Test("Delete confirmation explains local fallback video cleanup")

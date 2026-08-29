@@ -11,6 +11,9 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] App icon is configured.
 - [ ] Targeted device family is iPhone only for version 1.1.0.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
+- [ ] iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
+- [ ] Confirm iCloud library sync is not StoreKit-gated in this release; if product direction changes to Pro/subscription, add entitlement gating before release.
+- [ ] Background Modes includes both Location updates and Remote notifications.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
   - [ ] `NSLocationAlwaysAndWhenInUseUsageDescription`
@@ -21,6 +24,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Confirm the generated Info settings, not just `ASMR-Walk-Info.plist`, contain the privacy strings used at runtime.
 - [ ] Confirm archived `Info.plist` Photos add text explains user-initiated Save Video to Photos.
 - [ ] Confirm archived `Info.plist` Photos read text explains replaying older Photos-backed video walks with routes.
+- [ ] Confirm archived `Info.plist` includes `UIBackgroundModes` values for `location` and `remote-notification`.
 - [ ] Confirm archived `Info.plist` location, camera, microphone, and Photos strings use sentence case and ending punctuation.
 
 ## Build And Test
@@ -42,6 +46,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Confirm Walk and Video Walk keep essential controls visible with Increase Contrast enabled.
 - [ ] Confirm Background GPS Recording defaults off.
 - [ ] Confirm Background GPS Recording is described as optional, user-enabled, and GPS Walk only.
+- [ ] Confirm Settings shows the current iCloud Library status.
 - [ ] Confirm documentation and App Store copy do not imply background video recording.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
@@ -52,8 +57,13 @@ Run these on a physical iPhone before submission:
 ### Physical Device Only
 
 - [ ] Start and save a GPS-only walk.
+- [ ] Sign in to the same iCloud account on two devices, create a GPS-only walk on one device, and confirm the recording appears on the other.
+- [ ] Confirm synced route points remain intact and draw correctly on the second device.
+- [ ] Edit a synced recording title and description on one device and confirm the updated metadata appears on the other device.
 - [ ] Confirm a saved GPS-only walk receives a route thumbnail in History and on the detail screen.
+- [ ] Confirm route thumbnails are regenerated on devices where the local thumbnail file is missing.
 - [ ] Confirm a saved video walk receives a route thumbnail while local video playback still works.
+- [ ] Create a Video Walk on one device and confirm another synced device shows the route/details while explaining that the video file is not on that device.
 - [ ] Confirm thumbnail generation failures leave the recording saved and usable.
 - [ ] Confirm a saved GPS-only walk receives a useful place-based title and editable description when MapKit reverse geocoding succeeds.
 - [ ] Confirm a saved walk keeps its fallback date/time title when place lookup fails or returns no usable place name.
@@ -99,10 +109,12 @@ Run these on a physical iPhone before submission:
 - [ ] Inspect an exported GPX file and confirm ASMR Walk extensions include duration, recording mode, `hasVideo`, recording ID, horizontal accuracy, and speed when available.
 - [ ] Inspect an exported GPX file for a described recording and confirm `<desc>` and `asmrwalk:description` include the editable recording description.
 - [ ] Confirm exported GPX does not include local sandbox video URLs.
+- [ ] Sign out of iCloud or use a restricted iCloud account and confirm Settings explains the sync state without blocking local recording.
+- [ ] Confirm CloudKit schema is initialized in development and promoted before production release.
 
 ### Automated Coverage Gate
 
-- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, and large-route persistence.
+- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, and local-only video presentation.
 - [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect
@@ -110,10 +122,12 @@ Run these on a physical iPhone before submission:
 - [ ] Publish `PRIVACY_POLICY.md` at a public, stable URL.
 - [ ] Enter the public privacy-policy URL in App Store Connect.
 - [ ] Complete App Privacy answers from actual off-device collection, not simply from protected APIs used on device.
-- [ ] Confirm ASMR Walk does not collect data on developer-operated servers in version 1.
+- [ ] Confirm ASMR Walk does not collect data on developer-operated servers in version 1.1.0.
 - [ ] Confirm App Privacy answers disclose no tracking.
-- [ ] Confirm App Privacy answers do not mark locally stored routes, videos, Photos references, camera input, microphone input, or location as developer-collected data unless a future upload, analytics, sync, or backend feature is added.
-- [ ] Document network behavior: no direct app-owned network calls, no analytics SDK, no account backend, no CloudKit sync.
+- [ ] Confirm App Privacy answers distinguish user-private iCloud sync from developer-operated collection.
+- [ ] Confirm App Privacy answers do not mark videos, Photos references, camera input, microphone input, or location as developer-collected data unless a future upload, analytics, or developer-operated backend feature is added.
+- [ ] Document network behavior: no direct app-owned analytics calls, no account backend, no advertising SDK, and no developer-operated storage.
+- [ ] Document iCloud behavior: recording metadata and route data sync through the user's private iCloud database; full video files do not sync through ASMR Walk.
 - [ ] Document user-initiated sharing: GPX exports and Google Maps route links may send route data to the user's chosen share destination.
 - [ ] Document Apple framework behavior separately: Photos may use iCloud Photos for copies the user saves or older Photos-backed videos.
 - [ ] Document Apple framework behavior separately: MapKit may load map imagery for route thumbnails and reverse geocode a saved route point to suggest editable titles and descriptions.
@@ -122,16 +136,17 @@ Run these on a physical iPhone before submission:
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
+- [ ] Mention that route data and recording metadata can sync through iCloud.
 - [ ] Mention that route thumbnails are stored locally.
 - [ ] Mention that video walks are stored locally in ASMR Walk by default.
+- [ ] Mention that video files do not sync to other devices through ASMR Walk.
 - [ ] Mention that users can save a copy of a video walk to Photos from History detail.
 - [ ] Mention that deleting an ASMR Walk recording removes the app-managed local video but does not delete user-saved Photos copies.
 - [ ] Review export behavior: Google Maps is a quick route share, GPX is the full-fidelity route export with optional ASMR Walk metadata extensions.
-- [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, iCloud sync, accounts, remote storage, or any other off-device collection.
+- [ ] Revisit App Privacy answers before every release that adds analytics, crash reporting SDKs, developer-operated accounts, remote storage, video sync, or any other developer-operated off-device collection.
 
 ## Known Version 1.1.0 Scope
 
-- No iCloud sync.
 - No iPad support.
 - No Apple Watch support.
 - No HealthKit workout integration.
@@ -139,3 +154,4 @@ Run these on a physical iPhone before submission:
 - No background Video Walk recording.
 - No burned-in video map overlay export.
 - No delete-from-Photos management for video copies saved to the user's Photos library.
+- iCloud sync covers recording metadata and routes, not full video files.

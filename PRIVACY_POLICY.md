@@ -1,14 +1,22 @@
 # ASMR Walk Privacy Policy
 
-Last updated: August 13, 2026
+Last updated: August 26, 2026
 
-ASMR Walk is designed as a local-first walking journal. The app records walking routes and optional video walks on your iPhone. ASMR Walk does not run a developer-operated account system, analytics service, advertising network, or backend server.
+ASMR Walk is designed as a private walking journal. The app records walking routes and optional video walks on your iPhone. ASMR Walk does not run a developer-operated account system, analytics service, advertising network, or backend server.
 
 ## Data Stored On Your Device
 
-ASMR Walk stores walk titles, editable walk descriptions, dates, durations, distances, route thumbnails, and route points locally on your device using Apple's local persistence frameworks.
+ASMR Walk stores walk titles, editable walk descriptions, dates, durations, distances, route thumbnails, and route points using Apple's persistence frameworks.
 
-Route points can include latitude, longitude, timestamp, altitude when available, horizontal accuracy, and speed when available. This data stays on your device unless you choose to export or share it.
+Route points can include latitude, longitude, timestamp, altitude when available, horizontal accuracy, and speed when available.
+
+## iCloud Sync
+
+ASMR Walk can sync recording metadata and route data through your private iCloud database using Apple's CloudKit service. This lets recordings created on one signed-in device appear on another signed-in device.
+
+iCloud sync can include walk titles, descriptions, dates, durations, distances, route points, generated place metadata, route thumbnail references, and export-related metadata. Full video files are not synced by ASMR Walk. Video walks remain stored in app-managed local storage on the device where they were recorded unless you choose to save or share a copy.
+
+Your iCloud account and Apple's CloudKit service are operated by Apple, not ASMR Walk. ASMR Walk does not run its own sync server.
 
 ## Location
 
@@ -24,7 +32,7 @@ ASMR Walk uses the camera and microphone only for Video Walk recording. Video ca
 
 ## Photos
 
-ASMR Walk keeps newly recorded video walks in app-managed local storage for playback with your saved route. From a video walk's History detail screen, you can choose to save a copy of that local video to your Photos library.
+ASMR Walk keeps newly recorded video walks in app-managed local storage for playback with your saved route. From a video walk's History detail screen, you can choose to save a copy of that local video to your Photos library. If a video walk's metadata and route appear on another device through iCloud sync, the video itself may not be available on that other device.
 
 Deleting an ASMR Walk recording removes the app's route, metadata, app-managed thumbnail, and app-managed video file. It does not delete any copy you chose to save to Photos. ASMR Walk may still read older Photos-backed video walks created by earlier versions so they can replay with their saved routes.
 
@@ -41,9 +49,9 @@ Sharing is user-initiated through the iOS share sheet. The destination you choos
 
 ## Network Activity
 
-ASMR Walk does not make direct app-owned network requests for analytics, accounts, syncing, advertising, or server storage.
+ASMR Walk does not make direct app-owned network requests for analytics, developer-operated accounts, advertising, or developer-operated server storage.
 
-Some Apple frameworks or user-selected destinations may contact network services outside ASMR Walk's control. Examples include MapKit loading map imagery or reverse geocoding a saved route point, Photos loading an iCloud-backed video asset, or the user opening a Google Maps route link.
+Some Apple frameworks or user-selected destinations may contact network services outside ASMR Walk's control. Examples include CloudKit syncing recording metadata and routes through your private iCloud database, MapKit loading map imagery or reverse geocoding a saved route point, Photos loading an iCloud-backed video asset, or the user opening a Google Maps route link.
 
 ## Tracking
 

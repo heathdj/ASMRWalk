@@ -58,7 +58,7 @@ struct RecordingDetailView: View {
                 }
 
                 if recording.hasVideo {
-                    Label("This walk includes a video recording.", systemImage: "video.fill")
+                    Label(recording.videoAvailabilityMessage, systemImage: recording.localVideoFileExists ? "video.fill" : "video.slash")
                         .font(.subheadline)
                         .padding()
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -342,14 +342,18 @@ private struct RecordingMetadataEditView: View {
     }
 
     private func save() {
+        let editedAt = Date.now
+
         if trimmedTitle != recording.title {
             recording.title = trimmedTitle
             recording.isTitleUserEdited = true
+            recording.titleEditedAt = editedAt
         }
 
         if trimmedDescription != recording.walkDescription {
             recording.walkDescription = trimmedDescription
             recording.isDescriptionUserEdited = true
+            recording.descriptionEditedAt = editedAt
         }
 
         do {

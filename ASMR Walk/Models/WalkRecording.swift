@@ -23,8 +23,11 @@ final class WalkRecording {
     var metadataGeneratedAt: Date?
     var isTitleUserEdited: Bool = false
     var isDescriptionUserEdited: Bool = false
+    var titleEditedAt: Date?
+    var descriptionEditedAt: Date?
     var videoURL: URL?
     var videoAssetIdentifier: String?
+    var videoStoragePolicy: String = WalkRecordingVideoStoragePolicy.localOnly.rawValue
     var thumbnailURL: URL?
     var thumbnailStyleVersion: Int = 0
 
@@ -52,8 +55,11 @@ final class WalkRecording {
         metadataGeneratedAt: Date? = nil,
         isTitleUserEdited: Bool = false,
         isDescriptionUserEdited: Bool = false,
+        titleEditedAt: Date? = nil,
+        descriptionEditedAt: Date? = nil,
         videoURL: URL? = nil,
         videoAssetIdentifier: String? = nil,
+        videoStoragePolicy: WalkRecordingVideoStoragePolicy = .localOnly,
         thumbnailURL: URL? = nil,
         thumbnailStyleVersion: Int = 0,
         points: [LocationPoint] = []
@@ -69,8 +75,11 @@ final class WalkRecording {
         self.metadataGeneratedAt = metadataGeneratedAt
         self.isTitleUserEdited = isTitleUserEdited
         self.isDescriptionUserEdited = isDescriptionUserEdited
+        self.titleEditedAt = titleEditedAt
+        self.descriptionEditedAt = descriptionEditedAt
         self.videoURL = videoURL
         self.videoAssetIdentifier = videoAssetIdentifier
+        self.videoStoragePolicy = videoStoragePolicy.rawValue
         self.thumbnailURL = thumbnailURL
         self.thumbnailStyleVersion = thumbnailStyleVersion
         self.storedPoints = points
@@ -90,5 +99,16 @@ final class WalkRecording {
 
     func addPoint(_ point: LocationPoint) {
         storedPoints = points + [point]
+    }
+}
+
+enum WalkRecordingVideoStoragePolicy: String, Codable, CaseIterable, Sendable {
+    case localOnly
+
+    var title: String {
+        switch self {
+        case .localOnly:
+            "Local Only"
+        }
     }
 }
