@@ -50,6 +50,43 @@ extension WalkRecording {
         WalkRecordingVideoStoragePolicy(rawValue: videoStoragePolicy) ?? .localOnly
     }
 
+    var source: WalkRecordingSource {
+        WalkRecordingSource(rawValue: recordingSource) ?? .iPhone
+    }
+
+    var sourceTitle: String {
+        source.title
+    }
+
+    var isWatchRecording: Bool {
+        source == .appleWatch
+    }
+
+    var routeTimingStart: Date {
+        routeStartedAt ?? createdAt
+    }
+
+    var routeTimingEnd: Date {
+        routeEndedAt ?? routeTimingStart.addingTimeInterval(duration)
+    }
+
+    var externalCameraTimingMessage: String {
+        guard let externalVideoStartedAt else {
+            return "No external camera timing has been attached."
+        }
+
+        let offset = externalVideoStartedAt.timeIntervalSince(routeTimingStart)
+        if abs(offset) < 0.5 {
+            return "External camera timing starts with the recorded route."
+        }
+
+        if offset > 0 {
+            return "External camera timing starts \(offset.timerText) after the route."
+        }
+
+        return "External camera timing starts \(abs(offset).timerText) before the route."
+    }
+
     var titleConflictTimestamp: Date? {
         guard isTitleUserEdited else {
             return nil

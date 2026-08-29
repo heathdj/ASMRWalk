@@ -17,6 +17,12 @@ actor WalkRecordingPersistence {
         recording.duration = snapshot.duration
         recording.distanceMeters = snapshot.distanceMeters
         recording.mode = snapshot.mode
+        recording.recordingSource = snapshot.recordingSource.rawValue
+        recording.captureDeviceName = snapshot.captureDeviceName
+        recording.routeStartedAt = snapshot.routeStartedAt
+        recording.routeEndedAt = snapshot.routeEndedAt
+        recording.externalVideoReference = snapshot.externalVideoReference
+        recording.externalVideoStartedAt = snapshot.externalVideoStartedAt
         recording.videoURL = snapshot.videoURL
         recording.videoAssetIdentifier = snapshot.videoAssetIdentifier
 
@@ -82,6 +88,12 @@ actor WalkRecordingPersistence {
             duration: snapshot.duration,
             distanceMeters: snapshot.distanceMeters,
             mode: snapshot.mode,
+            recordingSource: snapshot.recordingSource,
+            captureDeviceName: snapshot.captureDeviceName,
+            routeStartedAt: snapshot.routeStartedAt,
+            routeEndedAt: snapshot.routeEndedAt,
+            externalVideoReference: snapshot.externalVideoReference,
+            externalVideoStartedAt: snapshot.externalVideoStartedAt,
             videoURL: snapshot.videoURL,
             videoAssetIdentifier: snapshot.videoAssetIdentifier,
             points: snapshot.points.map { makeLocationPoint(from: $0) }

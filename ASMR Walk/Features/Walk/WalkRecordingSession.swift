@@ -28,6 +28,12 @@ struct WalkRecordingSnapshot: Identifiable, Sendable {
     var duration: TimeInterval
     var distanceMeters: Double
     var mode: RecordingMode
+    var recordingSource: WalkRecordingSource
+    var captureDeviceName: String?
+    var routeStartedAt: Date?
+    var routeEndedAt: Date?
+    var externalVideoReference: String?
+    var externalVideoStartedAt: Date?
     var videoURL: URL?
     var videoAssetIdentifier: String?
     var points: [LocationPointSnapshot]
@@ -58,6 +64,12 @@ final class WalkRecordingSession {
             duration: 0,
             distanceMeters: 0,
             mode: mode,
+            recordingSource: .iPhone,
+            captureDeviceName: nil,
+            routeStartedAt: startedAt,
+            routeEndedAt: nil,
+            externalVideoReference: nil,
+            externalVideoStartedAt: nil,
             points: []
         )
     }
@@ -94,6 +106,7 @@ final class WalkRecordingSession {
 
     func updateDuration(at date: Date = .now) {
         snapshot.duration = max(0, date.timeIntervalSince(snapshot.createdAt))
+        snapshot.routeEndedAt = date
     }
 
     func attachVideo(at url: URL) {

@@ -701,6 +701,13 @@ struct WalkRecordingTests {
         #expect(recording.metadataGeneratedAt == nil)
         #expect(recording.isTitleUserEdited == false)
         #expect(recording.isDescriptionUserEdited == false)
+        #expect(recording.source == .iPhone)
+        #expect(recording.sourceTitle == "iPhone")
+        #expect(recording.captureDeviceName == nil)
+        #expect(recording.routeTimingStart == createdAt)
+        #expect(recording.routeTimingEnd == createdAt.addingTimeInterval(300))
+        #expect(recording.externalVideoReference == nil)
+        #expect(recording.externalVideoStartedAt == nil)
         #expect(recording.thumbnailURL == nil)
         #expect(recording.thumbnailStyleVersion == 0)
         #expect(recording.points.isEmpty)
@@ -758,6 +765,47 @@ struct WalkRecordingTests {
         #expect(WalkRecording.shortRecordingThreshold == 10)
         #expect(shortWalk.isShortRecording)
         #expect(tenSecondWalk.isShortRecording == false)
+    }
+
+    @Test("Watch recording metadata has safe presentation defaults")
+    func watchRecordingMetadataPresentation() {
+        let startedAt = Date(timeIntervalSince1970: 1_000)
+        let endedAt = Date(timeIntervalSince1970: 1_300)
+        let recording = WalkRecording(
+            title: "Watch Walk",
+            createdAt: startedAt,
+            duration: 300,
+            mode: .walk,
+            recordingSource: .appleWatch,
+            captureDeviceName: "David's Apple Watch",
+            routeStartedAt: startedAt,
+            routeEndedAt: endedAt
+        )
+
+        #expect(recording.source == .appleWatch)
+        #expect(recording.sourceTitle == "Apple Watch")
+        #expect(recording.isWatchRecording)
+        #expect(recording.routeTimingStart == startedAt)
+        #expect(recording.routeTimingEnd == endedAt)
+        #expect(recording.externalCameraTimingMessage == "No external camera timing has been attached.")
+    }
+
+    @Test("External camera timing describes its route offset")
+    func externalCameraTimingPresentation() {
+        let routeStart = Date(timeIntervalSince1970: 1_000)
+        let recording = WalkRecording(
+            title: "External Camera Walk",
+            createdAt: routeStart,
+            duration: 300,
+            mode: .walk,
+            recordingSource: .appleWatch,
+            routeStartedAt: routeStart,
+            externalVideoReference: "A-cam clip 012",
+            externalVideoStartedAt: routeStart.addingTimeInterval(-5)
+        )
+
+        #expect(recording.externalVideoReference == "A-cam clip 012")
+        #expect(recording.externalCameraTimingMessage == "External camera timing starts 0:05 before the route.")
     }
 
     @Test("Video playback route progress follows recorded point timing")
@@ -969,6 +1017,9 @@ struct WalkRecordingTests {
         #expect(recording.points.count == 15)
         #expect(recording.duration == 60)
         #expect(recording.distanceMeters == 180)
+        #expect(recording.recordingSource == WalkRecordingSource.iPhone.rawValue)
+        #expect(recording.routeStartedAt == firstCheckpoint.routeStartedAt)
+        #expect(recording.routeEndedAt == secondCheckpoint.routeEndedAt)
         #expect(recording.pointsInTimeOrder.map(\.timestamp) == secondCheckpoint.points.map(\.timestamp))
         #expect(try ModelContext(container).fetchCount(FetchDescriptor<WalkRecording>()) == 1)
     }
@@ -1111,6 +1162,39 @@ struct WalkRecordingTests {
         #expect(recording.duration == 75)
         #expect(recording.points.count == 8)
         #expect(recording.pointsInTimeOrder.map(\.timestamp) == metadataOnlyCheckpoint.points.map(\.timestamp))
+    }
+
+    @Test("Persistence stores Watch source and external camera timing metadata")
+    func persistenceStoresWatchSourceAndExternalCameraTiming() async throws {
+        let recordingID = try #require(UUID(uuidString: "F30E2C38-8714-4FA5-B30D-817AE52A0E77"))
+        let routeStartedAt = Date(timeIntervalSince1970: 2_000)
+        let routeEndedAt = Date(timeIntervalSince1970: 2_420)
+        let externalVideoStartedAt = Date(timeIntervalSince1970: 1_995)
+        let container = try makeContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: container)
+        let snapshot = makeSnapshot(
+            id: recordingID,
+            createdAt: routeStartedAt,
+            duration: 420,
+            distanceMeters: 1_200,
+            pointCount: 12,
+            recordingSource: .appleWatch,
+            captureDeviceName: "Apple Watch Ultra",
+            routeStartedAt: routeStartedAt,
+            routeEndedAt: routeEndedAt,
+            externalVideoReference: "Camera A clip 001",
+            externalVideoStartedAt: externalVideoStartedAt
+        )
+
+        try await persistence.save(snapshot)
+
+        let recording = try #require(try fetchRecording(id: recordingID, in: container))
+        #expect(recording.source == .appleWatch)
+        #expect(recording.captureDeviceName == "Apple Watch Ultra")
+        #expect(recording.routeStartedAt == routeStartedAt)
+        #expect(recording.routeEndedAt == routeEndedAt)
+        #expect(recording.externalVideoReference == "Camera A clip 001")
+        #expect(recording.externalVideoStartedAt == externalVideoStartedAt)
     }
 
     @Test("Persistence applies generated metadata without overwriting user edits")
@@ -1267,6 +1351,9 @@ struct WalkRecordingTests {
         #expect(gpxText.contains("<asmrwalk:recordingID>\(recordingID.uuidString)</asmrwalk:recordingID>"))
         #expect(gpxText.contains("<asmrwalk:durationSeconds>142.75</asmrwalk:durationSeconds>"))
         #expect(gpxText.contains("<asmrwalk:recordingMode>videoWalk</asmrwalk:recordingMode>"))
+        #expect(gpxText.contains("<asmrwalk:recordingSource>iPhone</asmrwalk:recordingSource>"))
+        #expect(gpxText.contains("<asmrwalk:routeStartedAt>1970-01-01T00:05:00Z</asmrwalk:routeStartedAt>"))
+        #expect(gpxText.contains("<asmrwalk:routeEndedAt>1970-01-01T00:07:22Z</asmrwalk:routeEndedAt>"))
         #expect(gpxText.contains("<asmrwalk:hasVideo>true</asmrwalk:hasVideo>"))
         #expect(gpxText.contains("<asmrwalk:horizontalAccuracyMeters>4.25</asmrwalk:horizontalAccuracyMeters>"))
         #expect(gpxText.contains("<asmrwalk:horizontalAccuracyMeters>8</asmrwalk:horizontalAccuracyMeters>"))
@@ -1274,6 +1361,37 @@ struct WalkRecordingTests {
         #expect(gpxText.components(separatedBy: "<asmrwalk:speedMetersPerSecond>").count - 1 == 1)
         #expect(gpxText.contains("video.mov") == false)
         #expect(gpxText.contains("/private/var/mobile") == false)
+    }
+
+    @Test("GPX export includes Watch and external camera timing metadata")
+    func gpxExportIncludesWatchAndExternalCameraMetadata() {
+        let routeStartedAt = Date(timeIntervalSince1970: 1_000)
+        let routeEndedAt = Date(timeIntervalSince1970: 1_240)
+        let externalVideoStartedAt = Date(timeIntervalSince1970: 995)
+        let recording = WalkRecording(
+            title: "Watch Export",
+            createdAt: routeStartedAt,
+            duration: 240,
+            mode: .walk,
+            recordingSource: .appleWatch,
+            captureDeviceName: "David's Apple Watch & Camera",
+            routeStartedAt: routeStartedAt,
+            routeEndedAt: routeEndedAt,
+            externalVideoReference: "A-cam <clip 12>",
+            externalVideoStartedAt: externalVideoStartedAt,
+            points: [
+                makePoint(timestamp: 1_000)
+            ]
+        )
+
+        let gpxText = WalkRouteExport(recording: recording).gpxText
+
+        #expect(gpxText.contains("<asmrwalk:recordingSource>appleWatch</asmrwalk:recordingSource>"))
+        #expect(gpxText.contains("<asmrwalk:captureDeviceName>David&apos;s Apple Watch &amp; Camera</asmrwalk:captureDeviceName>"))
+        #expect(gpxText.contains("<asmrwalk:routeStartedAt>1970-01-01T00:16:40Z</asmrwalk:routeStartedAt>"))
+        #expect(gpxText.contains("<asmrwalk:routeEndedAt>1970-01-01T00:20:40Z</asmrwalk:routeEndedAt>"))
+        #expect(gpxText.contains("<asmrwalk:externalVideoReference>A-cam &lt;clip 12&gt;</asmrwalk:externalVideoReference>"))
+        #expect(gpxText.contains("<asmrwalk:externalVideoStartedAt>1970-01-01T00:16:35Z</asmrwalk:externalVideoStartedAt>"))
     }
 
     @Test("GPX export includes recording descriptions")
@@ -1341,7 +1459,13 @@ struct WalkRecordingTests {
         distanceMeters: Double,
         pointCount: Int,
         latitude: Double = 33.4484,
-        longitude: Double = -112.0740
+        longitude: Double = -112.0740,
+        recordingSource: WalkRecordingSource = .iPhone,
+        captureDeviceName: String? = nil,
+        routeStartedAt: Date? = nil,
+        routeEndedAt: Date? = nil,
+        externalVideoReference: String? = nil,
+        externalVideoStartedAt: Date? = nil
     ) -> WalkRecordingSnapshot {
         WalkRecordingSnapshot(
             id: id,
@@ -1350,6 +1474,12 @@ struct WalkRecordingTests {
             duration: duration,
             distanceMeters: distanceMeters,
             mode: .walk,
+            recordingSource: recordingSource,
+            captureDeviceName: captureDeviceName,
+            routeStartedAt: routeStartedAt ?? createdAt,
+            routeEndedAt: routeEndedAt ?? createdAt.addingTimeInterval(duration),
+            externalVideoReference: externalVideoReference,
+            externalVideoStartedAt: externalVideoStartedAt,
             points: (0..<pointCount).map { index in
                 LocationPointSnapshot(
                     timestamp: createdAt.addingTimeInterval(TimeInterval(index)),
