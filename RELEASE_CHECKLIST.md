@@ -9,11 +9,15 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.
-- [ ] Targeted device family is iPhone only for version 1.1.0.
+- [ ] iPhone app targeted device family excludes iPad for version 1.1.0.
+- [ ] Apple Watch companion app target is included in the archive.
+- [ ] Apple Watch app icon is configured and visually matches the iPhone app icon.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
+- [ ] Watch app iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
 - [ ] Confirm iCloud library sync is not StoreKit-gated in this release; if product direction changes to Pro/subscription, add entitlement gating before release.
 - [ ] Background Modes includes both Location updates and Remote notifications.
+- [ ] Watch app has a location usage description for GPS-only Watch recording.
 - [ ] Privacy strings are present in the generated target Info settings:
   - [ ] `NSLocationWhenInUseUsageDescription`
   - [ ] `NSLocationAlwaysAndWhenInUseUsageDescription`
@@ -48,11 +52,15 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Confirm Background GPS Recording is described as optional, user-enabled, and GPS Walk only.
 - [ ] Confirm Settings shows the current iCloud Library status.
 - [ ] Confirm documentation and App Store copy do not imply background video recording.
+- [ ] Confirm documentation and App Store copy describe the Apple Watch app as GPS-only.
+- [ ] Confirm documentation and App Store copy do not imply HealthKit workout recording.
+- [ ] Confirm documentation and App Store copy explain Watch-to-iPhone sync uses the user's private iCloud database.
+- [ ] Confirm documentation and App Store copy explain external-camera timing stores metadata only and does not import or sync external video files.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
 ## Device Validation
 
-Run these on a physical iPhone before submission:
+Run these on physical devices before submission:
 
 ### Physical Device Only
 
@@ -112,6 +120,24 @@ Run these on a physical iPhone before submission:
 - [ ] Sign out of iCloud or use a restricted iCloud account and confirm Settings explains the sync state without blocking local recording.
 - [ ] Confirm CloudKit schema is initialized in development and promoted before production release.
 
+### Apple Watch Physical Device Gate
+
+- [ ] Confirm GitHub issue #93 is closed before submitting version 1.1.0 to App Store Connect.
+- [ ] Install the iPhone app and Apple Watch app on paired physical devices.
+- [ ] Confirm the iPhone and Apple Watch are signed into the expected iCloud account and iCloud sync is available.
+- [ ] Grant location permission to ASMR Walk on Apple Watch.
+- [ ] Start a GPS-only walk from Apple Watch and confirm elapsed time, distance, route-point count, and GPS status update during the walk.
+- [ ] Stop and save the Watch walk.
+- [ ] Confirm the Watch shows the saved/sync-pending state after save.
+- [ ] Confirm the saved Watch recording appears in iPhone History after iCloud sync.
+- [ ] Confirm the iPhone History row and detail screen identify the recording as Apple Watch sourced.
+- [ ] Confirm synced Watch route points draw correctly on iPhone and summary distance/duration are preserved.
+- [ ] Confirm a local route thumbnail is generated or regenerated on iPhone for the synced Watch recording.
+- [ ] Confirm the synced Watch recording does not imply a video file exists.
+- [ ] Add external-camera timing metadata to a synced Watch recording on iPhone.
+- [ ] Export GPX for the synced Watch recording and confirm it includes recording source, route timing, and external-camera timing metadata.
+- [ ] Record any sync delay, entitlement, iCloud account, or permission findings in the release notes for issue #71.
+
 ### Automated Coverage Gate
 
 - [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, and local-only video presentation.
@@ -132,8 +158,12 @@ Run these on a physical iPhone before submission:
 - [ ] Document Apple framework behavior separately: Photos may use iCloud Photos for copies the user saves or older Photos-backed videos.
 - [ ] Document Apple framework behavior separately: MapKit may load map imagery for route thumbnails and reverse geocode a saved route point to suggest editable titles and descriptions.
 - [ ] Confirm the app describes background GPS recording as optional and user-enabled.
-- [ ] Confirm App Store copy says ASMR Walk 1.1.0 is iPhone-only.
+- [ ] Confirm App Store copy says the iPhone app excludes iPad support in version 1.1.0.
+- [ ] Confirm App Store copy says version 1.1.0 includes a GPS-only Apple Watch companion app.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
+- [ ] Include review notes that the Apple Watch app records GPS-only walks, does not record video, and does not create HealthKit workouts.
+- [ ] Include review notes that Watch recordings sync through the user's private iCloud database and appear in iPhone History after sync.
+- [ ] Include review notes that external-camera fields are timing notes for user-managed footage and ASMR Walk does not import or sync those external video files.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
 - [ ] Mention that route data and recording metadata can sync through iCloud.
@@ -148,10 +178,11 @@ Run these on a physical iPhone before submission:
 ## Known Version 1.1.0 Scope
 
 - No iPad support.
-- No Apple Watch support.
+- Apple Watch support is GPS-only route recording.
 - No HealthKit workout integration.
 - Background route recording is GPS-only and opt-in.
 - No background Video Walk recording.
 - No burned-in video map overlay export.
 - No delete-from-Photos management for video copies saved to the user's Photos library.
 - iCloud sync covers recording metadata and routes, not full video files.
+- Simulator Watch-to-iPhone sync is non-authoritative for release; physical-device/TestFlight validation is tracked in GitHub issue #93.

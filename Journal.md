@@ -417,6 +417,12 @@ Issue 70 keeps the external-camera workflow honest. ASMR Walk is not importing o
 
 The key rule is to export metadata, not private files. GPX carries route points, source, timing, and the optional external clip label, but no sandbox video paths. The phone detail screen also says that plainly so a Watch route paired with an outside camera never looks like ASMR Walk secretly has the footage.
 
+### Release Notes Are the Trail Signs
+
+Issue 71 is the point where the Watch work stops being a stack of merged features and becomes a release story. The docs now say the current truth in one voice: 1.1.0 includes an Apple Watch companion app, but the Watch records GPS-only routes. It does not record video, it does not create HealthKit workouts, and it relies on the user's private iCloud account to bring completed routes back to iPhone History.
+
+The simulator taught one more release lesson: some workflows can compile, unit test, and still need real hardware before they are release facts. Watch-to-iPhone CloudKit sync was not reliable in Simulator, so the checklist treats physical Watch/iPhone validation as an App Store submission gate instead of pretending the simulator run settled it. Think of issue #93 as the final trail marker at the parking lot: #71 can prepare the map, but the release should not leave without checking that marker off.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
