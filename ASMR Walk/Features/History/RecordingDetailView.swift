@@ -13,6 +13,7 @@ struct RecordingDetailView: View {
     @State private var photoSaveStatus: PhotoSaveStatus?
     @State private var isSavingVideoToPhotos = false
     @State private var isShowingMetadataEditor = false
+    @State private var isShowingExternalCameraEditor = false
 
     var body: some View {
         ScrollView {
@@ -67,6 +68,10 @@ struct RecordingDetailView: View {
                     )
                 }
 
+                if recording.isWatchRecording {
+                    externalCameraTimingCard
+                }
+
                 if recording.hasVideo {
                     Label(recording.videoAvailabilityMessage, systemImage: recording.localVideoFileExists ? "video.fill" : "video.slash")
                         .font(.subheadline)
@@ -94,6 +99,9 @@ struct RecordingDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isShowingMetadataEditor) {
             RecordingMetadataEditView(recording: recording)
+        }
+        .sheet(isPresented: $isShowingExternalCameraEditor) {
+            ExternalCameraTimingEditView(recording: recording)
         }
         .alert("Video Export", isPresented: isShowingPhotoSaveStatus) {
             Button("OK", role: .cancel) {
@@ -148,6 +156,38 @@ struct RecordingDetailView: View {
         }
 
         return UIImage(contentsOfFile: thumbnailURL.path)
+    }
+
+    private var externalCameraTimingCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Label("External Camera", systemImage: "video.fill")
+                    .font(.headline)
+
+                Spacer()
+
+                Button(recording.externalVideoStartedAt == nil ? "Add" : "Edit", systemImage: "pencil") {
+                    isShowingExternalCameraEditor = true
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier(AccessibilityID.editExternalCameraTimingButton)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(recording.externalCameraWorkflowMessage)
+                    .font(.subheadline)
+
+                Text(recording.externalCameraTimingMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                Text("External footage stays outside ASMR Walk; GPX export includes only the clip label and timing metadata.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding()
+        .background(.quaternary, in: .rect(cornerRadius: 16))
     }
 
     private var recordingMetadataCard: some View {
@@ -366,6 +406,96 @@ private struct RecordingMetadataEditView: View {
             recording.descriptionEditedAt = editedAt
         }
 
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            saveErrorMessage = error.localizedDescription
+            isShowingSaveError = true
+        }
+    }
+}
+
+private struct ExternalCameraTimingEditView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Bindable var recording: WalkRecording
+    @State private var externalVideoReference: String
+    @State private var externalVideoStartedAt: Date
+    @State private var saveErrorMessage = ""
+    @State private var isShowingSaveError = false
+
+    init(recording: WalkRecording) {
+        self.recording = recording
+        _externalVideoReference = State(initialValue: recording.externalVideoReference ?? "")
+        _externalVideoStartedAt = State(initialValue: recording.externalVideoStartedAt ?? recording.routeTimingStart)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Clip label", text: $externalVideoReference)
+                        .textInputAutocapitalization(.words)
+
+                    DatePicker(
+                        "Camera Start",
+                        selection: $externalVideoStartedAt,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                } footer: {
+                    Text("Use a clip name, camera filename, or slate note. ASMR Walk stores timing metadata only; it does not import the external video file.")
+                }
+
+                if recording.externalVideoStartedAt != nil || recording.externalVideoReference?.isEmpty == false {
+                    Section {
+                        Button("Clear External Camera Timing", role: .destructive) {
+                            clear()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("External Camera")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .accessibilityIdentifier(AccessibilityID.saveExternalCameraTimingButton)
+                }
+            }
+            .alert("Unable to Save Timing", isPresented: $isShowingSaveError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(saveErrorMessage)
+            }
+        }
+    }
+
+    private var trimmedReference: String {
+        externalVideoReference.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func save() {
+        recording.externalVideoReference = trimmedReference.isEmpty ? nil : trimmedReference
+        recording.externalVideoStartedAt = externalVideoStartedAt
+        saveAndDismiss()
+    }
+
+    private func clear() {
+        recording.externalVideoReference = nil
+        recording.externalVideoStartedAt = nil
+        saveAndDismiss()
+    }
+
+    private func saveAndDismiss() {
         do {
             try modelContext.save()
             dismiss()

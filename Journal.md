@@ -411,6 +411,12 @@ Issue 69 is the iPhone side of the handshake. Once CloudKit brings a Watch-creat
 
 That last bit is subtle but important: a thumbnail URL is a local file path, not a portable souvenir. When a Watch recording syncs to the phone, the route points are the durable truth; the thumbnail is rebuilt locally from those points.
 
+### External Camera Footage Gets a Timing Slip
+
+Issue 70 keeps the external-camera workflow honest. ASMR Walk is not importing or storing the camera footage here; it is writing down the useful handshake details: the clip label, when that clip started, when the route started, and the offset between the two. That is enough for the Mac importer and future FCP workflow to line up the walking route with separately recorded footage.
+
+The key rule is to export metadata, not private files. GPX carries route points, source, timing, and the optional external clip label, but no sandbox video paths. The phone detail screen also says that plainly so a Watch route paired with an outside camera never looks like ASMR Walk secretly has the footage.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -110,6 +110,18 @@ extension WalkRecording {
         return "External camera timing starts \(abs(offset).timerText) before the route."
     }
 
+    var externalCameraWorkflowMessage: String {
+        if let externalVideoReference, externalVideoReference.isEmpty == false {
+            return "External clip: \(externalVideoReference)"
+        }
+
+        if externalVideoStartedAt != nil {
+            return "External camera timing is attached."
+        }
+
+        return "Attach a clip label and start time for footage recorded outside ASMR Walk."
+    }
+
     var titleConflictTimestamp: Date? {
         guard isTitleUserEdited else {
             return nil
