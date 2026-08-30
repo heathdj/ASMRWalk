@@ -27,6 +27,20 @@
 			remoteGlobalIDString = 3A3E1F172FC3DE3500CFEE4A;
 			remoteInfo = "ASMR Walk";
 		};
+		3A4F4CFA3044A7EF00D6ADD3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A3E1F102FC3DE3500CFEE4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A4F4CEC3044A7EE00D6ADD3;
+			remoteInfo = "ASMR Walk Mac Importer";
+		};
+		3A4F4D043044A7EF00D6ADD3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A3E1F102FC3DE3500CFEE4A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3A4F4CEC3044A7EE00D6ADD3;
+			remoteInfo = "ASMR Walk Mac Importer";
+		};
 		3AA4BD96304398A400E5D8A6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3A3E1F102FC3DE3500CFEE4A /* Project object */;
@@ -68,6 +82,9 @@
 		3A3E1F182FC3DE3500CFEE4A /* ASMR Walk.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ASMR Walk.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A3E1F252FC3DE3800CFEE4A /* ASMR WalkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR WalkTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A3E1F2F2FC3DE3800CFEE4A /* ASMR WalkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR WalkUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A4F4CED3044A7EE00D6ADD3 /* ASMR Walk Mac Importer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ASMR Walk Mac Importer.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A4F4CF93044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR Walk Mac ImporterTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A4F4D033044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMR Walk Mac ImporterUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "Launch Screen.storyboard"; sourceTree = "<group>"; };
 		3AA4BD89304398A400E5D8A6 /* ASMRWalk Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ASMRWalk Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AA4BD95304398A400E5D8A6 /* ASMRWalk Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMRWalk Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +119,21 @@
 		3A3E1F322FC3DE3800CFEE4A /* ASMR WalkUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "ASMR WalkUITests";
+			sourceTree = "<group>";
+		};
+		3A4F4CEE3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ASMR Walk Mac Importer";
+			sourceTree = "<group>";
+		};
+		3A4F4CFC3044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ASMR Walk Mac ImporterTests";
+			sourceTree = "<group>";
+		};
+		3A4F4D063044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ASMR Walk Mac ImporterUITests";
 			sourceTree = "<group>";
 		};
 		3AA4BD8A304398A400E5D8A6 /* ASMRWalk Watch App */ = {
@@ -143,6 +175,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3A4F4CEA3044A7EE00D6ADD3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4CF63044A7EF00D6ADD3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4D003044A7EF00D6ADD3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3AA4BD86304398A400E5D8A6 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -178,6 +231,9 @@
 				3AA4BD8A304398A400E5D8A6 /* ASMRWalk Watch App */,
 				3AA4BD98304398A400E5D8A6 /* ASMRWalk Watch AppTests */,
 				3AA4BDA2304398A400E5D8A6 /* ASMRWalk Watch AppUITests */,
+				3A4F4CEE3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */,
+				3A4F4CFC3044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests */,
+				3A4F4D063044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests */,
 				3A3E1F192FC3DE3500CFEE4A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -191,6 +247,9 @@
 				3AA4BD89304398A400E5D8A6 /* ASMRWalk Watch App.app */,
 				3AA4BD95304398A400E5D8A6 /* ASMRWalk Watch AppTests.xctest */,
 				3AA4BD9F304398A400E5D8A6 /* ASMRWalk Watch AppUITests.xctest */,
+				3A4F4CED3044A7EE00D6ADD3 /* ASMR Walk Mac Importer.app */,
+				3A4F4CF93044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests.xctest */,
+				3A4F4D033044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -266,6 +325,74 @@
 			);
 			productName = "ASMR WalkUITests";
 			productReference = 3A3E1F2F2FC3DE3800CFEE4A /* ASMR WalkUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		3A4F4CEC3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3A4F4D0B3044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac Importer" */;
+			buildPhases = (
+				3A4F4CE93044A7EE00D6ADD3 /* Sources */,
+				3A4F4CEA3044A7EE00D6ADD3 /* Frameworks */,
+				3A4F4CEB3044A7EE00D6ADD3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3A4F4CEE3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */,
+			);
+			name = "ASMR Walk Mac Importer";
+			packageProductDependencies = (
+			);
+			productName = "ASMR Walk Mac Importer";
+			productReference = 3A4F4CED3044A7EE00D6ADD3 /* ASMR Walk Mac Importer.app */;
+			productType = "com.apple.product-type.application";
+		};
+		3A4F4CF83044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3A4F4D0E3044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac ImporterTests" */;
+			buildPhases = (
+				3A4F4CF53044A7EF00D6ADD3 /* Sources */,
+				3A4F4CF63044A7EF00D6ADD3 /* Frameworks */,
+				3A4F4CF73044A7EF00D6ADD3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3A4F4CFB3044A7EF00D6ADD3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3A4F4CFC3044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests */,
+			);
+			name = "ASMR Walk Mac ImporterTests";
+			packageProductDependencies = (
+			);
+			productName = "ASMR Walk Mac ImporterTests";
+			productReference = 3A4F4CF93044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3A4F4D023044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3A4F4D113044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac ImporterUITests" */;
+			buildPhases = (
+				3A4F4CFF3044A7EF00D6ADD3 /* Sources */,
+				3A4F4D003044A7EF00D6ADD3 /* Frameworks */,
+				3A4F4D013044A7EF00D6ADD3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3A4F4D053044A7EF00D6ADD3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				3A4F4D063044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests */,
+			);
+			name = "ASMR Walk Mac ImporterUITests";
+			packageProductDependencies = (
+			);
+			productName = "ASMR Walk Mac ImporterUITests";
+			productReference = 3A4F4D033044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		3AA4BD88304398A400E5D8A6 /* ASMRWalk Watch App */ = {
@@ -357,6 +484,17 @@
 						CreatedOnToolsVersion = 26.5;
 						TestTargetID = 3A3E1F172FC3DE3500CFEE4A;
 					};
+					3A4F4CEC3044A7EE00D6ADD3 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					3A4F4CF83044A7EF00D6ADD3 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 3A4F4CEC3044A7EE00D6ADD3;
+					};
+					3A4F4D023044A7EF00D6ADD3 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = 3A4F4CEC3044A7EE00D6ADD3;
+					};
 					3AA4BD88304398A400E5D8A6 = {
 						CreatedOnToolsVersion = 26.6;
 					};
@@ -390,6 +528,9 @@
 				3AA4BD88304398A400E5D8A6 /* ASMRWalk Watch App */,
 				3AA4BD94304398A400E5D8A6 /* ASMRWalk Watch AppTests */,
 				3AA4BD9E304398A400E5D8A6 /* ASMRWalk Watch AppUITests */,
+				3A4F4CEC3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */,
+				3A4F4CF83044A7EF00D6ADD3 /* ASMR Walk Mac ImporterTests */,
+				3A4F4D023044A7EF00D6ADD3 /* ASMR Walk Mac ImporterUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -412,6 +553,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3A3E1F2D2FC3DE3800CFEE4A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4CEB3044A7EE00D6ADD3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4CF73044A7EF00D6ADD3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4D013044A7EF00D6ADD3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -463,6 +625,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		3A4F4CE93044A7EE00D6ADD3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4CF53044A7EF00D6ADD3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		3A4F4CFF3044A7EF00D6ADD3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3AA4BD85304398A400E5D8A6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -496,6 +679,16 @@
 			isa = PBXTargetDependency;
 			target = 3A3E1F172FC3DE3500CFEE4A /* ASMR Walk */;
 			targetProxy = 3A3E1F302FC3DE3800CFEE4A /* PBXContainerItemProxy */;
+		};
+		3A4F4CFB3044A7EF00D6ADD3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A4F4CEC3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */;
+			targetProxy = 3A4F4CFA3044A7EF00D6ADD3 /* PBXContainerItemProxy */;
+		};
+		3A4F4D053044A7EF00D6ADD3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3A4F4CEC3044A7EE00D6ADD3 /* ASMR Walk Mac Importer */;
+			targetProxy = 3A4F4D043044A7EF00D6ADD3 /* PBXContainerItemProxy */;
 		};
 		3AA4BD97304398A400E5D8A6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -836,6 +1029,180 @@
 			};
 			name = Release;
 		};
+		3A4F4D0C3044A7EF00D6ADD3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-Importer";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		3A4F4D0D3044A7EF00D6ADD3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = NO;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
+				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
+				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
+				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
+				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
+				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
+				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
+				ENABLE_RESOURCE_ACCESS_USB = NO;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-Importer";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		3A4F4D0F3044A7EF00D6ADD3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-ImporterTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ASMR Walk Mac Importer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ASMR Walk Mac Importer";
+			};
+			name = Debug;
+		};
+		3A4F4D103044A7EF00D6ADD3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-ImporterTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ASMR Walk Mac Importer.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ASMR Walk Mac Importer";
+			};
+			name = Release;
+		};
+		3A4F4D123044A7EF00D6ADD3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-ImporterUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "ASMR Walk Mac Importer";
+			};
+			name = Debug;
+		};
+		3A4F4D133044A7EF00D6ADD3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = C5HQ3DJJGW;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.bald-traveler.ASMR-Walk-Mac-ImporterUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_TARGET_NAME = "ASMR Walk Mac Importer";
+			};
+			name = Release;
+		};
 		3AA4BDAB304398A400E5D8A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1033,6 +1400,33 @@
 			buildConfigurations = (
 				3A3E1F402FC3DE3800CFEE4A /* Debug */,
 				3A3E1F412FC3DE3800CFEE4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3A4F4D0B3044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac Importer" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A4F4D0C3044A7EF00D6ADD3 /* Debug */,
+				3A4F4D0D3044A7EF00D6ADD3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3A4F4D0E3044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac ImporterTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A4F4D0F3044A7EF00D6ADD3 /* Debug */,
+				3A4F4D103044A7EF00D6ADD3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3A4F4D113044A7EF00D6ADD3 /* Build configuration list for PBXNativeTarget "ASMR Walk Mac ImporterUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A4F4D123044A7EF00D6ADD3 /* Debug */,
+				3A4F4D133044A7EF00D6ADD3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

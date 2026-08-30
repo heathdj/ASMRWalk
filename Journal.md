@@ -435,6 +435,8 @@ Issue 72 defines `.asmrroute`, the little package the Mac importer will hand to 
 
 That separation is the whole point. The renderer should be able to draw deterministically from route data during timeline playback, not ask Photos, CloudKit, or an iPhone sandbox where the trail went. Big video files stay outside unless a future workflow explicitly decides to copy them in.
 
+Issue 73 gives that lunchbox its first packing station. The GPX importer reads the app's own export metadata when it exists, falls back gently for plain third-party GPX, and writes the same deterministic package shape. The Mac app shell is intentionally small because the real Xcode target setup is owner territory, but the business logic is already testable and target-agnostic.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

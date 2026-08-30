@@ -28,6 +28,7 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing, including recording descriptions when present.
 - `.asmrroute` package contract for future Mac importer and Final Cut Pro/Motion route overlay workflows.
+- GPX-to-`.asmrroute` importer core and macOS importer shell source for the planned Mac utility.
 - Video files remain local to the device where they were recorded unless the user saves a copy to Photos.
 
 ## Tech Stack
@@ -146,6 +147,8 @@ The app uses a native static launch screen configured through the target Info se
 ## ASMR Route Packages
 
 The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Version 1 packages contain a deterministic `manifest.json`, normalized `route-points.json`, and optional preserved `source.gpx`. They are designed as the stable handoff from ASMR Walk import workflows to future Final Cut Pro/Motion rendering without requiring the renderer to query iCloud, Photos, or an iPhone sandbox.
+
+The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
 
 ## Current Limitations
 

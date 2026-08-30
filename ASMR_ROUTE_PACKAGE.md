@@ -52,6 +52,8 @@ Route points are stored in timestamp order. Each point can include:
 
 When a package is created from an explicit GPX import or export, the source GPX should be preserved as `source.gpx`. Package consumers should treat `manifest.json` and `route-points.json` as the normalized contract and `source.gpx` as provenance.
 
+The GPX importer reads ASMR Walk export extensions when present. Generic GPX files can still produce packages, but fields such as recording ID, capture device, recording source, exact ASMR Walk duration, and external-camera timing may be missing or conservatively inferred from route point timestamps.
+
 ## Video References
 
 Video files are not embedded by default. A video reference can represent:
