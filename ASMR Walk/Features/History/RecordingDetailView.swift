@@ -32,9 +32,19 @@ struct RecordingDetailView: View {
                         .font(.headline)
                         .foregroundStyle(recording.hasVideo ? .red : .green)
 
+                    Label(recording.sourceTitle, systemImage: recording.sourceSystemImage)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
                     Text(recording.createdAt, format: .dateTime.weekday(.wide).month(.wide).day().year())
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    if recording.isWatchRecording {
+                        Label(recording.sourceSyncMessage, systemImage: "icloud")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 recordingMetadataCard

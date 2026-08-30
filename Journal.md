@@ -405,6 +405,12 @@ Issue 68 turns the Watch recorder from a working engine into something a person 
 
 The recorder also learned one small bit of memory. After a stop/save finishes, it keeps a short "Saved" state instead of snapping back to plain ready. That gives the user a visible handoff moment: the walk is stored, and sync is the next step.
 
+### Watch Walks Need a Passport Stamp
+
+Issue 69 is the iPhone side of the handshake. Once CloudKit brings a Watch-created `WalkRecording` home, History should not treat it like a mystery iPhone walk. Rows and detail screens now show the source, Watch route-only recordings keep the "no video" story clean, and missing local thumbnails are explicitly eligible for regeneration on the iPhone.
+
+That last bit is subtle but important: a thumbnail URL is a local file path, not a portable souvenir. When a Watch recording syncs to the phone, the route points are the durable truth; the thumbnail is rebuilt locally from those points.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

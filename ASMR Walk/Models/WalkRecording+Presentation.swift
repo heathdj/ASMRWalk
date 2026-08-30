@@ -58,8 +58,31 @@ extension WalkRecording {
         source.title
     }
 
+    var sourceSystemImage: String {
+        switch source {
+        case .iPhone:
+            "iphone"
+        case .appleWatch:
+            "applewatch"
+        }
+    }
+
+    var sourceSyncMessage: String {
+        switch source {
+        case .iPhone:
+            "Recorded on iPhone."
+        case .appleWatch:
+            "Recorded on Apple Watch. Route data syncs through iCloud."
+        }
+    }
+
     var isWatchRecording: Bool {
         source == .appleWatch
+    }
+
+    var needsRouteThumbnailRefresh: Bool {
+        points.count > 1
+            && (localThumbnailFileExists == false || thumbnailStyleVersion < WalkRouteThumbnailGenerator.styleVersion)
     }
 
     var routeTimingStart: Date {
