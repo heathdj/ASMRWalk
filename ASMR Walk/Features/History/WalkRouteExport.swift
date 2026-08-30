@@ -238,9 +238,3 @@ private extension String {
             .replacingOccurrences(of: "'", with: "&apos;")
     }
 }
-
-private extension UTType {
-    static var gpx: UTType {
-        UTType(filenameExtension: "gpx") ?? .xml
-    }
-}
