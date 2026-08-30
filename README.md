@@ -27,6 +27,7 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing, including recording descriptions when present.
+- `.asmrroute` package contract for future Mac importer and Final Cut Pro/Motion route overlay workflows.
 - Video files remain local to the device where they were recorded unless the user saves a copy to Photos.
 
 ## Tech Stack
@@ -141,6 +142,10 @@ The unit test suite covers:
 UI tests cover the main tab surfaces and launch behavior. Camera, microphone, outdoor GPS, and Watch-to-iPhone sync flows should be validated on physical devices after privacy keys and entitlements are configured.
 
 The app uses a native static launch screen configured through the target Info settings. It does not show an artificial SwiftUI splash screen after launch.
+
+## ASMR Route Packages
+
+The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Version 1 packages contain a deterministic `manifest.json`, normalized `route-points.json`, and optional preserved `source.gpx`. They are designed as the stable handoff from ASMR Walk import workflows to future Final Cut Pro/Motion rendering without requiring the renderer to query iCloud, Photos, or an iPhone sandbox.
 
 ## Current Limitations
 

@@ -429,6 +429,12 @@ Issue 39 takes the "Save Video to Photos" path from a useful button to a clearer
 
 The export itself still copies a local file into Photos and keeps ASMR Walk's in-app playback source unchanged. That is the important ownership rule: Photos gets a copy, not the only copy. Permission denial also has a proper recovery path now, so a blocked Photos request points the user to Settings instead of sounding like the video disappeared.
 
+### The Route Package Is a Lunchbox
+
+Issue 72 defines `.asmrroute`, the little package the Mac importer will hand to the future Final Cut Pro/Motion renderer. It carries a manifest, normalized route points, optional source GPX, and video references that say what kind of media belongs with the route without stuffing the media itself into the box by default.
+
+That separation is the whole point. The renderer should be able to draw deterministically from route data during timeline playback, not ask Photos, CloudKit, or an iPhone sandbox where the trail went. Big video files stay outside unless a future workflow explicitly decides to copy them in.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
