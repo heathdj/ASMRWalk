@@ -22,6 +22,7 @@ struct WalkRouteExport {
     let walkDescription: String
     let createdAt: Date
     let duration: TimeInterval
+    let distanceMeters: Double
     let mode: RecordingMode
     let hasVideo: Bool
     let recordingSource: WalkRecordingSource
@@ -39,6 +40,7 @@ struct WalkRouteExport {
         walkDescription = recording.walkDescription
         createdAt = recording.createdAt
         duration = recording.duration
+        distanceMeters = recording.distanceMeters
         mode = recording.mode
         hasVideo = recording.hasVideo
         recordingSource = recording.source
