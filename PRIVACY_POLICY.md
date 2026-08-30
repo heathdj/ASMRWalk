@@ -62,4 +62,4 @@ ASMR Walk does not track users across apps or websites.
 
 ## Contact
 
-For privacy questions, contact `heathdj@me.com`.
+For privacy questions, contact `support@bald-traveler.com`.
