@@ -121,8 +121,11 @@ struct RouteExportTests {
         #expect(gpxText.contains("<asmrwalk:captureDeviceName>David&apos;s Apple Watch &amp; Camera</asmrwalk:captureDeviceName>"))
         #expect(gpxText.contains("<asmrwalk:routeStartedAt>1970-01-01T00:16:40Z</asmrwalk:routeStartedAt>"))
         #expect(gpxText.contains("<asmrwalk:routeEndedAt>1970-01-01T00:20:40Z</asmrwalk:routeEndedAt>"))
+        #expect(gpxText.contains("<asmrwalk:hasVideo>false</asmrwalk:hasVideo>"))
         #expect(gpxText.contains("<asmrwalk:externalVideoReference>A-cam &lt;clip 12&gt;</asmrwalk:externalVideoReference>"))
         #expect(gpxText.contains("<asmrwalk:externalVideoStartedAt>1970-01-01T00:16:35Z</asmrwalk:externalVideoStartedAt>"))
+        #expect(gpxText.contains("<asmrwalk:externalVideoOffsetSeconds>-5</asmrwalk:externalVideoOffsetSeconds>"))
+        #expect(gpxText.contains("clip 12.mov") == false)
     }
 
     @Test("GPX export includes recording descriptions")

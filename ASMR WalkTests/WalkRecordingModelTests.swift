@@ -212,6 +212,7 @@ struct WalkRecordingModelTests {
         #expect(recording.routeTimingStart == startedAt)
         #expect(recording.routeTimingEnd == endedAt)
         #expect(recording.externalCameraTimingMessage == "No external camera timing has been attached.")
+        #expect(recording.externalCameraWorkflowMessage == "Attach a clip label and start time for footage recorded outside ASMR Walk.")
         #expect(recording.videoAvailabilityTitle == "No Video")
         #expect(recording.videoAvailabilityMessage == "This recording has route data only.")
     }
@@ -273,6 +274,7 @@ struct WalkRecordingModelTests {
         )
 
         #expect(recording.externalVideoReference == "A-cam clip 012")
+        #expect(recording.externalCameraWorkflowMessage == "External clip: A-cam clip 012")
         #expect(recording.externalCameraTimingMessage == "External camera timing starts 0:05 before the route.")
     }
 

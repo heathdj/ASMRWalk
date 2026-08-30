@@ -135,6 +135,7 @@ struct WalkRouteExport {
         }
         if let externalVideoStartedAt {
             values += "<asmrwalk:externalVideoStartedAt>\(externalVideoStartedAt.ISO8601Format())</asmrwalk:externalVideoStartedAt>"
+            values += "<asmrwalk:externalVideoOffsetSeconds>\(externalVideoStartedAt.timeIntervalSince(routeStartedAt).gpxNumberText)</asmrwalk:externalVideoOffsetSeconds>"
         }
         return values
     }
