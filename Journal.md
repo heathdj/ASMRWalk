@@ -381,6 +381,12 @@ Issue 66 gives future Watch walks and external-camera shoots a passport before t
 
 The important constraint is CloudKit manners: every new field is optional or safely defaulted. Existing iPhone recordings keep behaving like iPhone recordings, and old synced rows do not need a dramatic migration ceremony. GPX export also carries the new source and timing fields, because the Mac importer and FCP plugin should not have to guess whether a route came from an iPhone, an Apple Watch, or a walk paired with an external camera clip.
 
+### Tests Need Smaller Shelves
+
+Issue 82 is housekeeping with real payoff. The unit tests had grown into one huge file, which made targeted runs awkward and turned every timeout into a treasure hunt. Splitting the suite by feature area gives each shelf a label: persistence, recording sessions, route export, metadata, privacy configuration, and coordinator flows now live in their own files.
+
+The shared test helpers moved into `TestSupport.swift`, which keeps fixtures available without making every test file carry the same backpack. No app behavior changed; this is about making the next pieces of Version 1.1.0 easier to verify in smaller, faster chunks.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
