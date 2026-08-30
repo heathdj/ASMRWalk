@@ -166,6 +166,12 @@ private struct RecordingRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+                if recording.hasVideo {
+                    Label(recording.photosExportAvailability.summaryTitle, systemImage: recording.photosExportAvailability.systemImage)
+                        .font(.caption)
+                        .foregroundStyle(recording.photosExportAvailability.isActionable ? .blue : .secondary)
+                }
             }
         }
         .padding(.vertical, 4)

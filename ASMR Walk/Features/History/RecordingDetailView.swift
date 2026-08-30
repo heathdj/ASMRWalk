@@ -79,9 +79,7 @@ struct RecordingDetailView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.red.opacity(0.1), in: .rect(cornerRadius: 16))
 
-                    if recording.localVideoFileExists {
-                        saveVideoToPhotosButton
-                    }
+                    photosExportCard
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Route Review")
@@ -103,7 +101,14 @@ struct RecordingDetailView: View {
         .sheet(isPresented: $isShowingExternalCameraEditor) {
             ExternalCameraTimingEditView(recording: recording)
         }
-        .alert("Video Export", isPresented: isShowingPhotoSaveStatus) {
+        .alert(photoSaveStatus?.title ?? "Video Export", isPresented: isShowingPhotoSaveStatus) {
+            if photoSaveStatus?.canOpenSettings == true {
+                Button("Open Settings") {
+                    photoSaveStatus = nil
+                    openAppSettings()
+                }
+            }
+
             Button("OK", role: .cancel) {
                 photoSaveStatus = nil
             }
@@ -240,16 +245,34 @@ struct RecordingDetailView: View {
         }
     }
 
+    private var photosExportCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label(recording.photosExportAvailability.title, systemImage: recording.photosExportAvailability.systemImage)
+                .font(.headline)
+
+            Text(recording.photosExportAvailability.message)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if recording.photosExportAvailability.isActionable {
+                saveVideoToPhotosButton
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary, in: .rect(cornerRadius: 16))
+    }
+
     private var saveVideoToPhotosButton: some View {
         Button {
             saveVideoToPhotos()
         } label: {
-            Label(saveVideoToPhotosTitle, systemImage: recording.videoAssetIdentifier == nil ? "photo.badge.plus" : "checkmark.circle")
+            Label(saveVideoToPhotosTitle, systemImage: recording.photosExportAvailability.systemImage)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.borderedProminent)
         .tint(.red)
-        .disabled(isSavingVideoToPhotos || recording.videoAssetIdentifier != nil)
+        .disabled(isSavingVideoToPhotos || recording.photosExportAvailability.isActionable == false)
         .accessibilityIdentifier(AccessibilityID.saveVideoToPhotosButton)
     }
 
@@ -258,16 +281,12 @@ struct RecordingDetailView: View {
             return "Saving Video to Photos"
         }
 
-        if recording.videoAssetIdentifier != nil {
-            return "Video Saved to Photos"
-        }
-
-        return "Save Video to Photos"
+        return recording.photosExportAvailability.title
     }
 
     private func saveVideoToPhotos() {
-        guard let videoURL = recording.videoURL, FileManager.default.fileExists(atPath: videoURL.path) else {
-            photoSaveStatus = .failure("The local video file could not be found.")
+        guard let videoURL = recording.photosExportAvailability.fileURL else {
+            photoSaveStatus = .failure(recording.photosExportAvailability.message)
             return
         }
 
@@ -279,24 +298,59 @@ struct RecordingDetailView: View {
                 try modelContext.save()
                 photoSaveStatus = .success
             } catch {
-                photoSaveStatus = .failure(error.localizedDescription)
+                if let storeError = error as? PhotoLibraryVideoStore.StoreError,
+                   storeError == .accessDenied {
+                    photoSaveStatus = .permissionDenied(storeError.localizedDescription)
+                } else {
+                    photoSaveStatus = .failure(error.localizedDescription)
+                }
             }
             isSavingVideoToPhotos = false
         }
+    }
+
+    private func openAppSettings() {
+        guard let settingsURL = URL(string: UIApplication.openSettingsURLString) else {
+            return
+        }
+
+        UIApplication.shared.open(settingsURL)
     }
 }
 
 private enum PhotoSaveStatus: Equatable {
     case success
+    case permissionDenied(String)
     case failure(String)
+
+    var title: String {
+        switch self {
+        case .success:
+            "Video Saved"
+        case .permissionDenied:
+            "Photos Access Needed"
+        case .failure:
+            "Video Export Failed"
+        }
+    }
 
     var message: String {
         switch self {
         case .success:
             "A copy of this video walk was saved to Photos. ASMR Walk will continue playing the local copy."
+        case let .permissionDenied(message):
+            "\(message) Enable Photos access in Settings to save a copy later."
         case let .failure(message):
             message
         }
+    }
+
+    var canOpenSettings: Bool {
+        if case .permissionDenied = self {
+            return true
+        }
+
+        return false
     }
 }
 

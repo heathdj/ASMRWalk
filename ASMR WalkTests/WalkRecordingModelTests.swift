@@ -36,6 +36,47 @@ struct WalkRecordingModelTests {
         #expect(recording.videoStorage == .localOnly)
         #expect(recording.videoAvailabilityTitle == "Video Not on This Device")
         #expect(recording.videoAvailabilityMessage.contains("video file stays on the device where it was recorded"))
+        #expect(recording.photosExportAvailability.title == "Photos Export Unavailable")
+        #expect(recording.photosExportAvailability.message.contains("not on this device"))
+    }
+
+    @Test("Photos export availability distinguishes saved and route-only recordings")
+    func photosExportAvailabilityStates() {
+        let routeOnlyRecording = WalkRecording(title: "Walk", mode: .walk)
+        let savedPhotosRecording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoAssetIdentifier: "photos-asset-id"
+        )
+
+        #expect(routeOnlyRecording.photosExportAvailability.title == "Photos Export Unavailable")
+        #expect(routeOnlyRecording.photosExportAvailability.summaryTitle == "Photos Export Unavailable")
+        #expect(routeOnlyRecording.photosExportAvailability.message.contains("no video"))
+        #expect(routeOnlyRecording.photosExportAvailability.isActionable == false)
+        #expect(savedPhotosRecording.photosExportAvailability.title == "Video Saved to Photos")
+        #expect(savedPhotosRecording.photosExportAvailability.summaryTitle == "Video Saved to Photos")
+        #expect(savedPhotosRecording.photosExportAvailability.isActionable == false)
+    }
+
+    @Test("Photos export is actionable for an in-app video file")
+    func photosExportAvailabilityForLocalVideoFile() throws {
+        let videoURL = FileManager.default.temporaryDirectory
+            .appending(path: "ASMRWalk-\(UUID().uuidString).mov")
+        FileManager.default.createFile(atPath: videoURL.path, contents: Data("video".utf8))
+        defer {
+            try? FileManager.default.removeItem(at: videoURL)
+        }
+
+        let recording = WalkRecording(
+            title: "Video Walk",
+            mode: .videoWalk,
+            videoURL: videoURL
+        )
+
+        #expect(recording.photosExportAvailability.title == "Save In-App Video to Photos")
+        #expect(recording.photosExportAvailability.summaryTitle == "Photos Export Available")
+        #expect(recording.photosExportAvailability.fileURL == videoURL)
+        #expect(recording.photosExportAvailability.isActionable)
     }
 
     @Test("Missing local thumbnails are detectable after sync")

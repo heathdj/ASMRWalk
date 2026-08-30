@@ -11,7 +11,7 @@ enum PhotoLibraryVideoStore {
     static let saveAccessExplanation = "ASMR Walk saves a copy of this video walk to Photos when you choose Save Video to Photos."
     static let legacyReadAccessExplanation = "ASMR Walk reads older Photos-backed video walks so you can replay them with your route."
 
-    enum StoreError: LocalizedError {
+    enum StoreError: LocalizedError, Equatable {
         case missingAddUsageDescription
         case missingReadUsageDescription
         case accessDenied

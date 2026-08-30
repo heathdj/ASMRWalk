@@ -161,6 +161,102 @@ extension WalkRecording {
 
         return "The route and recording details can sync through iCloud, but the video file stays on the device where it was recorded."
     }
+
+    var photosExportAvailability: PhotosVideoExportAvailability {
+        guard hasVideo else {
+            return .unavailable(reason: "This route-only recording has no video to save to Photos.")
+        }
+
+        if videoAssetIdentifier != nil {
+            return .saved
+        }
+
+        if let videoURL, localVideoFileExists {
+            return .available(source: .localVideo(fileURL: videoURL))
+        }
+
+        return .unavailable(reason: "The video file is not on this device, so it cannot be saved to Photos here.")
+    }
+}
+
+enum PhotosVideoExportSource: Equatable {
+    case localVideo(fileURL: URL)
+
+    var title: String {
+        switch self {
+        case .localVideo:
+            "In-App Video"
+        }
+    }
+}
+
+enum PhotosVideoExportAvailability: Equatable {
+    case available(source: PhotosVideoExportSource)
+    case saved
+    case unavailable(reason: String)
+
+    var title: String {
+        switch self {
+        case let .available(source):
+            "Save \(source.title) to Photos"
+        case .saved:
+            "Video Saved to Photos"
+        case .unavailable:
+            "Photos Export Unavailable"
+        }
+    }
+
+    var summaryTitle: String {
+        switch self {
+        case .available:
+            "Photos Export Available"
+        case .saved:
+            "Video Saved to Photos"
+        case .unavailable:
+            "Photos Export Unavailable"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .available:
+            "A copy can be saved to Photos. ASMR Walk keeps using the local in-app video for playback."
+        case .saved:
+            "A copy has already been saved to Photos. The in-app video remains available for playback."
+        case let .unavailable(reason):
+            reason
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .available:
+            "photo.badge.plus"
+        case .saved:
+            "checkmark.circle"
+        case .unavailable:
+            "photo.badge.exclamationmark"
+        }
+    }
+
+    var isActionable: Bool {
+        if case .available = self {
+            return true
+        }
+
+        return false
+    }
+
+    var fileURL: URL? {
+        guard case let .available(source) = self else {
+            return nil
+        }
+
+        switch source {
+        case let .localVideo(fileURL):
+            return fileURL
+        }
+    }
 }
 
 extension TimeInterval {
