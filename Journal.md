@@ -393,6 +393,12 @@ Issue 67 turns the Watch app from a front door into a tiny recorder. The Watch n
 
 The sneaky part was CloudKit. Unit tests launch the Watch app as a test host, and a CloudKit-backed SwiftData container expects the app target to have the right iCloud entitlement. Tests now use an in-memory container so they can verify recorder logic without pretending to be a production-signed Watch app. The production Watch target still needs the owner-driven Xcode entitlement and location usage string before real-device recording and sync testing.
 
+### The Watch Icon Borrows the Same Compass
+
+Issue 85 gives the Watch app the same visual handshake as the iPhone app. The iPhone icon already had the right ingredients in its Icon Composer package: the hiker, the route marker, the folded map, and the bright blue field. The Watch target needed a flattened 1024px asset catalog icon, so the layers were composed into a single PNG and wired into the watchOS app icon set.
+
+This is small, but it matters. App icons are the front door people use before they read a single line of UI, and mismatched Watch and iPhone icons make the companion app feel like a side quest instead of part of the same product.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
