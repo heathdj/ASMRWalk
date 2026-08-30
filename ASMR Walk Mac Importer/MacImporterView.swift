@@ -4,6 +4,8 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
+
 
 struct MacImporterView: View {
     @State private var viewModel = MacImporterViewModel()
