@@ -76,6 +76,7 @@ final class WatchRecorder {
     private(set) var currentDuration: TimeInterval = 0
     private(set) var currentDistanceMeters: Double = 0
     private(set) var pointCount = 0
+    private(set) var lastCompletedAt: Date?
 
     private let locationClient: any WatchLocationClient
     private let requiresLocationUsageDescription: Bool
@@ -107,7 +108,13 @@ final class WatchRecorder {
     var statusTitle: String {
         switch phase {
         case .ready:
-            isLocationAccessDenied ? "Location Needed" : "Ready"
+            if isLocationAccessDenied {
+                "Location Needed"
+            } else if lastCompletedAt != nil {
+                "Saved"
+            } else {
+                "Ready"
+            }
         case .recording:
             "Recording"
         case .saving:
@@ -126,6 +133,9 @@ final class WatchRecorder {
         case .denied, .restricted:
             return "Enable location access in Settings to record Watch walks."
         default:
+            if let lastCompletedAt, phase == .ready {
+                return "Saved \(lastCompletedAt.formatted(date: .omitted, time: .shortened)). Waiting for iCloud sync."
+            }
             if let latestAccuracyMeters {
                 return "GPS accuracy: \(Int(latestAccuracyMeters.rounded())) m"
             }
@@ -143,6 +153,7 @@ final class WatchRecorder {
         }
 
         errorMessage = nil
+        lastCompletedAt = nil
         authorizationStatus = locationClient.authorizationStatus
 
         guard requiresLocationUsageDescription == false || WatchLocationUsageConfiguration.hasWhenInUseUsageDescription else {
@@ -198,6 +209,7 @@ final class WatchRecorder {
                 try await persistence.save(snapshot)
             }
             reset()
+            lastCompletedAt = .now
         } catch {
             phase = .recording
             errorMessage = "Unable to save walk: \(error.localizedDescription)"
@@ -214,6 +226,7 @@ final class WatchRecorder {
             try? await persistence?.deleteRecording(id: recordingID)
         }
 
+        lastCompletedAt = nil
         reset()
     }
 
@@ -314,6 +327,7 @@ final class WatchRecorder {
         updateTask = nil
         clockTask?.cancel()
         clockTask = nil
+        errorMessage = nil
         session = nil
         persistence = nil
         phase = .ready

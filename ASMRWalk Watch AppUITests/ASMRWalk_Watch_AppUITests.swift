@@ -23,14 +23,15 @@ final class ASMRWalk_Watch_AppUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testRecordingScreenLaunches() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-        // XCUIAutomation Documentation
-        // https://developer.apple.com/documentation/xcuiautomation
+        XCTAssertTrue(app.buttons["Start"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Time"].exists)
+        XCTAssertTrue(app.staticTexts["Distance"].exists)
+        XCTAssertTrue(app.staticTexts["Points"].exists)
+        XCTAssertTrue(app.staticTexts["GPS"].exists)
     }
 
     @MainActor
