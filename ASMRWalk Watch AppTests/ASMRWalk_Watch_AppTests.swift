@@ -102,6 +102,21 @@ struct ASMRWalk_Watch_AppTests {
         #expect(recorder.isRecording == false)
     }
 
+    @Test("Watch recorder shows sync-pending state after saving")
+    func watchRecorderShowsSyncPendingAfterSaving() async throws {
+        let container = try makeTestContainer()
+        let locationClient = FakeWatchLocationClient(authorizationStatus: .authorizedWhenInUse)
+        let recorder = WatchRecorder(locationClient: locationClient, requiresLocationUsageDescription: false)
+
+        await recorder.start(in: container.mainContext)
+        await recorder.stopAndSave()
+
+        #expect(recorder.isRecording == false)
+        #expect(recorder.lastCompletedAt != nil)
+        #expect(recorder.statusTitle == "Saved")
+        #expect(recorder.statusDetail.contains("Waiting for iCloud sync"))
+    }
+
     private func makeLocation(
         latitude: CLLocationDegrees,
         longitude: CLLocationDegrees,

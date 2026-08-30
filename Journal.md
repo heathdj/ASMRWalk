@@ -399,6 +399,12 @@ Issue 85 gives the Watch app the same visual handshake as the iPhone app. The iP
 
 This is small, but it matters. App icons are the front door people use before they read a single line of UI, and mismatched Watch and iPhone icons make the companion app feel like a side quest instead of part of the same product.
 
+### A Tiny Dashboard Has to Say a Lot
+
+Issue 68 turns the Watch recorder from a working engine into something a person can actually steer from their wrist. The screen now leads with state, then live numbers, then one obvious action. That order matters on watchOS because there is no room for a cockpit full of switches: the user needs to know whether the Watch is ready, recording, saving, waiting for GPS, blocked by location permission, or simply waiting for iCloud to carry the saved walk back home.
+
+The recorder also learned one small bit of memory. After a stop/save finishes, it keeps a short "Saved" state instead of snapping back to plain ready. That gives the user a visible handoff moment: the walk is stored, and sync is the next step.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
