@@ -6,14 +6,85 @@
 //
 
 import Testing
+import SwiftData
 @testable import ASMR_Walk_Mac_Importer
 
+@MainActor
 struct ASMR_Walk_Mac_ImporterTests {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
-        // Swift Testing Documentation
-        // https://developer.apple.com/documentation/testing
+    @Test func cloudSyncUsesASMRWalkContainer() {
+        #expect(CloudSyncConfiguration.containerIdentifier == "iCloud.com.bald-traveler.ASMRWalk")
+    }
+
+    @Test func inMemoryModelContainerCanStoreSyncedRecordingSchema() throws {
+        let container = try MacModelContainerFactory.makeModelContainer(inMemory: true)
+        let context = ModelContext(container)
+        let recording = WalkRecording(
+            title: "Morning Walk",
+            createdAt: Date(timeIntervalSince1970: 100),
+            duration: 60,
+            distanceMeters: 120,
+            mode: .walk,
+            points: [
+                LocationPoint(
+                    timestamp: Date(timeIntervalSince1970: 101),
+                    latitude: 40,
+                    longitude: -74,
+                    horizontalAccuracy: 5
+                )
+            ]
+        )
+
+        context.insert(recording)
+        try context.save()
+
+        let descriptor = FetchDescriptor<WalkRecording>()
+        let recordings = try context.fetch(descriptor)
+
+        #expect(recordings.count == 1)
+        #expect(recordings.first?.displayTitle == "Morning Walk")
+        #expect(recordings.first?.points.count == 1)
+    }
+
+    @Test func routePackageFromSyncedRecordingDoesNotRequireSourceGPX() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        let recording = WalkRecording(
+            id: UUID(uuidString: "B3E87B3F-CF9C-499E-8714-F62D2CE172F8")!,
+            title: "Synced Watch Walk",
+            createdAt: start,
+            duration: 120,
+            distanceMeters: 300,
+            mode: .walk,
+            walkDescription: "Imported from iCloud.",
+            recordingSource: .appleWatch,
+            routeStartedAt: start,
+            routeEndedAt: start.addingTimeInterval(120),
+            points: [
+                LocationPoint(
+                    timestamp: start.addingTimeInterval(60),
+                    latitude: 36.12,
+                    longitude: -86.67,
+                    altitude: 190,
+                    horizontalAccuracy: 4,
+                    speed: 1.2
+                ),
+                LocationPoint(
+                    timestamp: start,
+                    latitude: 36.11,
+                    longitude: -86.66,
+                    horizontalAccuracy: 5
+                )
+            ]
+        )
+
+        let package = ASMRRoutePackage(recording: recording)
+
+        #expect(package.manifest.title == "Synced Watch Walk")
+        #expect(package.manifest.recordingSource == .appleWatch)
+        #expect(package.manifest.routePointCount == 2)
+        #expect(package.manifest.sourceGPXFile == nil)
+        #expect(package.sourceGPX == nil)
+        #expect(package.routePoints.map(\.timestamp) == [start, start.addingTimeInterval(60)])
     }
 
 }

@@ -437,6 +437,12 @@ That separation is the whole point. The renderer should be able to draw determin
 
 Issue 73 gives that lunchbox its first packing station. The GPX importer reads the app's own export metadata when it exists, falls back gently for plain third-party GPX, and writes the same deterministic package shape. The Mac app shell is intentionally small because the real Xcode target setup is owner territory, but the business logic is already testable and target-agnostic.
 
+### The Mac Importer Learns to Read the Cloud Shelf
+
+Issue 60 moves the Mac importer from "bring me a GPX file" to "show me the walks iCloud already knows about." The Mac app now has its own SwiftData mirror of the `WalkRecording` and `LocationPoint` schema, pointed at the same private CloudKit container as iPhone and Watch. That mirror is deliberately boring, which is exactly what sync wants: defaults, optional-friendly fields, and no clever platform-only dependencies hiding in the model.
+
+The importer still keeps GPX as the spare key. If iCloud is signed out, restricted, temporarily unavailable, or just slow to deliver records, the app says so and leaves manual import open. When a synced walk does arrive, the Mac builds the same `.asmrroute` package without inventing a fake source GPX file. The route data came from CloudKit this time, so the package tells that truth plainly.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

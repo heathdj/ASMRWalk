@@ -12,6 +12,10 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] iPhone app targeted device family excludes iPad for version 1.1.0.
 - [ ] Apple Watch companion app target is included in the archive.
 - [ ] Apple Watch app icon is configured and visually matches the iPhone app icon.
+- [ ] Mac importer app target is included in the release plan for 1.1.0.
+- [ ] Mac importer app iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
+- [ ] Mac importer app Push Notifications capability is enabled so private CloudKit sync can receive updates.
+- [ ] Mac importer app sandbox user-selected file access is `read/write` for GPX import and package export.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
 - [ ] Watch app iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
@@ -138,9 +142,20 @@ Run these on physical devices before submission:
 - [ ] Export GPX for the synced Watch recording and confirm it includes recording source, route timing, and external-camera timing metadata.
 - [ ] Record any sync delay, entitlement, iCloud account, or permission findings in the release notes for issue #71.
 
+### Mac Importer Physical Account Gate
+
+- [ ] Sign in to the same iCloud account on Mac, iPhone, and Apple Watch.
+- [ ] Confirm the Mac importer app opens without CloudKit entitlement errors.
+- [ ] Confirm iPhone-created GPS walks appear in the Mac importer after iCloud sync.
+- [ ] Confirm Watch-created GPS walks appear in the Mac importer after iCloud sync.
+- [ ] Confirm iCloud sign-out or restricted account state explains that GPX import remains available.
+- [ ] Create an `.asmrroute` package from a synced recording in the Mac importer.
+- [ ] Load the generated `.asmrroute` package and confirm manifest metadata, source device, route timing, and route-point count match the source recording.
+- [ ] Confirm GPX import fallback still creates an `.asmrroute` package when synced recordings are unavailable.
+
 ### Automated Coverage Gate
 
-- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, and local-only video presentation.
+- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, local-only video presentation, Mac importer CloudKit configuration, and package generation from synced recordings.
 - [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect
