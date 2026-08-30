@@ -1,10 +1,10 @@
 # ASMR Walk
 
-ASMR Walk is an iPhone walking journal built with SwiftUI. It records GPS walking routes, can pair a route with a walk video, syncs recording metadata and route data through iCloud, keeps videos local, and exports routes for use outside the app.
+ASMR Walk is an iPhone walking journal with an Apple Watch companion recorder. It records GPS walking routes, can pair a route with a walk video, syncs recording metadata and route data through iCloud, keeps videos local, and exports routes for use outside the app.
 
 ## Version 1.1.0 Scope
 
-ASMR Walk 1.1.0 is intentionally iPhone-only and uses the user's private iCloud account to sync recording metadata and route data. It supports GPS Walk recordings, Video Walk recordings, optional background GPS for GPS Walk only, local video storage with user-initiated Photos export, synced history metadata/routes, route thumbnails, generated place-based recording details, and route export. It does not include iPad support, Apple Watch, HealthKit, analytics, developer-operated accounts, advertising, developer-operated storage, or a developer-operated backend.
+ASMR Walk 1.1.0 uses the user's private iCloud account to sync recording metadata and route data. It supports iPhone GPS Walk recordings, iPhone Video Walk recordings, Apple Watch GPS-only recordings, optional background GPS for iPhone GPS Walk only, local video storage with user-initiated Photos export, synced history metadata/routes, route thumbnails, generated place-based recording details, external-camera timing metadata for Watch routes, and route export. It does not include iPad support, HealthKit, analytics, developer-operated accounts, advertising, developer-operated storage, or a developer-operated backend.
 
 iCloud library sync is not gated by a StoreKit subscription in this implementation; it is available when the user is signed in to iCloud and CloudKit is available.
 
@@ -14,9 +14,12 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - GPS-only walk recording with a live MapKit route overlay.
 - Optional background GPS recording for GPS-only walks, gated by a Settings toggle and Always location permission.
 - Video walk recording with camera preview, microphone audio, landscape-first UI, and live route overlay.
+- Apple Watch GPS-only recording with live elapsed time, distance, route-point count, GPS status, save, and discard controls.
 - Saved video walk playback with a synchronized route-progress map overlay.
 - SwiftData persistence with private iCloud sync for recording metadata and route points.
 - Recording detail screens with editable titles and descriptions, route maps, duration, distance, route-point counts, and video indicators.
+- Watch recording source labels in iPhone History and Recording Detail.
+- External-camera timing fields for Watch recordings so separately captured footage can be aligned later.
 - Settings iCloud status so users can see whether their private iCloud account is available for library sync.
 - Generated route thumbnails for saved walks in History, detail views, and GPX share previews.
 - Best-effort place metadata generation after saving a walk, with fallback date/time titles when lookup is unavailable.
@@ -34,6 +37,7 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - MapKit for live and saved route maps.
 - Core Location for GPS tracking.
 - AVFoundation for video and microphone capture.
+- watchOS SwiftUI for the Apple Watch companion recorder.
 - Swift Testing for unit tests.
 - XCTest / XCUIAutomation for UI tests.
 
@@ -41,20 +45,26 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 
 ```text
 ASMR Walk/
-  Features/
-    History/   Saved recordings, details, route maps, and exports
-    Video/     Camera preview, video capture, landscape video-walk UI
-    Walk/      GPS recording flow and route session logic
-  Models/      SwiftData models and presentation helpers
+  ASMR Walk/
+    Features/
+      History/   Saved recordings, details, route maps, and exports
+      Video/     Camera preview, video capture, landscape video-walk UI
+      Walk/      GPS recording flow and route session logic
+    Models/      SwiftData models and presentation helpers
+  ASMRWalk Watch App/
+    Features/Recording/   Watch GPS recorder, session, and persistence
+    Models/               Watch-side SwiftData models
 ```
 
 ## Requirements
 
 - Xcode with iOS 26 SDK support.
 - iOS 26 iPhone simulator or physical iPhone.
+- watchOS simulator or physical Apple Watch for the companion app.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
+- A paired physical Apple Watch and iPhone are required to validate Watch GPS recording and Watch-to-iPhone iCloud sync before App Store submission.
 - An iCloud account and CloudKit-capable provisioning are required to validate sync across devices.
-- Version 1.1.0 is intentionally iPhone-only; iPad support is out of scope until the app receives a full adaptive-layout pass.
+- iPad support is out of scope until the app receives a full adaptive-layout pass.
 
 ## Setup
 
@@ -68,6 +78,8 @@ Before running recording features, confirm the app target includes these generat
 - `Privacy - Microphone Usage Description`
 - `Background Modes`: Location updates and Remote notifications
 - `iCloud`: CloudKit with container `iCloud.com.bald-traveler.ASMRWalk`
+
+The Watch app target should use the same CloudKit container and include a Watch location usage description. Watch recording asks for location access when the user starts a Watch walk.
 
 Expected privacy strings:
 
@@ -85,6 +97,8 @@ iOS will terminate the app if camera or microphone capture is requested without 
 See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
 Finished video walks are kept in ASMR Walk's app-managed storage for playback. iCloud sync carries the recording details and route, not the `.mov` file. From a video walk's History detail screen, the user can save a copy to Photos. Deleting an ASMR Walk recording removes the route, app metadata, and app-managed video file on that device, but it does not delete any Photos copy the user saved.
+
+Apple Watch recordings are GPS-only route recordings. They sync through private iCloud as recording metadata and route points, then appear in iPhone History with an Apple Watch source label. Watch recordings do not include video. If the walk used a separate external camera, the iPhone detail screen can store the external clip label and start time so GPX export carries alignment metadata without importing or syncing the video file.
 
 ## Privacy
 
@@ -105,6 +119,8 @@ Background GPS recording requires the `location` background mode, the Background
 
 iCloud sync requires the CloudKit entitlement, the `iCloud.com.bald-traveler.ASMRWalk` container, and the `remote-notification` background mode. Sync uses the user's private iCloud database and may be temporarily unavailable when the device is signed out of iCloud or iCloud is restricted.
 
+Watch-to-iPhone sync can be unreliable in Simulator and is treated as non-authoritative for release validation. Complete the physical-device validation tracked in GitHub issue #93 before submitting version 1.1.0 to the App Store.
+
 ## Testing
 
 Use Xcode's test action for the `ASMR Walk` scheme.
@@ -116,12 +132,13 @@ The unit test suite covers:
 - Generated and editable recording metadata.
 - Route thumbnail path and persistence helpers.
 - iCloud sync configuration and account-status presentation.
+- Apple Watch recording session filtering, persistence, UI-facing state, and route metadata.
 - GPS route filtering and distance accumulation.
 - Video-walk recording metadata.
 - Google Maps route export.
 - GPX route export.
 
-UI tests cover the main tab surfaces and launch behavior. Camera and microphone flows should be validated on a real device after privacy keys are configured.
+UI tests cover the main tab surfaces and launch behavior. Camera, microphone, outdoor GPS, and Watch-to-iPhone sync flows should be validated on physical devices after privacy keys and entitlements are configured.
 
 The app uses a native static launch screen configured through the target Info settings. It does not show an artificial SwiftUI splash screen after launch.
 
@@ -131,12 +148,14 @@ The app uses a native static launch screen configured through the target Info se
 - The map overlay is rendered in the app and is not burned into exported video.
 - Video Walk does not continue recording in the background.
 - iCloud sync does not sync full video files; videos remain on the recording device unless the user saves or shares a copy.
-- iPad, Apple Watch, and HealthKit are not part of version 1.1.0.
+- Apple Watch recordings are GPS-only and do not record video or HealthKit workouts.
+- Watch-to-iPhone sync needs physical-device/TestFlight validation before App Store submission because Simulator sync has not been reliable.
+- iPad and HealthKit are not part of version 1.1.0.
 
 ## Roadmap
 
 These are future ideas, not shipped 1.1.0 features:
 
 - HealthKit workout integration.
-- Apple Watch companion recording.
 - Burned-in video map overlay export.
+- Shared route/model package for future iPhone, Watch, Mac importer, and Final Cut Pro plugin reuse.
