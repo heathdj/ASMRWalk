@@ -53,6 +53,15 @@ final class MacImporterViewModel {
             fromGPXData: data,
             sourceFilename: gpxURL.lastPathComponent
         )
+        try writePackage(package, successMessage: "\(package.manifest.routePointCount) route points were written to %@.")
+    }
+
+    func exportSyncedRecording(_ recording: WalkRecording) throws {
+        let package = ASMRRoutePackage(recording: recording)
+        try writePackage(package, successMessage: "\(package.manifest.routePointCount) synced route points were written to %@.")
+    }
+
+    private func writePackage(_ package: ASMRRoutePackage, successMessage: String) throws {
         let outputDirectory = try chooseOutputDirectory()
         let outputURL = ASMRRoutePackage.packageURL(
             forTitle: package.manifest.title,
@@ -69,7 +78,7 @@ final class MacImporterViewModel {
         try package.write(to: outputURL, fileManager: fileManager)
         packageURL = outputURL
         statusTitle = "Package Created"
-        statusMessage = "\(package.manifest.routePointCount) route points were written to \(outputURL.lastPathComponent)."
+        statusMessage = String(format: successMessage, outputURL.lastPathComponent)
         statusSystemImage = "checkmark.circle.fill"
     }
 
@@ -97,7 +106,7 @@ final class MacImporterViewModel {
         return url
     }
 
-    private func showFailure(_ error: any Error) {
+    func showFailure(_ error: any Error) {
         packageURL = nil
         statusTitle = "Import Failed"
         statusMessage = error.localizedDescription
