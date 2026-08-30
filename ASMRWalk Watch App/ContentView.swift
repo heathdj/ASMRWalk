@@ -16,9 +16,10 @@ struct ContentView: View {
         ScrollView {
             VStack(spacing: 12) {
                 statusHeader
+                primaryRecordingControl
                 metricsGrid
                 gpsStatus
-                recordingControls
+                secondaryRecordingControl
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
@@ -72,13 +73,14 @@ struct ContentView: View {
             .accessibilityElement(children: .combine)
     }
 
-    private var recordingControls: some View {
-        VStack(spacing: 8) {
-            if recorder.phase == .saving {
+    private var primaryRecordingControl: some View {
+        Group {
+            switch recorder.phase {
+            case .saving:
                 ProgressView()
                     .controlSize(.small)
                     .accessibilityLabel("Saving walk")
-            } else if recorder.isRecording {
+            case .recording:
                 Button("Stop", systemImage: "stop.fill") {
                     Task {
                         await recorder.stopAndSave()
@@ -88,15 +90,7 @@ struct ContentView: View {
                 .tint(.red)
                 .controlSize(.large)
                 .accessibilityHint("Stops and saves the current Watch walk.")
-
-                Button("Discard", role: .destructive) {
-                    Task {
-                        await recorder.discard()
-                    }
-                }
-                .font(.caption)
-                .accessibilityHint("Deletes the current unsaved Watch walk.")
-            } else {
+            case .ready:
                 Button("Start", systemImage: "figure.walk") {
                     Task {
                         await recorder.start(in: modelContext)
@@ -108,6 +102,19 @@ struct ContentView: View {
                 .disabled(recorder.canStartRecording == false)
                 .accessibilityHint("Starts a GPS-only Watch walk.")
             }
+        }
+    }
+
+    @ViewBuilder
+    private var secondaryRecordingControl: some View {
+        if recorder.isRecording {
+            Button("Discard", role: .destructive) {
+                Task {
+                    await recorder.discard()
+                }
+            }
+            .font(.caption)
+            .accessibilityHint("Deletes the current unsaved Watch walk.")
         }
     }
 
