@@ -206,10 +206,56 @@ struct WalkRecordingModelTests {
 
         #expect(recording.source == .appleWatch)
         #expect(recording.sourceTitle == "Apple Watch")
+        #expect(recording.sourceSystemImage == "applewatch")
+        #expect(recording.sourceSyncMessage == "Recorded on Apple Watch. Route data syncs through iCloud.")
         #expect(recording.isWatchRecording)
         #expect(recording.routeTimingStart == startedAt)
         #expect(recording.routeTimingEnd == endedAt)
         #expect(recording.externalCameraTimingMessage == "No external camera timing has been attached.")
+        #expect(recording.videoAvailabilityTitle == "No Video")
+        #expect(recording.videoAvailabilityMessage == "This recording has route data only.")
+    }
+
+    @Test("Synced Watch recordings without local thumbnails request iPhone thumbnail refresh")
+    func syncedWatchRecordingRequestsLocalThumbnailRefresh() {
+        let recording = WalkRecording(
+            title: "Synced Watch Walk",
+            mode: .walk,
+            recordingSource: .appleWatch,
+            thumbnailURL: nil,
+            thumbnailStyleVersion: 0,
+            points: [
+                makePoint(timestamp: 100),
+                makePoint(timestamp: 120, latitude: 33.4490, longitude: -112.0730)
+            ]
+        )
+
+        #expect(recording.needsRouteThumbnailRefresh)
+    }
+
+    @Test("Synced Watch recordings keep current local thumbnails")
+    func syncedWatchRecordingKeepsCurrentLocalThumbnail() throws {
+        let thumbnailURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension("jpg")
+        try Data([0xFF, 0xD8, 0xFF, 0xD9]).write(to: thumbnailURL)
+        defer {
+            try? FileManager.default.removeItem(at: thumbnailURL)
+        }
+
+        let recording = WalkRecording(
+            title: "Synced Watch Walk",
+            mode: .walk,
+            recordingSource: .appleWatch,
+            thumbnailURL: thumbnailURL,
+            thumbnailStyleVersion: WalkRouteThumbnailGenerator.styleVersion,
+            points: [
+                makePoint(timestamp: 100),
+                makePoint(timestamp: 120, latitude: 33.4490, longitude: -112.0730)
+            ]
+        )
+
+        #expect(recording.needsRouteThumbnailRefresh == false)
     }
 
     @Test("External camera timing describes its route offset")

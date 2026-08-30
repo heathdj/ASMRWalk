@@ -162,6 +162,7 @@ private struct RecordingRow: View {
                 HStack(spacing: 12) {
                     Label(recording.durationText, systemImage: "clock")
                     Label(recording.distanceText, systemImage: "figure.walk")
+                    Label(recording.sourceTitle, systemImage: recording.sourceSystemImage)
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -173,11 +174,6 @@ private struct RecordingRow: View {
 }
 
 private extension WalkRecording {
-    var needsRouteThumbnailRefresh: Bool {
-        points.count > 1
-            && (localThumbnailFileExists == false || thumbnailStyleVersion < WalkRouteThumbnailGenerator.styleVersion)
-    }
-
     var snapshotForThumbnailGeneration: WalkRecordingSnapshot {
         WalkRecordingSnapshot(
             id: id,
