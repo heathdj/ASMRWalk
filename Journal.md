@@ -423,6 +423,12 @@ Issue 71 is the point where the Watch work stops being a stack of merged feature
 
 The simulator taught one more release lesson: some workflows can compile, unit test, and still need real hardware before they are release facts. Watch-to-iPhone CloudKit sync was not reliable in Simulator, so the checklist treats physical Watch/iPhone validation as an App Store submission gate instead of pretending the simulator run settled it. Think of issue #93 as the final trail marker at the parking lot: #71 can prepare the map, but the release should not leave without checking that marker off.
 
+### Photos Export Gets a Door Sign
+
+Issue 39 takes the "Save Video to Photos" path from a useful button to a clearer little contract. A video row now says whether Photos export is available, already done, or unavailable because the file is not on this device. The detail screen shows the same state before the user taps anything, which matters because synced metadata can travel farther than the local `.mov`.
+
+The export itself still copies a local file into Photos and keeps ASMR Walk's in-app playback source unchanged. That is the important ownership rule: Photos gets a copy, not the only copy. Permission denial also has a proper recovery path now, so a blocked Photos request points the user to Settings instead of sounding like the video disappeared.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
