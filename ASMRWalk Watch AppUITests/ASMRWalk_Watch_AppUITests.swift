@@ -32,6 +32,7 @@ final class ASMRWalk_Watch_AppUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Distance"].exists)
         XCTAssertTrue(app.staticTexts["Points"].exists)
         XCTAssertTrue(app.staticTexts["GPS"].exists)
+        XCTAssertLessThan(app.buttons["Start"].frame.minY, app.staticTexts["Time"].frame.minY)
     }
 
     @MainActor
