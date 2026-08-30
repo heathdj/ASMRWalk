@@ -387,6 +387,12 @@ Issue 82 is housekeeping with real payoff. The unit tests had grown into one hug
 
 The shared test helpers moved into `TestSupport.swift`, which keeps fixtures available without making every test file carry the same backpack. No app behavior changed; this is about making the next pieces of Version 1.1.0 easier to verify in smaller, faster chunks.
 
+### The Watch Starts Walking
+
+Issue 67 turns the Watch app from a front door into a tiny recorder. The Watch now has its own GPS session, Core Location client, SwiftData persistence actor, and recording screen. The session follows the same practical GPS manners as iPhone walks: ignore stale points, reject low-accuracy fixes, filter tiny movement noise, and only count accepted points toward distance.
+
+The sneaky part was CloudKit. Unit tests launch the Watch app as a test host, and a CloudKit-backed SwiftData container expects the app target to have the right iCloud entitlement. Tests now use an in-memory container so they can verify recorder logic without pretending to be a production-signed Watch app. The production Watch target still needs the owner-driven Xcode entitlement and location usage string before real-device recording and sync testing.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
