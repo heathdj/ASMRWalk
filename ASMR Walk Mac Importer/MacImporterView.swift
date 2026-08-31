@@ -140,21 +140,73 @@ struct MacImporterView: View {
                 }
             }
 
-            RoutePreviewMapView(route: viewModel.routePreview)
+            RoutePreviewMapView(
+                route: viewModel.routePreview,
+                selectedPointID: viewModel.selectedRoutePointID,
+                selectPoint: viewModel.selectRoutePoint
+            )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipShape(.rect(cornerRadius: 8))
 
             if let routePreview = viewModel.routePreview {
-                HStack(spacing: 12) {
-                    Label(routePreview.distanceText, systemImage: "point.topleft.down.curvedto.point.bottomright.up")
-                    Label(routePreview.package.manifest.recordingSource.title, systemImage: "record.circle")
-                    Label(routePreview.package.manifest.mode.title, systemImage: routePreview.package.manifest.mode.systemImage)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                routeSummary(routePreview)
+                routePointCleanupPanel(routePreview)
             }
         }
         .padding(24)
+    }
+
+    private func routeSummary(_ routePreview: RoutePreview) -> some View {
+        HStack(spacing: 12) {
+            Label(routePreview.distanceText, systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+            Label(routePreview.recordingSource.title, systemImage: "record.circle")
+            Label(routePreview.recordingMode.title, systemImage: routePreview.recordingMode.systemImage)
+
+            if routePreview.hasPointEdits {
+                Label("\(routePreview.removedPointCount) removed", systemImage: "scissors")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private func routePointCleanupPanel(_ routePreview: RoutePreview) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            if let selectedPoint = routePreview.point(id: viewModel.selectedRoutePointID) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Point \(selectedPoint.sourceIndex + 1)")
+                        .font(.headline)
+                    Text(selectedPoint.coordinateSummary)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Text(selectedPoint.timestamp, style: .time)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("No Point Selected")
+                        .font(.headline)
+                    Text("Select a point marker on the map to remove it from the pending export.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Button("Delete Point", systemImage: "trash", role: .destructive) {
+                viewModel.deleteSelectedRoutePoint()
+            }
+            .disabled(viewModel.selectedRoutePointID == nil || routePreview.canDeletePoint == false)
+
+            Button("Reset Route", systemImage: "arrow.counterclockwise") {
+                viewModel.resetRoutePointEdits()
+            }
+            .disabled(routePreview.hasPointEdits == false)
+        }
+        .padding(12)
+        .background(.regularMaterial, in: .rect(cornerRadius: 8))
     }
 
     private var statusPanel: some View {
@@ -196,7 +248,7 @@ struct MacImporterView: View {
                     viewModel.showFailure(error)
                 }
             }
-            .disabled(viewModel.routePreview?.routePointCount ?? 0 == 0)
+            .disabled(viewModel.routePreview?.routePointCount ?? 0 < 1)
 
             Button("Reveal Package", systemImage: "arrow.up.forward.app") {
                 viewModel.revealPackageInFinder()
@@ -264,6 +316,12 @@ private struct SyncedRecordingRow: View {
         }
         .padding(12)
         .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
+    }
+}
+
+private extension RoutePreview.RoutePoint {
+    var coordinateSummary: String {
+        "\(latitude.formatted(.number.precision(.fractionLength(5)))), \(longitude.formatted(.number.precision(.fractionLength(5))))"
     }
 }
 

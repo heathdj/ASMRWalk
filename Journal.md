@@ -449,6 +449,12 @@ Issue 101 gives the Mac importer the missing visual checkpoint: a real map previ
 
 That little workflow change matters. GPX import used to jump straight from file picker to package writer, which was efficient but blind. Now import means "load and inspect," and export is a separate deliberate action. That gives the next issue, point cleanup, a clean place to live without mutating the original GPX file or the CloudKit-backed recording.
 
+### The Mac Route Gets an Eraser
+
+Issue 102 adds the cleanup bench that naturally follows the preview map. Every route point is now a selectable marker, and the user can delete a bad point from the pending export before creating the `.asmrroute` package. The original GPX file and CloudKit-synced recording stay untouched; the importer works from a local preview copy, like marking up a photocopy instead of taking a pen to the only map.
+
+The guardrail is simple but important: the route can never be edited down to nothing. Deleting clears any previously exported package path, the route count updates immediately, and Reset restores the original point list. That keeps the workflow reversible until the user deliberately exports the cleaned package.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

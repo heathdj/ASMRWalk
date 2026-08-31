@@ -8,8 +8,20 @@ import SwiftUI
 
 struct RoutePreviewMapView: View {
     let route: RoutePreview?
+    let selectedPointID: RoutePreview.RoutePoint.ID?
+    let selectPoint: (RoutePreview.RoutePoint.ID) -> Void
 
     @State private var position = MapCameraPosition.automatic
+
+    init(
+        route: RoutePreview?,
+        selectedPointID: RoutePreview.RoutePoint.ID? = nil,
+        selectPoint: @escaping (RoutePreview.RoutePoint.ID) -> Void = { _ in }
+    ) {
+        self.route = route
+        self.selectedPointID = selectedPointID
+        self.selectPoint = selectPoint
+    }
 
     var body: some View {
         Group {
@@ -29,6 +41,25 @@ struct RoutePreviewMapView: View {
                         Marker("Finish", systemImage: "flag.checkered", coordinate: end)
                             .tint(.red)
                     }
+
+                    ForEach(route.routePoints) { point in
+                        Annotation("Route point", coordinate: point.coordinate) {
+                            Button {
+                                selectPoint(point.id)
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(point.id == selectedPointID ? Color.red : Color.white)
+                                    Circle()
+                                        .strokeBorder(point.id == selectedPointID ? Color.white : Color.green, lineWidth: 2)
+                                }
+                                .frame(width: point.id == selectedPointID ? 14 : 10, height: point.id == selectedPointID ? 14 : 10)
+                                .shadow(radius: 1)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Route point \(point.sourceIndex + 1)")
+                        }
+                    }
                 }
                 .mapStyle(.standard(elevation: .realistic))
                 .mapControls {
@@ -40,6 +71,9 @@ struct RoutePreviewMapView: View {
                     position = route.cameraPosition
                 }
                 .onChange(of: route.id) {
+                    position = route.cameraPosition
+                }
+                .onChange(of: route.routePointCount) {
                     position = route.cameraPosition
                 }
                 .accessibilityLabel("Map showing the loaded walking route")
@@ -58,9 +92,7 @@ struct RoutePreviewMapView: View {
 
 private extension RoutePreview {
     var coordinates: [CLLocationCoordinate2D] {
-        package.routePoints.map {
-            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
-        }
+        routePoints.map(\.coordinate)
     }
 
     var cameraPosition: MapCameraPosition {
@@ -90,5 +122,11 @@ private extension RoutePreview {
             width: width,
             height: height
         )
+    }
+}
+
+private extension RoutePreview.RoutePoint {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
