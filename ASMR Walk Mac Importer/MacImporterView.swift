@@ -16,18 +16,24 @@ struct MacImporterView: View {
     @State private var isImportingGPX = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                cloudSyncPanel
-                syncedRecordingList
-                statusPanel
-                actionBar
+        HSplitView {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    header
+                    cloudSyncPanel
+                    syncedRecordingList
+                    statusPanel
+                    actionBar
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minWidth: 360, idealWidth: 430)
+
+            routePreviewPanel
+                .frame(minWidth: 460)
         }
-        .frame(width: 680, height: 620)
+        .frame(width: 980, height: 680)
         .fileImporter(
             isPresented: $isImportingGPX,
             allowedContentTypes: [.gpx, .xml],
@@ -86,12 +92,11 @@ struct MacImporterView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(syncedRecordings) { recording in
-                        SyncedRecordingRow(recording: recording) {
-                            do {
-                                try viewModel.exportSyncedRecording(recording)
-                            } catch {
-                                viewModel.showFailure(error)
-                            }
+                        SyncedRecordingRow(
+                            recording: recording,
+                            isSelected: viewModel.routePreview?.id == recording.id
+                        ) {
+                            viewModel.loadSyncedRecording(recording)
                         }
 
                         if recording.id != syncedRecordings.last?.id {
@@ -102,6 +107,54 @@ struct MacImporterView: View {
                 .background(.regularMaterial, in: .rect(cornerRadius: 8))
             }
         }
+    }
+
+    private var routePreviewPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(viewModel.routePreview?.title ?? "Route Preview")
+                        .font(.title2.bold())
+                        .lineLimit(1)
+
+                    if let routePreview = viewModel.routePreview {
+                        Text(routePreview.sourceDescription)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    } else {
+                        Text("Load a GPX file or synced recording.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if let routePreview = viewModel.routePreview {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("\(routePreview.routePointCount) pts")
+                            .font(.callout.monospacedDigit())
+                        Text(routePreview.durationText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            RoutePreviewMapView(route: viewModel.routePreview)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipShape(.rect(cornerRadius: 8))
+
+            if let routePreview = viewModel.routePreview {
+                HStack(spacing: 12) {
+                    Label(routePreview.distanceText, systemImage: "point.topleft.down.curvedto.point.bottomright.up")
+                    Label(routePreview.package.manifest.recordingSource.title, systemImage: "record.circle")
+                    Label(routePreview.package.manifest.mode.title, systemImage: routePreview.package.manifest.mode.systemImage)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(24)
     }
 
     private var statusPanel: some View {
@@ -136,6 +189,15 @@ struct MacImporterView: View {
             }
             .buttonStyle(.borderedProminent)
 
+            Button("Create Package", systemImage: "shippingbox") {
+                do {
+                    try viewModel.exportLoadedRoute()
+                } catch {
+                    viewModel.showFailure(error)
+                }
+            }
+            .disabled(viewModel.routePreview?.routePointCount ?? 0 == 0)
+
             Button("Reveal Package", systemImage: "arrow.up.forward.app") {
                 viewModel.revealPackageInFinder()
             }
@@ -165,7 +227,8 @@ struct MacImporterView: View {
 
 private struct SyncedRecordingRow: View {
     let recording: WalkRecording
-    let export: () -> Void
+    let isSelected: Bool
+    let preview: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -194,12 +257,13 @@ private struct SyncedRecordingRow: View {
                 .font(.caption.monospacedDigit())
                 .foregroundStyle(.secondary)
 
-            Button("Create Package", systemImage: "shippingbox") {
-                export()
+            Button("Preview", systemImage: isSelected ? "checkmark.circle.fill" : "map") {
+                preview()
             }
             .disabled(recording.points.isEmpty)
         }
         .padding(12)
+        .background(isSelected ? Color.accentColor.opacity(0.12) : Color.clear)
     }
 }
 
