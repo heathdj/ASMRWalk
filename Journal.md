@@ -461,6 +461,12 @@ Issue 74 starts the Mac importer video pairing path without stuffing giant movie
 
 This is also where macOS privacy rules show their teeth. The SwiftUI Photos picker can hand over a user-selected item, but richer timestamp, duration, and location matching depends on Photos Library access and real media. The importer now has the entitlement side prepared, while the deeper matching behavior remains something to validate against an owner-controlled Photos library instead of a simulator-shaped guess.
 
+### The Mac Importer Gets the Family Badge
+
+Issue 98 gives the Mac importer its own app icon while keeping it visually tied to the iPhone and Watch apps. The Mac target now carries the same layered Icon Composer `AppIcon.icon` package as the iPhone app, so Xcode can render the platform-specific icon instead of flattening the artwork too early.
+
+That detail matters because the Icon Composer file is not just a picture; it is a tiny stage set with the hiker, route marker, and map on separate layers. Flattening it into PNG slots lost the composition Xcode is designed to preserve. The Mac target already pointed at `AppIcon`, so the clean move was to add the matching Icon Composer package without touching project settings.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
