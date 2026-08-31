@@ -89,8 +89,69 @@ struct ASMR_Walk_Mac_ImporterTests {
     }
 
     @Test func routePreviewSummarizesLoadedPackage() {
+        let package = makeRoutePackage()
+
+        let preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
+
+        #expect(preview.id == package.manifest.packageIdentifier)
+        #expect(preview.title == "Preview Route")
+        #expect(preview.sourceDescription == "GPX file: Preview.gpx")
+        #expect(preview.routePointCount == 2)
+    }
+
+    @Test func deletingPreviewPointOnlyChangesPendingExport() throws {
+        let package = makeRoutePackage()
+        var preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
+        let pointToDelete = try #require(preview.routePoints.first)
+
+        let deletedPoint = preview.deletePoint(id: pointToDelete.id)
+        let exportPackage = preview.exportPackage
+
+        #expect(deletedPoint?.sourceIndex == pointToDelete.sourceIndex)
+        #expect(preview.routePointCount == 1)
+        #expect(preview.removedPointCount == 1)
+        #expect(preview.hasPointEdits)
+        #expect(package.routePoints.count == 2)
+        #expect(exportPackage.manifest.routePointCount == 1)
+        #expect(exportPackage.routePoints.count == 1)
+        #expect(exportPackage.routePoints.first?.timestamp == package.routePoints.last?.timestamp)
+    }
+
+    @Test func previewCannotDeleteLastRoutePoint() throws {
+        var preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let firstPoint = try #require(preview.routePoints.first)
+        _ = preview.deletePoint(id: firstPoint.id)
+        let remainingPoint = try #require(preview.routePoints.first)
+
+        let deletedPoint = preview.deletePoint(id: remainingPoint.id)
+
+        #expect(deletedPoint == nil)
+        #expect(preview.routePointCount == 1)
+    }
+
+    @Test func resetPreviewEditsRestoresOriginalPoints() throws {
+        var preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let firstPoint = try #require(preview.routePoints.first)
+        _ = preview.deletePoint(id: firstPoint.id)
+
+        preview.resetEdits()
+
+        #expect(preview.routePointCount == 2)
+        #expect(preview.removedPointCount == 0)
+        #expect(preview.hasPointEdits == false)
+    }
+
+    @Test func exportWithoutLoadedRouteReportsFailure() {
+        let viewModel = MacImporterViewModel()
+
+        #expect(throws: MacImporterViewModel.ImportError.noRouteLoaded) {
+            try viewModel.exportLoadedRoute()
+        }
+    }
+
+    private func makeRoutePackage() -> ASMRRoutePackage {
         let start = Date(timeIntervalSince1970: 2_000)
-        let package = ASMRRoutePackage(
+        return ASMRRoutePackage(
             manifest: ASMRRoutePackage.Manifest(
                 packageIdentifier: UUID(uuidString: "48DB6037-9676-46F8-A272-E029A1E96F66")!,
                 title: "Preview Route",
@@ -126,21 +187,6 @@ struct ASMR_Walk_Mac_ImporterTests {
                 )
             ]
         )
-
-        let preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
-
-        #expect(preview.id == package.manifest.packageIdentifier)
-        #expect(preview.title == "Preview Route")
-        #expect(preview.sourceDescription == "GPX file: Preview.gpx")
-        #expect(preview.routePointCount == 2)
-    }
-
-    @Test func exportWithoutLoadedRouteReportsFailure() {
-        let viewModel = MacImporterViewModel()
-
-        #expect(throws: MacImporterViewModel.ImportError.noRouteLoaded) {
-            try viewModel.exportLoadedRoute()
-        }
     }
 
 }

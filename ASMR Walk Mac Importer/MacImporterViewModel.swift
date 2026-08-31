@@ -16,6 +16,7 @@ final class MacImporterViewModel {
     private(set) var statusSystemImage = "point.topleft.down.curvedto.point.bottomright.up"
     private(set) var packageURL: URL?
     private(set) var routePreview: RoutePreview?
+    private(set) var selectedRoutePointID: RoutePreview.RoutePoint.ID?
 
     private let importer: ASMRGPXRouteImporter
     private let fileManager: FileManager
@@ -69,15 +70,53 @@ final class MacImporterViewModel {
     }
 
     func exportLoadedRoute() throws {
-        guard let package = routePreview?.package else {
+        guard let package = routePreview?.exportPackage else {
             throw ImportError.noRouteLoaded
         }
 
         try writePackage(package, successMessage: "\(package.manifest.routePointCount) route points were written to %@.")
     }
 
+    func selectRoutePoint(id: RoutePreview.RoutePoint.ID) {
+        guard routePreview?.point(id: id) != nil else {
+            return
+        }
+
+        selectedRoutePointID = id
+    }
+
+    func deleteSelectedRoutePoint() {
+        guard var preview = routePreview,
+              let selectedRoutePointID,
+              let removedPoint = preview.deletePoint(id: selectedRoutePointID) else {
+            return
+        }
+
+        routePreview = preview
+        self.selectedRoutePointID = nil
+        packageURL = nil
+        statusTitle = "Route Point Removed"
+        statusMessage = "Point \(removedPoint.sourceIndex + 1) was removed from the pending export. The source route was not changed."
+        statusSystemImage = "point.topleft.down.curvedto.point.bottomright.up"
+    }
+
+    func resetRoutePointEdits() {
+        guard var preview = routePreview, preview.hasPointEdits else {
+            return
+        }
+
+        preview.resetEdits()
+        routePreview = preview
+        selectedRoutePointID = nil
+        packageURL = nil
+        statusTitle = "Route Restored"
+        statusMessage = "\(preview.routePointCount) route points are ready to preview."
+        statusSystemImage = "arrow.counterclockwise"
+    }
+
     private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {
         routePreview = RoutePreview(package: package, sourceDescription: sourceDescription)
+        selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Loaded"
         statusMessage = "\(package.manifest.routePointCount) route points are ready to preview."
