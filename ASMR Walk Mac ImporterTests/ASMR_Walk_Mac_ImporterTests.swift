@@ -5,6 +5,7 @@
 //  Created by David Heath on 8/30/26.
 //
 
+import Foundation
 import Testing
 import SwiftData
 @testable import ASMR_Walk_Mac_Importer
@@ -85,6 +86,61 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(package.manifest.sourceGPXFile == nil)
         #expect(package.sourceGPX == nil)
         #expect(package.routePoints.map(\.timestamp) == [start, start.addingTimeInterval(60)])
+    }
+
+    @Test func routePreviewSummarizesLoadedPackage() {
+        let start = Date(timeIntervalSince1970: 2_000)
+        let package = ASMRRoutePackage(
+            manifest: ASMRRoutePackage.Manifest(
+                packageIdentifier: UUID(uuidString: "48DB6037-9676-46F8-A272-E029A1E96F66")!,
+                title: "Preview Route",
+                walkDescription: nil,
+                createdAt: start,
+                durationSeconds: 90,
+                distanceMeters: 450,
+                mode: .walk,
+                recordingSource: .iPhone,
+                captureDeviceName: nil,
+                routeStartedAt: start,
+                routeEndedAt: start.addingTimeInterval(90),
+                routePointCount: 2,
+                sourceGPXFile: nil,
+                videoReferences: []
+            ),
+            routePoints: [
+                ASMRRoutePackage.RoutePoint(
+                    timestamp: start,
+                    latitude: 36.11,
+                    longitude: -86.66,
+                    altitude: nil,
+                    horizontalAccuracy: 5,
+                    speed: nil
+                ),
+                ASMRRoutePackage.RoutePoint(
+                    timestamp: start.addingTimeInterval(90),
+                    latitude: 36.12,
+                    longitude: -86.67,
+                    altitude: nil,
+                    horizontalAccuracy: 4,
+                    speed: nil
+                )
+            ]
+        )
+
+        let preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
+
+        #expect(preview.id == package.manifest.packageIdentifier)
+        #expect(preview.title == "Preview Route")
+        #expect(preview.sourceDescription == "GPX file: Preview.gpx")
+        #expect(preview.routePointCount == 2)
+    }
+
+    @Test func exportWithoutLoadedRouteReportsFailure() {
+        let viewModel = MacImporterViewModel()
+
+        #expect(throws: MacImporterViewModel.ImportError.noRouteLoaded) {
+            try viewModel.exportLoadedRoute()
+        }
     }
 
 }

@@ -12,9 +12,10 @@ import UniformTypeIdentifiers
 @Observable
 final class MacImporterViewModel {
     private(set) var statusTitle = "Ready"
-    private(set) var statusMessage: String? = "Choose an ASMR Walk GPX export to create an .asmrroute package."
+    private(set) var statusMessage: String? = "Select a synced recording or import a GPX file to preview a route."
     private(set) var statusSystemImage = "point.topleft.down.curvedto.point.bottomright.up"
     private(set) var packageURL: URL?
+    private(set) var routePreview: RoutePreview?
 
     private let importer: ASMRGPXRouteImporter
     private let fileManager: FileManager
@@ -34,13 +35,13 @@ final class MacImporterViewModel {
                 return
             }
 
-            try importGPX(from: selectedURL)
+            try loadGPX(from: selectedURL)
         } catch {
             showFailure(error)
         }
     }
 
-    func importGPX(from gpxURL: URL) throws {
+    func loadGPX(from gpxURL: URL) throws {
         guard gpxURL.startAccessingSecurityScopedResource() else {
             throw ImportError.fileAccessDenied
         }
@@ -53,12 +54,34 @@ final class MacImporterViewModel {
             fromGPXData: data,
             sourceFilename: gpxURL.lastPathComponent
         )
+        loadRoutePreview(
+            package,
+            sourceDescription: "GPX file: \(gpxURL.lastPathComponent)"
+        )
+    }
+
+    func loadSyncedRecording(_ recording: WalkRecording) {
+        let package = ASMRRoutePackage(recording: recording)
+        loadRoutePreview(
+            package,
+            sourceDescription: "Synced \(recording.source.title) recording"
+        )
+    }
+
+    func exportLoadedRoute() throws {
+        guard let package = routePreview?.package else {
+            throw ImportError.noRouteLoaded
+        }
+
         try writePackage(package, successMessage: "\(package.manifest.routePointCount) route points were written to %@.")
     }
 
-    func exportSyncedRecording(_ recording: WalkRecording) throws {
-        let package = ASMRRoutePackage(recording: recording)
-        try writePackage(package, successMessage: "\(package.manifest.routePointCount) synced route points were written to %@.")
+    private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {
+        routePreview = RoutePreview(package: package, sourceDescription: sourceDescription)
+        packageURL = nil
+        statusTitle = "Route Loaded"
+        statusMessage = "\(package.manifest.routePointCount) route points are ready to preview."
+        statusSystemImage = "map.fill"
     }
 
     private func writePackage(_ package: ASMRRoutePackage, successMessage: String) throws {
@@ -119,6 +142,7 @@ extension MacImporterViewModel {
         case fileAccessDenied
         case outputDirectoryAccessDenied
         case outputDirectoryNotSelected
+        case noRouteLoaded
 
         var errorDescription: String? {
             switch self {
@@ -128,6 +152,8 @@ extension MacImporterViewModel {
                 "The selected output folder could not be accessed."
             case .outputDirectoryNotSelected:
                 "No output folder was selected."
+            case .noRouteLoaded:
+                "Load a route before creating an .asmrroute package."
             }
         }
     }

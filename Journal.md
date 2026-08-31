@@ -443,6 +443,12 @@ Issue 60 moves the Mac importer from "bring me a GPX file" to "show me the walks
 
 The importer still keeps GPX as the spare key. If iCloud is signed out, restricted, temporarily unavailable, or just slow to deliver records, the app says so and leaves manual import open. When a synced walk does arrive, the Mac builds the same `.asmrroute` package without inventing a fake source GPX file. The route data came from CloudKit this time, so the package tells that truth plainly.
 
+### The Mac Importer Gets a Windshield
+
+Issue 101 gives the Mac importer the missing visual checkpoint: a real map preview before package export. A route file is no longer a sealed envelope of coordinates where the user has to trust the numbers. GPX imports and iCloud-synced recordings both become the same loaded route preview, drawn with start and finish markers and enough context to spot obvious nonsense before making an `.asmrroute`.
+
+That little workflow change matters. GPX import used to jump straight from file picker to package writer, which was efficient but blind. Now import means "load and inspect," and export is a separate deliberate action. That gives the next issue, point cleanup, a clean place to live without mutating the original GPX file or the CloudKit-backed recording.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
