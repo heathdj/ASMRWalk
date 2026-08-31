@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 import SwiftData
+import UniformTypeIdentifiers
 @testable import ASMR_Walk_Mac_Importer
 
 @MainActor
@@ -139,6 +140,89 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(preview.routePointCount == 2)
         #expect(preview.removedPointCount == 0)
         #expect(preview.hasPointEdits == false)
+    }
+
+    @Test func routePreviewExportIncludesPairedPhotosVideoReference() throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let photosReference = MacImporterViewModel.PhotosVideoReference(
+            itemIdentifier: "B96D04C5-3D04-4C6B-9FF7-2B5B307526D5/L0/001",
+            supportedContentTypes: [.quickTimeMovie],
+            metadata: nil
+        )
+
+        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference)
+        let videoReference = try #require(exportPackage.manifest.videoReferences.first)
+
+        #expect(exportPackage.manifest.videoReferences.count == 1)
+        #expect(videoReference.kind == .photosAsset)
+        #expect(videoReference.displayName.contains("Photos video"))
+        #expect(videoReference.sourceIdentifier == "B96D04C5-3D04-4C6B-9FF7-2B5B307526D5/L0/001")
+        #expect(videoReference.startsAt == nil)
+        #expect(videoReference.offsetSeconds == nil)
+        #expect(videoReference.isEmbedded == false)
+    }
+
+    @Test func pairedPhotosVideoReferenceReplacesExistingPhotosReference() throws {
+        let originalPackage = makeRoutePackage()
+        var manifest = originalPackage.manifest
+        manifest.videoReferences = [
+            ASMRRoutePackage.VideoReference(
+                kind: .photosAsset,
+                displayName: "Old Photos video",
+                sourceIdentifier: "old-identifier",
+                startsAt: nil,
+                offsetSeconds: nil,
+                isEmbedded: false
+            )
+        ]
+        let package = ASMRRoutePackage(
+            manifest: manifest,
+            routePoints: originalPackage.routePoints,
+            sourceGPX: originalPackage.sourceGPX
+        )
+        let preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
+        let photosReference = MacImporterViewModel.PhotosVideoReference(
+            itemIdentifier: "new-identifier",
+            supportedContentTypes: [.movie],
+            metadata: nil
+        )
+
+        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference)
+        let videoReference = try #require(exportPackage.manifest.videoReferences.first)
+
+        #expect(exportPackage.manifest.videoReferences.count == 1)
+        #expect(videoReference.sourceIdentifier == "new-identifier")
+    }
+
+    @Test func routePreviewExportIncludesPhotosVideoTimingOffset() throws {
+        let routeStart = Date(timeIntervalSince1970: 2_000)
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let photosReference = MacImporterViewModel.PhotosVideoReference(
+            itemIdentifier: "timed-video",
+            supportedContentTypes: [.movie],
+            metadata: PhotoLibraryVideoMetadata(
+                creationDate: routeStart.addingTimeInterval(-12),
+                duration: 96,
+                latitude: 36.11,
+                longitude: -86.66
+            )
+        )
+
+        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference(relativeTo: preview))
+        let videoReference = try #require(exportPackage.manifest.videoReferences.first)
+
+        #expect(videoReference.startsAt == routeStart.addingTimeInterval(-12))
+        #expect(videoReference.offsetSeconds == -12)
+    }
+
+    @Test func photosVideoSelectionWithoutIdentifierReportsFailure() async {
+        let viewModel = MacImporterViewModel()
+
+        await viewModel.pairPhotosVideo(itemIdentifier: nil, supportedContentTypes: [.movie])
+
+        #expect(viewModel.selectedPhotosVideoReference == nil)
+        #expect(viewModel.statusTitle == "Import Failed")
+        #expect(viewModel.statusMessage == MacImporterViewModel.ImportError.photosVideoIdentifierUnavailable.localizedDescription)
     }
 
     @Test func exportWithoutLoadedRouteReportsFailure() {

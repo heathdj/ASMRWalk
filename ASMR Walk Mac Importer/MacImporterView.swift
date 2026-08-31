@@ -5,6 +5,8 @@
 
 import SwiftUI
 import SwiftData
+import Photos
+import PhotosUI
 import UniformTypeIdentifiers
 
 struct MacImporterView: View {
@@ -14,6 +16,7 @@ struct MacImporterView: View {
     @State private var viewModel = MacImporterViewModel()
     @State private var cloudSyncStatus = CloudSyncStatus()
     @State private var isImportingGPX = false
+    @State private var selectedPhotosVideo: PhotosPickerItem?
 
     var body: some View {
         HSplitView {
@@ -22,6 +25,7 @@ struct MacImporterView: View {
                     header
                     cloudSyncPanel
                     syncedRecordingList
+                    photosVideoPanel
                     statusPanel
                     actionBar
                 }
@@ -41,6 +45,18 @@ struct MacImporterView: View {
         ) { result in
             Task {
                 await viewModel.handleGPXImportResult(result)
+            }
+        }
+        .onChange(of: selectedPhotosVideo) {
+            guard let selectedPhotosVideo else {
+                return
+            }
+
+            Task {
+                await viewModel.pairPhotosVideo(
+                    itemIdentifier: selectedPhotosVideo.itemIdentifier,
+                    supportedContentTypes: selectedPhotosVideo.supportedContentTypes
+                )
             }
         }
         .task {
@@ -107,6 +123,36 @@ struct MacImporterView: View {
                 .background(.regularMaterial, in: .rect(cornerRadius: 8))
             }
         }
+    }
+
+    private var photosVideoPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Photos Video")
+                .font(.headline)
+
+            Text(viewModel.photosVideoPairingMessage)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+
+            HStack {
+                PhotosPicker(
+                    selection: $selectedPhotosVideo,
+                    matching: .videos,
+                    preferredItemEncoding: .current,
+                    photoLibrary: .shared()
+                ) {
+                    Label("Choose Photos Video", systemImage: "photo.on.rectangle")
+                }
+                .buttonStyle(.bordered)
+
+                Button("Clear", systemImage: "xmark.circle") {
+                    selectedPhotosVideo = nil
+                    viewModel.clearPhotosVideoPairing()
+                }
+                .disabled(viewModel.selectedPhotosVideoReference == nil)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var routePreviewPanel: some View {

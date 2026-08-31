@@ -455,6 +455,12 @@ Issue 102 adds the cleanup bench that naturally follows the preview map. Every r
 
 The guardrail is simple but important: the route can never be edited down to nothing. Deleting clears any previously exported package path, the route count updates immediately, and Reset restores the original point list. That keeps the workflow reversible until the user deliberately exports the cleaned package.
 
+### Photos Videos Get a Claim Ticket
+
+Issue 74 starts the Mac importer video pairing path without stuffing giant movie files into `.asmrroute` packages. A selected Photos video becomes a non-embedded `photosAsset` reference in the manifest, which is more like a claim ticket than a suitcase: the package knows which library asset belongs with the route, but the video stays in Photos.
+
+This is also where macOS privacy rules show their teeth. The SwiftUI Photos picker can hand over a user-selected item, but richer timestamp, duration, and location matching depends on Photos Library access and real media. The importer now has the entitlement side prepared, while the deeper matching behavior remains something to validate against an owner-controlled Photos library instead of a simulator-shaped guess.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

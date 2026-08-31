@@ -42,12 +42,21 @@ struct RoutePreview: Equatable, Identifiable {
     }
 
     var exportPackage: ASMRRoutePackage {
+        exportPackage(photosVideoReference: nil)
+    }
+
+    func exportPackage(photosVideoReference: ASMRRoutePackage.VideoReference?) -> ASMRRoutePackage {
         var manifest = originalPackage.manifest
         manifest.routePointCount = routePoints.count
         manifest.routeStartedAt = routePoints.first?.timestamp ?? manifest.routeStartedAt
         manifest.routeEndedAt = routePoints.last?.timestamp ?? manifest.routeEndedAt
         manifest.durationSeconds = max(0, manifest.routeEndedAt.timeIntervalSince(manifest.routeStartedAt))
         manifest.distanceMeters = editedDistanceMeters
+
+        if let photosVideoReference {
+            manifest.videoReferences.removeAll { $0.kind == .photosAsset }
+            manifest.videoReferences.append(photosVideoReference)
+        }
 
         return ASMRRoutePackage(
             manifest: manifest,
@@ -120,6 +129,10 @@ extension RoutePreview {
 
     var recordingMode: RecordingMode {
         originalPackage.manifest.mode
+    }
+
+    var routeStartedAt: Date {
+        exportPackage.manifest.routeStartedAt
     }
 
     mutating func deletePoint(id pointID: RoutePoint.ID) -> RoutePoint? {
