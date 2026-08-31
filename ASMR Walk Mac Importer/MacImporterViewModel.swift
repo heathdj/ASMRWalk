@@ -6,6 +6,7 @@
 import AppKit
 import Foundation
 import Observation
+import Photos
 import UniformTypeIdentifiers
 
 @MainActor
@@ -17,16 +18,20 @@ final class MacImporterViewModel {
     private(set) var packageURL: URL?
     private(set) var routePreview: RoutePreview?
     private(set) var selectedRoutePointID: RoutePreview.RoutePoint.ID?
+    private(set) var selectedPhotosVideoReference: PhotosVideoReference?
 
     private let importer: ASMRGPXRouteImporter
     private let fileManager: FileManager
+    private let photosMetadataLoader: any PhotosVideoMetadataLoading
 
     init(
         importer: ASMRGPXRouteImporter = ASMRGPXRouteImporter(),
-        fileManager: FileManager = .default
+        fileManager: FileManager = .default,
+        photosMetadataLoader: (any PhotosVideoMetadataLoading)? = nil
     ) {
         self.importer = importer
         self.fileManager = fileManager
+        self.photosMetadataLoader = photosMetadataLoader ?? PhotoLibraryVideoMetadataLoader()
     }
 
     func handleGPXImportResult(_ result: Result<[URL], any Error>) async {
@@ -70,11 +75,58 @@ final class MacImporterViewModel {
     }
 
     func exportLoadedRoute() throws {
-        guard let package = routePreview?.exportPackage else {
+        guard let package = routePreview?.exportPackage(
+            photosVideoReference: selectedPhotosVideoReference?.packageReference(relativeTo: routePreview)
+        ) else {
             throw ImportError.noRouteLoaded
         }
 
         try writePackage(package, successMessage: "\(package.manifest.routePointCount) route points were written to %@.")
+    }
+
+    func pairPhotosVideo(itemIdentifier: String?, supportedContentTypes: [UTType]) async {
+        guard let itemIdentifier, itemIdentifier.isEmpty == false else {
+            showFailure(ImportError.photosVideoIdentifierUnavailable)
+            return
+        }
+
+        var pairingMessage: String?
+        selectedPhotosVideoReference = PhotosVideoReference(
+            itemIdentifier: itemIdentifier,
+            supportedContentTypes: supportedContentTypes,
+            metadata: nil
+        )
+
+        do {
+            let metadata = try await photosMetadataLoader.metadata(forItemIdentifier: itemIdentifier)
+            selectedPhotosVideoReference = PhotosVideoReference(
+                itemIdentifier: itemIdentifier,
+                supportedContentTypes: supportedContentTypes,
+                metadata: metadata
+            )
+            pairingMessage = photosVideoPairingMessage
+        } catch PhotoLibraryVideoMetadataLoader.MetadataError.usageDescriptionMissing {
+            pairingMessage = "The Photos video is selected. Add the Mac target Photos usage description in Xcode before timestamp, duration, and location matching can run."
+        } catch {
+            pairingMessage = "The Photos video is selected, but its timestamp, duration, and location metadata could not be loaded: \(error.localizedDescription)"
+        }
+
+        packageURL = nil
+        statusTitle = "Photos Video Paired"
+        statusMessage = pairingMessage ?? photosVideoPairingMessage
+        statusSystemImage = "photo.on.rectangle"
+    }
+
+    func clearPhotosVideoPairing() {
+        guard selectedPhotosVideoReference != nil else {
+            return
+        }
+
+        selectedPhotosVideoReference = nil
+        packageURL = nil
+        statusTitle = "Photos Video Removed"
+        statusMessage = "The pending route package will not include a Photos video reference."
+        statusSystemImage = "photo.on.rectangle.angled"
     }
 
     func selectRoutePoint(id: RoutePreview.RoutePoint.ID) {
@@ -112,6 +164,22 @@ final class MacImporterViewModel {
         statusTitle = "Route Restored"
         statusMessage = "\(preview.routePointCount) route points are ready to preview."
         statusSystemImage = "arrow.counterclockwise"
+    }
+
+    var photosVideoPairingMessage: String {
+        guard let selectedPhotosVideoReference else {
+            return "Select a Photos video to pair it with the loaded route."
+        }
+
+        guard routePreview != nil else {
+            return "\(selectedPhotosVideoReference.displayName) is selected. Load a route before creating an .asmrroute package."
+        }
+
+        if let offsetText = selectedPhotosVideoReference.offsetText(relativeTo: routePreview) {
+            return "\(selectedPhotosVideoReference.displayName) will be referenced in the next .asmrroute package. Estimated route offset: \(offsetText)."
+        }
+
+        return "\(selectedPhotosVideoReference.displayName) will be referenced in the next .asmrroute package. The video file will not be copied into the package."
     }
 
     private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {
@@ -182,6 +250,7 @@ extension MacImporterViewModel {
         case outputDirectoryAccessDenied
         case outputDirectoryNotSelected
         case noRouteLoaded
+        case photosVideoIdentifierUnavailable
 
         var errorDescription: String? {
             switch self {
@@ -193,6 +262,129 @@ extension MacImporterViewModel {
                 "No output folder was selected."
             case .noRouteLoaded:
                 "Load a route before creating an .asmrroute package."
+            case .photosVideoIdentifierUnavailable:
+                "The selected Photos video could not be referenced."
+            }
+        }
+    }
+}
+
+extension MacImporterViewModel {
+    struct PhotosVideoReference: Equatable {
+        let itemIdentifier: String
+        let supportedContentTypes: [UTType]
+        let metadata: PhotoLibraryVideoMetadata?
+
+        var displayName: String {
+            if let typeDescription = supportedContentTypes.first?.localizedDescription,
+               typeDescription.isEmpty == false {
+                return "Photos video (\(typeDescription))"
+            }
+
+            return "Photos video"
+        }
+
+        var packageReference: ASMRRoutePackage.VideoReference {
+            ASMRRoutePackage.VideoReference(
+                kind: .photosAsset,
+                displayName: displayName,
+                sourceIdentifier: itemIdentifier,
+                startsAt: metadata?.creationDate,
+                offsetSeconds: nil,
+                isEmbedded: false
+            )
+        }
+
+        func packageReference(relativeTo routePreview: RoutePreview?) -> ASMRRoutePackage.VideoReference {
+            ASMRRoutePackage.VideoReference(
+                kind: .photosAsset,
+                displayName: displayName,
+                sourceIdentifier: itemIdentifier,
+                startsAt: metadata?.creationDate,
+                offsetSeconds: offsetSeconds(relativeTo: routePreview),
+                isEmbedded: false
+            )
+        }
+
+        func offsetText(relativeTo routePreview: RoutePreview?) -> String? {
+            guard let offsetSeconds = offsetSeconds(relativeTo: routePreview) else {
+                return nil
+            }
+
+            return Duration.seconds(offsetSeconds).formatted(.time(pattern: .minuteSecond(padMinuteToLength: 2)))
+        }
+
+        private func offsetSeconds(relativeTo routePreview: RoutePreview?) -> TimeInterval? {
+            guard let routePreview, let creationDate = metadata?.creationDate else {
+                return nil
+            }
+
+            return creationDate.timeIntervalSince(routePreview.routeStartedAt)
+        }
+    }
+}
+
+protocol PhotosVideoMetadataLoading: Sendable {
+    func metadata(forItemIdentifier itemIdentifier: String) async throws -> PhotoLibraryVideoMetadata
+}
+
+struct PhotoLibraryVideoMetadata: Equatable, Sendable {
+    let creationDate: Date?
+    let duration: TimeInterval
+    let latitude: Double?
+    let longitude: Double?
+}
+
+struct PhotoLibraryVideoMetadataLoader: PhotosVideoMetadataLoading {
+    func metadata(forItemIdentifier itemIdentifier: String) async throws -> PhotoLibraryVideoMetadata {
+        guard Bundle.main.object(forInfoDictionaryKey: "NSPhotoLibraryUsageDescription") != nil else {
+            throw MetadataError.usageDescriptionMissing
+        }
+
+        let authorizationStatus = await authorizationStatus()
+        guard authorizationStatus == .authorized || authorizationStatus == .limited else {
+            throw MetadataError.authorizationDenied
+        }
+
+        let result = PHAsset.fetchAssets(withLocalIdentifiers: [itemIdentifier], options: nil)
+        guard let asset = result.firstObject else {
+            throw MetadataError.assetNotFound
+        }
+
+        return PhotoLibraryVideoMetadata(
+            creationDate: asset.creationDate,
+            duration: asset.duration,
+            latitude: asset.location?.coordinate.latitude,
+            longitude: asset.location?.coordinate.longitude
+        )
+    }
+
+    private func authorizationStatus() async -> PHAuthorizationStatus {
+        let currentStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard currentStatus == .notDetermined else {
+            return currentStatus
+        }
+
+        return await withCheckedContinuation { continuation in
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+                continuation.resume(returning: status)
+            }
+        }
+    }
+
+    enum MetadataError: LocalizedError, Equatable {
+        case usageDescriptionMissing
+        case authorizationDenied
+        case assetNotFound
+
+        var errorDescription: String? {
+            switch self {
+            case .usageDescriptionMissing:
+                "The Mac importer target is missing NSPhotoLibraryUsageDescription."
+            case .authorizationDenied:
+                "Photos library access was not granted."
+            case .assetNotFound:
+                "The selected Photos video could not be found in the library."
             }
         }
     }
