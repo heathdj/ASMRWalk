@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSExtension</key>
+	<dict/>
+	<key>PluginKit</key>
+	<dict>
+		<key>Attributes</key>
+		<dict>
+			<key>com.apple.protocol</key>
+			<string>FxPlug</string>
+			<key>com.apple.version</key>
+			<string>1.0</string>
+		</dict>
+		<key>PrincipalClass</key>
+		<string>FxPrincipal</string>
+		<key>Protocol</key>
+		<string>PROXPCProtocol</string>
+	</dict>
+	<key>ProPlugDictionaryVersion</key>
+	<integer>2</integer>
+	<key>ProPlugPlugInGroupList</key>
+	<array>
+		<dict>
+			<key>displayName</key>
+			<string>ASMR Walk</string>
+			<key>uuid</key>
+			<string>2BE2841F-2010-4B9E-923A-16865E315D88</string>
+		</dict>
+	</array>
+	<key>ProPlugPlugInList</key>
+	<array>
+		<dict>
+			<key>className</key>
+			<string>ASMRWalkRouteOverlayPlugin</string>
+			<key>displayName</key>
+			<string>ASMR Walk Route Overlay</string>
+			<key>groupUUID</key>
+			<string>2BE2841F-2010-4B9E-923A-16865E315D88</string>
+			<key>infoString</key>
+			<string>Animates ASMR Walk route packages over walking footage.</string>
+			<key>protocolNames</key>
+			<array>
+				<string>FxGenerator</string>
+			</array>
+			<key>uuid</key>
+			<string>D3A901A9-B749-4B9D-AF3D-F28509A457DF</string>
+			<key>version</key>
+			<string>1.0</string>
+		</dict>
+	</array>
+	<key>XPCService</key>
+	<dict>
+		<key>JoinExistingSession</key>
+		<true/>
+		<key>RunLoopType</key>
+		<string>NSRunLoop</string>
+		<key>_AdditionalSubServices</key>
+		<dict/>
+	</dict>
+</dict>
+</plist>
