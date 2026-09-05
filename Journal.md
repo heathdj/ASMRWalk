@@ -467,6 +467,14 @@ Issue 98 gives the Mac importer its own app icon while keeping it visually tied 
 
 That detail matters because the Icon Composer file is not just a picture; it is a tiny stage set with the hiker, route marker, and map on separate layers. Flattening it into PNG slots lost the composition Xcode is designed to preserve. The Mac target already pointed at `AppIcon`, so the clean move was to add the matching Icon Composer package without touching project settings.
 
+### The FxPlug Doorframe Goes Up
+
+Issue 76 starts the Final Cut Pro and Motion chapter by putting up the doorframe before trying to decorate the room. FxPlug 4 wants a specific shape: a macOS wrapper app, an XPC service with a `pluginkit` wrapper, PlugInKit metadata, and a Swift class that conforms to `FxTileableEffect` even when the host advertises it as an `FxGenerator`.
+
+The first pass is intentionally a no-op renderer. That sounds underwhelming, but it is the right kind of boring: before route geometry, map styling, and timing modes arrive, the plugin has to build, register, and show up in Motion/FCP. The `.asmrroute` reader is already separated from the rendering class so #77 can focus on drawing the trail instead of untangling package validation from host lifecycle code.
+
+The Xcode target bring-up had one practical wrinkle: the wrapper app has to copy the `ASMRWalkRouteOverlay.pluginkit` product into its `Contents/PlugIns` directory. Without that copy phase, the plugin can build perfectly and still be invisible to the host, like a stage prop left in the parking lot. The branch now builds both the XPC service and the wrapper app, and the built app contains the embedded pluginkit where PlugInKit expects to find it.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
