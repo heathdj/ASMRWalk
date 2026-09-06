@@ -467,6 +467,8 @@ Issue 98 gives the Mac importer its own app icon while keeping it visually tied 
 
 That detail matters because the Icon Composer file is not just a picture; it is a tiny stage set with the hiker, route marker, and map on separate layers. Flattening it into PNG slots lost the composition Xcode is designed to preserve. The Mac target already pointed at `AppIcon`, so the clean move was to add the matching Icon Composer package without touching project settings.
 
+Issue 110 added a sharper lesson: an icon can look right in Icon Composer and still be poison to the asset compiler. The copied `AppIcon.icon` package made `actool` fail before the Mac importer could build, and manual saves did not change the package bytes. The importer now uses a conventional macOS `AppIcon.appiconset` generated from the same artwork, which is more like handing Xcode finished passport photos instead of asking it to run the photo studio during every build. The layered source can still guide future icon work, but the app bundle now has ordinary PNG slots that compile into a real `.icns`.
+
 ### The FxPlug Doorframe Goes Up
 
 Issue 76 starts the Final Cut Pro and Motion chapter by putting up the doorframe before trying to decorate the room. FxPlug 4 wants a specific shape: a macOS wrapper app, an XPC service with a `pluginkit` wrapper, PlugInKit metadata, and a Swift class that conforms to `FxTileableEffect` even when the host advertises it as an `FxGenerator`.
