@@ -100,6 +100,11 @@ Run these on physical devices before submission:
 - [ ] Confirm the screen stays awake only while video recording is active.
 - [ ] Confirm the small green recording indicator appears while video recording.
 - [ ] Open Video Walk before granting camera or microphone permission and confirm the tab does not trigger system prompts.
+- [ ] On a fresh install, tap Start Video Walk and confirm camera and microphone prompts appear only in response to that action.
+- [ ] Deny camera while microphone remains undetermined and confirm recovery mentions only Camera Settings, never Microphone Settings.
+- [ ] With camera authorized, deny microphone and confirm recovery mentions only Microphone Settings.
+- [ ] Deny location while camera and microphone remain undetermined and confirm recovery mentions only Location Settings.
+- [ ] Apply a restricted camera, microphone, or location state and confirm the app explains the restriction without offering a misleading Settings button.
 - [ ] Grant camera and microphone permission, return to Video Walk, and confirm the live camera preview starts automatically.
 - [ ] Confirm the camera preview is live when returning to the Video Walk tab.
 - [ ] Confirm DockKit shutter can start a video walk after returning to the Video Walk tab and DockKit zoom still behaves correctly while stabilization is enabled.
@@ -109,7 +114,7 @@ Run these on physical devices before submission:
 - [ ] Confirm legacy Photos-backed video playback still works for older recordings if available.
 - [ ] Confirm delete messaging states app-managed local video files are removed with their recording.
 - [ ] Confirm delete messaging states any user-saved Photos copy remains in Photos.
-- [ ] Deny camera or microphone permission and confirm the app shows a Settings recovery button.
+- [ ] Deny camera or microphone permission and confirm the app shows a resource-specific Settings recovery button.
 - [ ] Deny Photos permission and confirm Save Video to Photos fails gracefully without affecting local playback.
 - [ ] Run VoiceOver through Walk, Video Walk, and the active recording banner and confirm recording state is understandable without relying on color.
 - [ ] Run Accessibility Inspector on Walk, Video Walk, History, and Settings. Resolve or document any remaining issues.
