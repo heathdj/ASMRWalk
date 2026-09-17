@@ -9,11 +9,11 @@ import SwiftData
 
 @Model
 final class LocationPoint {
-    var timestamp: Date
-    var latitude: Double
-    var longitude: Double
+    var timestamp: Date = Date.now
+    var latitude: Double = 0
+    var longitude: Double = 0
     var altitude: Double?
-    var horizontalAccuracy: Double
+    var horizontalAccuracy: Double = 0
     var speed: Double?
     var recording: WalkRecording?
 

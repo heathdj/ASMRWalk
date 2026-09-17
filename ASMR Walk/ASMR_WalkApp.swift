@@ -27,7 +27,6 @@ struct ASMR_WalkApp: App {
 
     private static func makeModelContainer() -> ModelContainer {
         let schema = Schema([WalkRecording.self, LocationPoint.self])
-
         #if DEBUG
         if UITestLaunchConfiguration.usesInMemoryModelContainer {
             let configuration = ModelConfiguration(
@@ -43,10 +42,7 @@ struct ASMR_WalkApp: App {
         }
         #endif
 
-        let configuration = ModelConfiguration(
-            schema: schema,
-            cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier)
-        )
+        let configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
 
         do {
             return try ModelContainer(for: schema, configurations: [configuration])

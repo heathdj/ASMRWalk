@@ -259,6 +259,14 @@ One earlier design gave video walks a split ownership model: ASMR Walk kept the 
 
 That model taught the app to be precise about ownership. Legacy Photos-backed videos still remain in Photos when their ASMR Walk recording is deleted, and any user-saved Photos copy from the newer flow stays in Photos too.
 
+### Preparing the Filing Cabinet for iCloud
+
+The 1.0.1 release line made a quiet but important database change before ASMR Walk had public users. SwiftData's local filing cabinet was already working, but future iCloud sync has stricter house rules: no unique constraints and optional relationships only. Waiting until sync shipped would make public users cross that bridge later, with more real recordings at stake.
+
+So the app moved the route-point relationship behind an optional stored relationship while keeping the friendly `points` API the rest of the code already uses. It also stopped relying on SwiftData's unique constraint for `WalkRecording.id`; the persistence actor already behaves like the front-desk clerk who checks for an existing folder before creating a new one. CloudKit itself stays off in 1.0.1, but the schema is now shaped more like the sync-ready version that will follow.
+
+The lesson is release timing. A migration tested by beta users is a controlled rehearsal. The same migration sprung on a larger public audience is opening night with wet paint.
+
 ### The Video Came Back Home
 
 User testing flipped the video ownership model back to the simpler mental model: ASMR Walk records the video, ASMR Walk keeps the video, and Photos is an explicit export button instead of the default filing cabinet. New video walks now keep their `.mov` in app-managed storage and History playback uses that local file first. The detail screen offers **Save Video to Photos** when someone wants a copy in their library.

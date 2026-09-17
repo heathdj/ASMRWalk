@@ -10,20 +10,28 @@ import SwiftData
 final class WalkRecording {
     static let shortRecordingThreshold: TimeInterval = 10
 
-    #Unique<WalkRecording>([\.id])
     #Index<WalkRecording>([\.createdAt])
 
-    var id: UUID
-    var title: String
-    var createdAt: Date
-    var duration: TimeInterval
-    var distanceMeters: Double
-    var mode: RecordingMode
+    var id: UUID = UUID()
+    var title: String = ""
+    var createdAt: Date = Date.now
+    var duration: TimeInterval = 0
+    var distanceMeters: Double = 0
+    var mode: RecordingMode = RecordingMode.walk
     var videoURL: URL?
     var videoAssetIdentifier: String?
 
-    @Relationship(deleteRule: .cascade, inverse: \LocationPoint.recording)
-    var points: [LocationPoint]
+    @Relationship(deleteRule: .cascade, originalName: "points", inverse: \LocationPoint.recording)
+    private var storedPoints: [LocationPoint]?
+
+    var points: [LocationPoint] {
+        get {
+            storedPoints ?? []
+        }
+        set {
+            storedPoints = newValue
+        }
+    }
 
     init(
         id: UUID = UUID(),
@@ -44,7 +52,7 @@ final class WalkRecording {
         self.mode = mode
         self.videoURL = videoURL
         self.videoAssetIdentifier = videoAssetIdentifier
-        self.points = points
+        self.storedPoints = points
     }
 
     var hasVideo: Bool {
@@ -60,6 +68,6 @@ final class WalkRecording {
     }
 
     func addPoint(_ point: LocationPoint) {
-        points.append(point)
+        storedPoints = points + [point]
     }
 }
