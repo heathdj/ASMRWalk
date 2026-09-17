@@ -110,15 +110,30 @@ final class ASMR_WalkUITests: XCTestCase {
 
     @MainActor
     func testVideoWalkPermissionDeniedShowsSettingsRecovery() {
-        launchWithEnvironment(["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY": "1"])
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE": "cameraDenied"])
 
         openTab("Video Walk")
 
         XCTAssertTrue(element("videoWalk.screen").waitForExistence(timeout: 2))
         let status = element("videoWalk.status")
         XCTAssertTrue(status.waitForExistence(timeout: 2))
-        XCTAssertTrue(status.label.contains("Privacy access needed"))
+        XCTAssertTrue(status.label.contains("Camera access needed"))
+        XCTAssertTrue(app.buttons["Open Camera Settings"].exists)
         XCTAssertTrue(element("permissions.openSettings").exists)
+        XCTAssertFalse(element("videoWalk.startButton").isEnabled)
+    }
+
+    @MainActor
+    func testRestrictedVideoWalkPermissionDoesNotOfferSettingsRecovery() {
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE": "microphoneRestricted"])
+
+        openTab("Video Walk")
+
+        XCTAssertTrue(element("videoWalk.screen").waitForExistence(timeout: 2))
+        let status = element("videoWalk.status")
+        XCTAssertTrue(status.waitForExistence(timeout: 2))
+        XCTAssertTrue(status.label.contains("Microphone unavailable"))
+        XCTAssertFalse(element("permissions.openSettings").exists)
         XCTAssertFalse(element("videoWalk.startButton").isEnabled)
     }
 
