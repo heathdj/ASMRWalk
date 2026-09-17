@@ -11,20 +11,60 @@ import SwiftData
 @main
 struct ASMR_WalkApp: App {
     @UIApplicationDelegateAdaptor(AppOrientationDelegate.self) private var appOrientationDelegate
+    private let modelContainer: ModelContainer
 
     init() {
         UITestLaunchConfiguration.apply()
+        modelContainer = Self.makeModelContainer()
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [WalkRecording.self, LocationPoint.self])
+        .modelContainer(modelContainer)
+    }
+
+    private static func makeModelContainer() -> ModelContainer {
+        let schema = Schema([WalkRecording.self, LocationPoint.self])
+
+        #if DEBUG
+        if UITestLaunchConfiguration.usesInMemoryModelContainer {
+            let configuration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: true
+            )
+
+            do {
+                return try ModelContainer(for: schema, configurations: [configuration])
+            } catch {
+                fatalError("Unable to create UI test model container: \(error.localizedDescription)")
+            }
+        }
+        #endif
+
+        let configuration = ModelConfiguration(
+            schema: schema,
+            cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier)
+        )
+
+        do {
+            return try ModelContainer(for: schema, configurations: [configuration])
+        } catch {
+            fatalError("Unable to create ASMR Walk model container: \(error.localizedDescription)")
+        }
     }
 }
 
 private enum UITestLaunchConfiguration {
+    static var usesInMemoryModelContainer: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] == "1"
+        #else
+        false
+        #endif
+    }
+
     static func apply() {
         #if DEBUG
         switch ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_ONBOARDING"] {

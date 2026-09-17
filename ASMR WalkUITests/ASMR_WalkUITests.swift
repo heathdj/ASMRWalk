@@ -236,6 +236,7 @@ final class ASMR_WalkUITests: XCTestCase {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()
             app.launchEnvironment["ASMR_WALK_UI_TEST_ONBOARDING"] = "completed"
+            app.launchEnvironment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] = "1"
             app.launch()
         }
     }
@@ -264,6 +265,7 @@ final class ASMR_WalkUITests: XCTestCase {
         app.launchEnvironment = [:]
         app.launchEnvironment["ASMR_WALK_UI_TEST_ONBOARDING"] = onboardingState
         app.launchEnvironment["ASMR_WALK_UI_TEST_START_DESTINATION"] = "walk"
+        app.launchEnvironment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] = "1"
         for (key, value) in environment {
             app.launchEnvironment[key] = value
         }
