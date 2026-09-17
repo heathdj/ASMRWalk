@@ -110,15 +110,30 @@ final class ASMR_WalkUITests: XCTestCase {
 
     @MainActor
     func testVideoWalkPermissionDeniedShowsSettingsRecovery() {
-        launchWithEnvironment(["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY": "1"])
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE": "cameraDenied"])
 
         openTab("Video Walk")
 
         XCTAssertTrue(element("videoWalk.screen").waitForExistence(timeout: 2))
         let status = element("videoWalk.status")
         XCTAssertTrue(status.waitForExistence(timeout: 2))
-        XCTAssertTrue(status.label.contains("Privacy access needed"))
+        XCTAssertTrue(status.label.contains("Camera access needed"))
+        XCTAssertTrue(app.buttons["Open Camera Settings"].exists)
         XCTAssertTrue(element("permissions.openSettings").exists)
+        XCTAssertFalse(element("videoWalk.startButton").isEnabled)
+    }
+
+    @MainActor
+    func testRestrictedVideoWalkPermissionDoesNotOfferSettingsRecovery() {
+        launchWithEnvironment(["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE": "microphoneRestricted"])
+
+        openTab("Video Walk")
+
+        XCTAssertTrue(element("videoWalk.screen").waitForExistence(timeout: 2))
+        let status = element("videoWalk.status")
+        XCTAssertTrue(status.waitForExistence(timeout: 2))
+        XCTAssertTrue(status.label.contains("Microphone unavailable"))
+        XCTAssertFalse(element("permissions.openSettings").exists)
         XCTAssertFalse(element("videoWalk.startButton").isEnabled)
     }
 
@@ -221,6 +236,7 @@ final class ASMR_WalkUITests: XCTestCase {
         measure(metrics: [XCTApplicationLaunchMetric()]) {
             let app = XCUIApplication()
             app.launchEnvironment["ASMR_WALK_UI_TEST_ONBOARDING"] = "completed"
+            app.launchEnvironment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] = "1"
             app.launch()
         }
     }
@@ -249,6 +265,7 @@ final class ASMR_WalkUITests: XCTestCase {
         app.launchEnvironment = [:]
         app.launchEnvironment["ASMR_WALK_UI_TEST_ONBOARDING"] = onboardingState
         app.launchEnvironment["ASMR_WALK_UI_TEST_START_DESTINATION"] = "walk"
+        app.launchEnvironment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] = "1"
         for (key, value) in environment {
             app.launchEnvironment[key] = value
         }

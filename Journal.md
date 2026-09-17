@@ -347,6 +347,14 @@ Video Walk now asks the movie output connection for `.auto` stabilization whenev
 
 ## Engineer's Wisdom
 
+### Permission Recovery Learns Everyone's Name
+
+The first App Review uncovered a subtle privacy trap in Video Walk. Camera, microphone, and location had been bundled into one big “privacy access” warning, like sending someone to a building directory without saying which office they needed. If camera access was denied before the microphone prompt appeared, the app could tell the user to enable both in Settings—even though iOS had never asked about the microphone.
+
+Permission recovery is now deliberately specific. A denied camera points only to Camera Settings, a denied microphone points only to Microphone Settings, and a location problem talks only about Location. Restrictions get an explanation but no misleading Settings button, because parental or device-management restrictions are not something the user can flip back on. Most importantly, an undetermined permission never sends anyone to Settings; its system prompt remains tied to the explicit Start Video Walk action.
+
+The permission fix also exposed a test-lab ghost: UI tests were launching with the real persistent SwiftData store. A walk left behind by an earlier run could stroll into the next test and make the empty History screen decidedly non-empty. UI-test launches now opt into a fresh in-memory container, giving every test a clean notebook while production launches continue using the private CloudKit-backed store.
+
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
 - Separate hardware services from views before hardware complexity arrives.
 - Prefer system controls. They carry accessibility, platform behavior, and visual updates that custom components must otherwise recreate.

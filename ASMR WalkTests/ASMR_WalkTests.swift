@@ -143,6 +143,48 @@ struct ASMR_WalkTests {
         ) == .blocked)
     }
 
+    @Test("Video privacy recovery identifies only the permission that is blocked")
+    func videoPrivacyRecoveryIsResourceSpecific() {
+        #expect(VideoWalkPrivacyIssue.resolve(
+            camera: .denied,
+            microphone: .notDetermined,
+            location: .notDetermined
+        ) == .cameraDenied)
+        #expect(VideoWalkPrivacyIssue.resolve(
+            camera: .authorized,
+            microphone: .denied,
+            location: .notDetermined
+        ) == .microphoneDenied)
+        #expect(VideoWalkPrivacyIssue.resolve(
+            camera: .notDetermined,
+            microphone: .notDetermined,
+            location: .denied
+        ) == .locationDenied)
+    }
+
+    @Test("Undetermined permissions never direct the user to Settings")
+    func undeterminedVideoPrivacyDoesNotOfferSettingsRecovery() {
+        let issue = VideoWalkPrivacyIssue.resolve(
+            camera: .notDetermined,
+            microphone: .notDetermined,
+            location: .notDetermined
+        )
+
+        #expect(issue == nil)
+    }
+
+    @Test("Restricted permissions explain the block without offering Settings")
+    func restrictedVideoPrivacyDoesNotOfferSettingsRecovery() {
+        let issue = VideoWalkPrivacyIssue.resolve(
+            camera: .authorized,
+            microphone: .restricted,
+            location: .authorizedWhenInUse
+        )
+
+        #expect(issue == .microphoneRestricted)
+        #expect(issue?.settingsButtonTitle == nil)
+    }
+
     @Test("Video stop outcome records local video")
     func videoStopOutcomeLocalVideo() throws {
         let videoURL = URL(fileURLWithPath: "/tmp/video.mov")
