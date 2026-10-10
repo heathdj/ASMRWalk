@@ -3,6 +3,8 @@
 //  ASMR Walk
 //
 
+import AVFoundation
+import CoreLocation
 import MapKit
 import SwiftData
 import SwiftUI
@@ -21,6 +23,95 @@ enum VideoWalkStopFlowResult: Equatable {
     case saved
     case awaitingShortRecordingDecision(stopSessionWhenFinished: Bool)
     case failed
+}
+
+enum VideoWalkPrivacyIssue: Equatable {
+    case cameraDenied
+    case cameraRestricted
+    case microphoneDenied
+    case microphoneRestricted
+    case locationDenied
+    case locationRestricted
+
+    static func resolve(
+        camera: AVAuthorizationStatus,
+        microphone: AVAuthorizationStatus,
+        location: CLAuthorizationStatus
+    ) -> Self? {
+        switch camera {
+        case .denied:
+            return .cameraDenied
+        case .restricted:
+            return .cameraRestricted
+        default:
+            break
+        }
+
+        switch microphone {
+        case .denied:
+            return .microphoneDenied
+        case .restricted:
+            return .microphoneRestricted
+        default:
+            break
+        }
+
+        switch location {
+        case .denied:
+            return .locationDenied
+        case .restricted:
+            return .locationRestricted
+        default:
+            return nil
+        }
+    }
+
+    var settingsButtonTitle: String? {
+        switch self {
+        case .cameraDenied:
+            "Open Camera Settings"
+        case .microphoneDenied:
+            "Open Microphone Settings"
+        case .locationDenied:
+            "Open Location Settings"
+        case .cameraRestricted, .microphoneRestricted, .locationRestricted:
+            nil
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .cameraDenied:
+            "Camera access needed"
+        case .cameraRestricted:
+            "Camera unavailable"
+        case .microphoneDenied:
+            "Microphone access needed"
+        case .microphoneRestricted:
+            "Microphone unavailable"
+        case .locationDenied:
+            "Location access needed"
+        case .locationRestricted:
+            "Location unavailable"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .cameraDenied:
+            "Camera access was denied. Allow camera access in Settings to record a video walk."
+        case .cameraRestricted:
+            "Camera access is restricted on this device, so video walks are unavailable."
+        case .microphoneDenied:
+            "Microphone access was denied. Allow microphone access in Settings to record sound with a video walk."
+        case .microphoneRestricted:
+            "Microphone access is restricted on this device, so video walks are unavailable."
+        case .locationDenied:
+            "Location access was denied. Allow location access in Settings to save the route with a video walk."
+        case .locationRestricted:
+            "Location access is restricted on this device, so a video walk route cannot be recorded."
+        }
+    }
 }
 
 @MainActor
@@ -207,8 +298,8 @@ struct VideoWalkView: View {
                 } else if shouldShowRecordingIndicator {
                     recordingIndicator
                 }
-                if isPrivacyAccessDenied {
-                    openSettingsButton
+                if let settingsButtonTitle = privacyIssue?.settingsButtonTitle {
+                    openSettingsButton(title: settingsButtonTitle)
                 }
                 Spacer(minLength: 0)
                 if camera.isReady || isRecordingVideoWalk {
@@ -291,8 +382,8 @@ struct VideoWalkView: View {
         }
     }
 
-    private var openSettingsButton: some View {
-        Button("Open Privacy Settings", systemImage: "gear") {
+    private func openSettingsButton(title: String) -> some View {
+        Button(title, systemImage: "gear") {
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 openURL(url)
             }
@@ -308,11 +399,8 @@ struct VideoWalkView: View {
         if isBlockedByWalk {
             return "GPS walk recording"
         }
-        if Self.shouldShowDeniedVideoPrivacyForUITests {
-            return "Privacy access needed"
-        }
-        if isPrivacyAccessDenied {
-            return "Privacy access needed"
+        if let privacyIssue {
+            return privacyIssue.title
         }
         if isRecordingVideoWalk {
             return "Recording video walk"
@@ -337,12 +425,8 @@ struct VideoWalkView: View {
             return "Finish the active GPS walk before starting a video walk."
         }
 
-        if Self.shouldShowDeniedVideoPrivacyForUITests {
-            return "Enable camera, microphone, and location access in Settings to record a video walk."
-        }
-
-        if isPrivacyAccessDenied {
-            return "Enable camera, microphone, and location access in Settings to record a video walk."
+        if let privacyIssue {
+            return privacyIssue.detail
         }
 
         if let successMessage = camera.successMessage {
@@ -420,13 +504,19 @@ struct VideoWalkView: View {
     }
 
     private var isRecordingButtonDisabled: Bool {
-        isStopping || (isBlockedByWalk == false && isPrivacyAccessDenied)
+        isStopping || (isBlockedByWalk == false && privacyIssue != nil)
     }
 
-    private var isPrivacyAccessDenied: Bool {
-        camera.isPermissionDenied
-            || walkRecorder.isLocationAccessDenied
-            || Self.shouldShowDeniedVideoPrivacyForUITests
+    private var privacyIssue: VideoWalkPrivacyIssue? {
+        if let simulatedPrivacyIssue = Self.simulatedPrivacyIssueForUITests {
+            return simulatedPrivacyIssue
+        }
+
+        return VideoWalkPrivacyIssue.resolve(
+            camera: camera.cameraAuthorizationStatus,
+            microphone: camera.microphoneAuthorizationStatus,
+            location: walkRecorder.authorizationStatus
+        )
     }
 
     private static var shouldShowRecordingIndicatorForUITests: Bool {
@@ -437,11 +527,28 @@ struct VideoWalkView: View {
         #endif
     }
 
-    private static var shouldShowDeniedVideoPrivacyForUITests: Bool {
+    private static var simulatedPrivacyIssueForUITests: VideoWalkPrivacyIssue? {
         #if DEBUG
-        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY"] == "1"
+        switch ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE"] {
+        case "cameraDenied":
+            return .cameraDenied
+        case "cameraRestricted":
+            return .cameraRestricted
+        case "microphoneDenied":
+            return .microphoneDenied
+        case "microphoneRestricted":
+            return .microphoneRestricted
+        case "locationDenied":
+            return .locationDenied
+        case "locationRestricted":
+            return .locationRestricted
+        default:
+            return ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_DENIED_VIDEO_PRIVACY"] == "1"
+                ? .cameraDenied
+                : nil
+        }
         #else
-        false
+        nil
         #endif
     }
 

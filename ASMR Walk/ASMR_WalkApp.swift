@@ -27,6 +27,22 @@ struct ASMR_WalkApp: App {
 
     private static func makeModelContainer() -> ModelContainer {
         let schema = Schema([WalkRecording.self, LocationPoint.self])
+
+        #if DEBUG
+        if UITestLaunchConfiguration.usesInMemoryModelContainer {
+            let configuration = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: true
+            )
+
+            do {
+                return try ModelContainer(for: schema, configurations: [configuration])
+            } catch {
+                fatalError("Unable to create UI test model container: \(error.localizedDescription)")
+            }
+        }
+        #endif
+
         let configuration = ModelConfiguration(
             schema: schema,
             cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier)
@@ -41,6 +57,14 @@ struct ASMR_WalkApp: App {
 }
 
 private enum UITestLaunchConfiguration {
+    static var usesInMemoryModelContainer: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] == "1"
+        #else
+        false
+        #endif
+    }
+
     static func apply() {
         #if DEBUG
         switch ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_ONBOARDING"] {
