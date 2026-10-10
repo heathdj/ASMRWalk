@@ -26,6 +26,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - Deleting a recording removes app metadata, routes, app-managed thumbnails, and app-managed local video files; any user-exported Photos copy remains in Photos.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
 - Version 1 will render map overlays in the app instead of burning them into exported video.
+- The FxPlug route overlay defaults to stretching route progress across the host effect duration, offers GPX timestamp timing as an alternative, and caps prepared render geometry at 2,048 deterministically sampled points.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
 - Startup should go directly from the native static launch screen to `ContentView`; do not reintroduce an artificial SwiftUI splash delay.
 - The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
@@ -53,6 +54,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - Background GPS decisions must stay centralized in `BackgroundRecordingPolicy`; Video Walk should remain foreground-only even when the user's Background GPS Recording setting is enabled.
 - Store user-editable recording descriptions as `walkDescription`; do not add a SwiftData `@Model` property named `description`.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
+- Keep FxPlug frame rendering deterministic: host timing and package data may prepare state, but drawing must not access the network, Photos, MapKit, or CloudKit.
 - User-initiated exports and share links are not background collection by ASMR Walk, but privacy policy and review notes must explain what route data they contain.
 - CloudKit sync is not a developer-operated backend, but privacy policy and review notes must explain that route data and recording metadata may sync through the user's private iCloud account.
 - High-risk release flows should have deterministic Swift Testing or XCUI coverage when possible; physical-device-only behavior belongs in `RELEASE_CHECKLIST.md`.

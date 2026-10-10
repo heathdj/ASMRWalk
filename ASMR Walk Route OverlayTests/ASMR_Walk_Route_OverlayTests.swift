@@ -63,6 +63,58 @@ struct ASMRRouteOverlayRenderPlanTests {
         #expect(plan.visibleRoutePoints.count == 2)
     }
 
+    @Test("Clip-duration timing maps the full route onto the host effect")
+    func clipDurationTimingMapsRouteOntoEffect() {
+        let plan = ASMRRouteOverlayRenderPlan.make(
+            from: makeRoutePackage(),
+            renderTimeSeconds: 120,
+            effectStartSeconds: 100,
+            effectDurationSeconds: 40,
+            timingMode: .clipDuration
+        )
+
+        #expect(plan.currentPosition == .init(x: 0.5, y: 0.25))
+        #expect(plan.visibleRoutePoints.count == 2)
+    }
+
+    @Test("GPX timing uses timestamp seconds independently of effect duration")
+    func gpxTimingUsesTimestampSeconds() {
+        let plan = ASMRRouteOverlayRenderPlan.make(
+            from: makeRoutePackage(),
+            renderTimeSeconds: 105,
+            effectStartSeconds: 100,
+            effectDurationSeconds: 200,
+            timingMode: .routeTimestamps
+        )
+
+        #expect(plan.currentPosition == .init(x: 0.25, y: 0.5))
+        #expect(plan.visibleRoutePoints.count == 2)
+    }
+
+    @Test("Long routes are reduced to a deterministic point budget")
+    func longRoutesAreReducedToPointBudget() throws {
+        let coordinates = (0..<10_000).map { index in
+            (latitude: Double(index % 17), longitude: Double(index), seconds: TimeInterval(index))
+        }
+        let routePackage = makeRoutePackage(coordinates: coordinates)
+
+        let firstPlan = ASMRRouteOverlayRenderPlan.make(
+            from: routePackage,
+            renderTimeSeconds: 10_000,
+            maximumRoutePointCount: 256
+        )
+        let secondPlan = ASMRRouteOverlayRenderPlan.make(
+            from: routePackage,
+            renderTimeSeconds: 10_000,
+            maximumRoutePointCount: 256
+        )
+
+        #expect(firstPlan == secondPlan)
+        #expect(firstPlan.routePoints.count == 256)
+        #expect(firstPlan.routePoints.first?.x == 0)
+        #expect(firstPlan.routePoints.last?.x == 1)
+    }
+
     @Test("A stationary route stays centered")
     func stationaryRouteStaysCentered() {
         let routePackage = makeRoutePackage(coordinates: [
@@ -87,6 +139,7 @@ struct ASMRRouteOverlayRenderPlanTests {
         ]
     ) -> ASMRRoutePackageInput {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let duration = coordinates.map(\.seconds).max() ?? 0
         let routePoints = coordinates.map { coordinate in
             ASMRRoutePackageInput.RoutePoint(
                 timestamp: start.addingTimeInterval(coordinate.seconds),
@@ -105,13 +158,13 @@ struct ASMRRouteOverlayRenderPlanTests {
                 title: "Test Route",
                 walkDescription: nil,
                 createdAt: start,
-                durationSeconds: 20,
+                durationSeconds: duration,
                 distanceMeters: nil,
                 mode: "walk",
                 recordingSource: "iPhone",
                 captureDeviceName: nil,
                 routeStartedAt: start,
-                routeEndedAt: start.addingTimeInterval(20),
+                routeEndedAt: start.addingTimeInterval(duration),
                 routePointCount: routePoints.count,
                 routePointsFile: "route-points.json",
                 sourceGPXFile: nil,
