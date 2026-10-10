@@ -40,6 +40,14 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
         )
 
+        parameterAPI.addPopupMenu(
+            withName: "Route Timing",
+            parameterID: ASMRWalkRouteOverlayParameterID.timingMode,
+            defaultValue: UInt32(ASMRRouteOverlayTimingMode.clipDuration.rawValue),
+            menuEntries: ["Clip Duration", "GPX Timestamps"],
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
+        )
+
         parameterAPI.addToggleButton(
             withName: "Show Current Position",
             parameterID: ASMRWalkRouteOverlayParameterID.showCurrentPosition,
@@ -71,9 +79,14 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             defaultValue: true,
             at: renderTime
         )
+        let timingMode = timingMode(at: renderTime)
+        let effectTiming = effectTiming()
         let renderPlan = Self.renderPlan(
             packagePath: packagePath,
             renderTimeSeconds: renderTime.seconds,
+            effectStartSeconds: effectTiming.startSeconds,
+            effectDurationSeconds: effectTiming.durationSeconds,
+            timingMode: timingMode,
             showCurrentPosition: showCurrentPosition,
             showStartEndMarkers: showStartEndMarkers
         )
@@ -171,9 +184,46 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         return value.boolValue
     }
 
+    private func timingMode(at time: CMTime) -> ASMRRouteOverlayTimingMode {
+        guard let retrievalAPI = apiManager?.api(for: FxParameterRetrievalAPI_v6.self)
+            as? FxParameterRetrievalAPI_v6 else {
+            return .clipDuration
+        }
+
+        var value = Int32(ASMRRouteOverlayTimingMode.clipDuration.rawValue)
+        guard retrievalAPI.getIntValue(
+            &value,
+            fromParameter: ASMRWalkRouteOverlayParameterID.timingMode,
+            at: time
+        ) else {
+            return .clipDuration
+        }
+
+        return ASMRRouteOverlayTimingMode(rawValue: Int(value)) ?? .clipDuration
+    }
+
+    private func effectTiming() -> (startSeconds: TimeInterval, durationSeconds: TimeInterval?) {
+        guard let timingAPI = apiManager?.api(for: FxTimingAPI_v5.self) as? FxTimingAPI_v5 else {
+            return (0, nil)
+        }
+
+        var startTime = CMTime.zero
+        var duration = CMTime.invalid
+        timingAPI.startTime(forEffect: &startTime)
+        timingAPI.durationTime(forEffect: &duration)
+
+        return (
+            startTime.seconds.isFinite ? startTime.seconds : 0,
+            duration.seconds.isFinite && duration.seconds > 0 ? duration.seconds : nil
+        )
+    }
+
     private static func renderPlan(
         packagePath: String,
         renderTimeSeconds: TimeInterval,
+        effectStartSeconds: TimeInterval,
+        effectDurationSeconds: TimeInterval?,
+        timingMode: ASMRRouteOverlayTimingMode,
         showCurrentPosition: Bool,
         showStartEndMarkers: Bool
     ) -> ASMRRouteOverlayRenderPlan {
@@ -184,6 +234,9 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             return ASMRRouteOverlayRenderPlan.make(
                 from: routePackage,
                 renderTimeSeconds: renderTimeSeconds,
+                effectStartSeconds: effectStartSeconds,
+                effectDurationSeconds: effectDurationSeconds,
+                timingMode: timingMode,
                 showCurrentPosition: showCurrentPosition,
                 showStartEndMarkers: showStartEndMarkers
             )
@@ -215,4 +268,5 @@ private enum ASMRWalkRouteOverlayParameterID {
     static let packagePath: UInt32 = 1
     static let showCurrentPosition: UInt32 = 2
     static let showStartEndMarkers: UInt32 = 3
+    static let timingMode: UInt32 = 4
 }

@@ -483,6 +483,12 @@ Issue 77 turns the FxPlug target from "hello, host" into an actual route drawer.
 
 The MVP renderer is intentionally geometric. It draws a transparent 32-bit output surface with a route line, optional start/end markers, and an optional current-position dot based on timeline seconds. That makes progress playback stable and repeatable: the same package, time, and settings produce the same pixels every time. The pure rendering files are also compiled directly into the unit-test target, which lets tests exercise timestamp interpolation, stationary routes, alpha clearing, row padding, and the host's BGRA channel order without launching Final Cut Pro. File picking and nicer host UI can grow around this later, but the core renderer now has the important contract in place: no map tiles, no remote calls, just route data in and alpha-composited pixels out.
 
+### Two Clocks and a Route with a Diet Plan
+
+Issue 78 taught the overlay to speak both clocks that editors care about. **Clip Duration** treats the route like a flexible measuring tape: the first point starts at the effect's in-point and the last point lands exactly at its out-point, whether the edit is ten seconds or ten minutes. **GPX Timestamps** keeps the walk's original rhythm instead, including pauses and gaps. Both modes subtract the host-reported effect start before doing their math, which avoids the classic timeline bug where moving a clip makes an animation jump ahead.
+
+Long walks also needed a sensible luggage limit. A route with tens of thousands of samples is deterministically reduced to at most 2,048 render points while keeping its first and last samples. This is less like throwing away the map and more like removing redundant breadcrumbs before entering the editing room. The same source package always selects the same points, so playback and export cannot disagree because of randomness or frame order.
+
 ### Permission Recovery Learns Everyone's Name
 
 The first App Review uncovered a subtle privacy trap in Video Walk. Camera, microphone, and location had been bundled into one big “privacy access” warning, like sending someone to a building directory without saying which office they needed. If camera access was denied before the microphone prompt appeared, the app could tell the user to enable both in Settings—even though iOS had never asked about the microphone.

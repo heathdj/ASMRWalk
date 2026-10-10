@@ -5,6 +5,11 @@
 
 import Foundation
 
+enum ASMRRouteOverlayTimingMode: Int, Codable, CaseIterable, Sendable {
+    case clipDuration
+    case routeTimestamps
+}
+
 struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
     struct Point: Codable, Equatable, Sendable {
         let x: Double
@@ -34,11 +39,18 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
     static func make(
         from routePackage: ASMRRoutePackageInput,
         renderTimeSeconds: TimeInterval,
+        effectStartSeconds: TimeInterval = 0,
+        effectDurationSeconds: TimeInterval? = nil,
+        timingMode: ASMRRouteOverlayTimingMode = .clipDuration,
+        maximumRoutePointCount: Int = 2_048,
         style: ASMRRouteOverlayStyle = .default,
         showCurrentPosition: Bool = true,
         showStartEndMarkers: Bool = true
     ) -> ASMRRouteOverlayRenderPlan {
-        let timedPoints = normalizedTimedPoints(from: routePackage)
+        let timedPoints = simplified(
+            normalizedTimedPoints(from: routePackage),
+            maximumPointCount: maximumRoutePointCount
+        )
 
         guard let firstPoint = timedPoints.first else {
             return ASMRRouteOverlayRenderPlan(
@@ -51,7 +63,17 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             )
         }
 
-        let elapsedSeconds = max(0, min(renderTimeSeconds, routePackage.manifest.durationSeconds))
+        let routeDuration = max(
+            0,
+            timedPoints.last?.seconds ?? routePackage.manifest.durationSeconds
+        )
+        let elapsedSeconds = routeElapsedSeconds(
+            renderTimeSeconds: renderTimeSeconds,
+            effectStartSeconds: effectStartSeconds,
+            effectDurationSeconds: effectDurationSeconds,
+            routeDurationSeconds: routeDuration,
+            timingMode: timingMode
+        )
         let visibleRoutePoints = visiblePoints(from: timedPoints, elapsedSeconds: elapsedSeconds)
         let currentPosition = showCurrentPosition ? interpolatedPoint(from: timedPoints, elapsedSeconds: elapsedSeconds) : nil
 
@@ -107,6 +129,43 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
                 seconds: max(0, routePoint.timestamp.timeIntervalSince(routeStart)),
                 point: normalizedPoint
             )
+        }
+    }
+
+    private static func routeElapsedSeconds(
+        renderTimeSeconds: TimeInterval,
+        effectStartSeconds: TimeInterval,
+        effectDurationSeconds: TimeInterval?,
+        routeDurationSeconds: TimeInterval,
+        timingMode: ASMRRouteOverlayTimingMode
+    ) -> TimeInterval {
+        guard routeDurationSeconds > 0 else { return 0 }
+
+        let effectElapsed = max(0, renderTimeSeconds - effectStartSeconds)
+        switch timingMode {
+        case .clipDuration:
+            let effectDuration = effectDurationSeconds.flatMap { $0 > 0 ? $0 : nil }
+                ?? routeDurationSeconds
+            let progress = min(1, effectElapsed / effectDuration)
+            return routeDurationSeconds * progress
+        case .routeTimestamps:
+            return min(effectElapsed, routeDurationSeconds)
+        }
+    }
+
+    private static func simplified(
+        _ timedPoints: [TimedPoint],
+        maximumPointCount: Int
+    ) -> [TimedPoint] {
+        guard maximumPointCount >= 2, timedPoints.count > maximumPointCount else {
+            return timedPoints
+        }
+
+        let lastIndex = timedPoints.count - 1
+        let divisor = Double(maximumPointCount - 1)
+        return (0..<maximumPointCount).map { outputIndex in
+            let sourceIndex = Int((Double(outputIndex) * Double(lastIndex) / divisor).rounded())
+            return timedPoints[sourceIndex]
         }
     }
 
