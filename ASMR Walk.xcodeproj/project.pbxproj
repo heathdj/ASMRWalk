@@ -182,6 +182,15 @@
 			);
 			target = 3A51DD5E304CB00C00B3CEF1 /* ASMRWalkRouteOverlay */;
 		};
+		3A77AA01306310000077AA01 /* Exceptions for "ASMRWalkRouteOverlay" folder in "ASMR Walk Route OverlayTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ASMRWalkRouteOverlay.swift,
+				Info.plist,
+				main.swift,
+			);
+			target = 3A51DD3F304CAFAD00B3CEF1 /* ASMR Walk Route OverlayTests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -237,6 +246,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				3A51DD6B304CB00C00B3CEF1 /* Exceptions for "ASMRWalkRouteOverlay" folder in "ASMRWalkRouteOverlay" target */,
+				3A77AA01306310000077AA01 /* Exceptions for "ASMRWalkRouteOverlay" folder in "ASMR Walk Route OverlayTests" target */,
 			);
 			path = ASMRWalkRouteOverlay;
 			sourceTree = "<group>";
@@ -588,6 +598,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				3A51DD43304CAFAD00B3CEF1 /* ASMR Walk Route OverlayTests */,
+				3A51DD60304CB00C00B3CEF1 /* ASMRWalkRouteOverlay */,
 			);
 			name = "ASMR Walk Route OverlayTests";
 			packageProductDependencies = (

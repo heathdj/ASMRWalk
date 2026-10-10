@@ -477,6 +477,20 @@ The first pass is intentionally a no-op renderer. That sounds underwhelming, but
 
 The Xcode target bring-up had one practical wrinkle: the wrapper app has to copy the `ASMRWalkRouteOverlay.pluginkit` product into its `Contents/PlugIns` directory. Without that copy phase, the plugin can build perfectly and still be invisible to the host, like a stage prop left in the parking lot. The branch now builds both the XPC service and the wrapper app, and the built app contains the embedded pluginkit where PlugInKit expects to find it.
 
+### The Route Overlay Gets Its Transparency Sheet
+
+Issue 77 turns the FxPlug target from "hello, host" into an actual route drawer. The plugin now reads a prepared `.asmrroute` package during `pluginState`, normalizes the latitude/longitude track into a padded canvas, and carries only deterministic render instructions into the timeline render call. Think of it like making an acetate overlay before stepping up to the projector: once the frame is rendering, the plugin is drawing from its own prepared sheet instead of asking CloudKit, Photos, MapKit, or the network for anything.
+
+The MVP renderer is intentionally geometric. It draws a transparent 32-bit output surface with a route line, optional start/end markers, and an optional current-position dot based on timeline seconds. That makes progress playback stable and repeatable: the same package, time, and settings produce the same pixels every time. The pure rendering files are also compiled directly into the unit-test target, which lets tests exercise timestamp interpolation, stationary routes, alpha clearing, row padding, and the host's BGRA channel order without launching Final Cut Pro. File picking and nicer host UI can grow around this later, but the core renderer now has the important contract in place: no map tiles, no remote calls, just route data in and alpha-composited pixels out.
+
+### Permission Recovery Learns Everyone's Name
+
+The first App Review uncovered a subtle privacy trap in Video Walk. Camera, microphone, and location had been bundled into one big “privacy access” warning, like sending someone to a building directory without saying which office they needed. If camera access was denied before the microphone prompt appeared, the app could tell the user to enable both in Settings—even though iOS had never asked about the microphone.
+
+Permission recovery is now deliberately specific. A denied camera points only to Camera Settings, a denied microphone points only to Microphone Settings, and a location problem talks only about Location. Restrictions get an explanation but no misleading Settings button, because parental or device-management restrictions are not something the user can flip back on. Most importantly, an undetermined permission never sends anyone to Settings; its system prompt remains tied to the explicit Start Video Walk action.
+
+The permission fix also exposed a test-lab ghost: UI tests were launching with the real persistent SwiftData store. A walk left behind by an earlier run could stroll into the next test and make the empty History screen decidedly non-empty. UI-test launches now opt into a fresh in-memory container, giving every test a clean notebook while production launches continue using the private CloudKit-backed store.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
