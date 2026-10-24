@@ -211,7 +211,6 @@ struct VideoWalkView: View {
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
-            InterfaceOrientationController.lockVideoWalkLandscape()
             await preparePreviewIfAuthorized()
             dockKitAccessory.start(
                 shutterAction: handleDockKitShutter,
@@ -229,7 +228,6 @@ struct VideoWalkView: View {
                 }
                 camera.stopSession()
             }
-            InterfaceOrientationController.restoreDefaultOrientation()
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {

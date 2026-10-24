@@ -16,11 +16,15 @@ final class AppOrientationDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+enum AppOrientationPolicy {
+    static func orientationMask(for tab: AppTab) -> UIInterfaceOrientationMask {
+        tab == .videoWalk ? .landscapeRight : .portrait
+    }
+}
+
 @MainActor
 enum InterfaceOrientationController {
     static let videoWalkOrientation: UIInterfaceOrientation = .landscapeRight
-    static let videoWalkOrientationMask: UIInterfaceOrientationMask = .landscapeRight
-    static let defaultOrientationMask: UIInterfaceOrientationMask = .portrait
 
     static var currentInterfaceOrientation: UIInterfaceOrientation {
         activeScene?.effectiveGeometry.interfaceOrientation ?? .landscapeRight
@@ -41,16 +45,11 @@ enum InterfaceOrientationController {
         }
     }
 
-    static func lockVideoWalkLandscape() {
-        AppOrientationDelegate.supportedOrientations = videoWalkOrientationMask
+    static func applyPolicy(for tab: AppTab) {
+        let orientationMask = AppOrientationPolicy.orientationMask(for: tab)
+        AppOrientationDelegate.supportedOrientations = orientationMask
         updateSupportedInterfaceOrientations()
-        request(videoWalkOrientationMask)
-    }
-
-    static func restoreDefaultOrientation() {
-        AppOrientationDelegate.supportedOrientations = defaultOrientationMask
-        updateSupportedInterfaceOrientations()
-        request(defaultOrientationMask)
+        request(orientationMask)
     }
 
     static func request(_ orientations: UIInterfaceOrientationMask) {
@@ -58,7 +57,11 @@ enum InterfaceOrientationController {
             return
         }
 
-        scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations))
+        scene.requestGeometryUpdate(.iOS(interfaceOrientations: orientations)) { error in
+            #if DEBUG
+            print("Interface orientation update failed: \(error.localizedDescription)")
+            #endif
+        }
     }
 
     private static var activeScene: UIWindowScene? {

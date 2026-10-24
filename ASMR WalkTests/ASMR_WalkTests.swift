@@ -43,6 +43,32 @@ struct ASMR_WalkTests {
         #expect(Set(systemImages).count == systemImages.count)
     }
 
+    @Test("Only Video Walk uses the landscape-right orientation policy")
+    func tabOrientationPolicy() {
+        #expect(AppOrientationPolicy.orientationMask(for: .videoWalk) == .landscapeRight)
+        #expect(AppOrientationPolicy.orientationMask(for: .history) == .portrait)
+        #expect(AppOrientationPolicy.orientationMask(for: .walk) == .portrait)
+        #expect(AppOrientationPolicy.orientationMask(for: .settings) == .portrait)
+    }
+
+    @Test("Tab orientation changes are applied before navigation state changes")
+    func tabSelectionAppliesOrientationPolicy() {
+        var transitions: [(requested: AppTab, current: AppTab)] = []
+        var selection: AppTabSelection!
+        selection = AppTabSelection { requestedTab in
+            transitions.append((requestedTab, selection.selectedTab))
+        }
+
+        selection.selectedTab = .videoWalk
+        selection.selectedTab = .history
+        selection.selectedTab = .history
+        selection.reapplyOrientationPolicy()
+
+        #expect(transitions.map(\.requested) == [.videoWalk, .history, .history])
+        #expect(transitions.map(\.current) == [.history, .videoWalk, .history])
+        #expect(selection.selectedTab == .history)
+    }
+
     @Test("Theme choices map to the expected app color scheme")
     func appThemePresentation() {
         #expect(AppTheme.system.title == "System")

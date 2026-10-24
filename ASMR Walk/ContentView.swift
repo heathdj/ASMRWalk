@@ -42,6 +42,33 @@ enum AppTab: CaseIterable, Hashable {
     }
 }
 
+@MainActor
+@Observable
+final class AppTabSelection {
+    var selectedTab: AppTab {
+        willSet {
+            guard newValue != selectedTab else {
+                return
+            }
+            applyOrientation(newValue)
+        }
+    }
+
+    private let applyOrientation: @MainActor (AppTab) -> Void
+
+    init(
+        selectedTab: AppTab = .history,
+        applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy
+    ) {
+        self.selectedTab = selectedTab
+        self.applyOrientation = applyOrientation
+    }
+
+    func reapplyOrientationPolicy() {
+        applyOrientation(selectedTab)
+    }
+}
+
 enum AccessibilityID {
     static let onboardingScreen = "onboarding.screen"
     static let onboardingWalkPage = "onboarding.page.walk"
@@ -95,10 +122,11 @@ enum AccessibilityQALaunchConfiguration {
 }
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
     @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
-    @State private var selectedTab: AppTab = .history
+    @State private var tabSelection = AppTabSelection()
     @State private var recordingCoordinator: RecordingCoordinator
     @State private var isShowingShortRecordingConfirmation = false
     @State private var videoWalkStopRequestID: UUID?
@@ -108,12 +136,14 @@ struct ContentView: View {
     }
 
     var body: some View {
+        @Bindable var tabSelection = tabSelection
+
         Group {
             if hasCompletedOnboarding || Self.shouldSkipOnboardingForUITests {
-                TabView(selection: $selectedTab) {
+                TabView(selection: $tabSelection.selectedTab) {
                     Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
                         HistoryView {
-                            selectedTab = recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab
+                            selectTab(recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab)
                         }
                     }
 
@@ -135,6 +165,14 @@ struct ContentView: View {
                 }
             } else {
                 OnboardingView()
+            }
+        }
+        .task {
+            tabSelection.reapplyOrientationPolicy()
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                tabSelection.reapplyOrientationPolicy()
             }
         }
         .tint(.green)
@@ -176,9 +214,13 @@ struct ContentView: View {
         StartRecordingDestination(rawValue: startRecordingDestinationRawValue) ?? .walk
     }
 
+    private func selectTab(_ tab: AppTab) {
+        tabSelection.selectedTab = tab
+    }
+
     private func showActiveRecording() {
         if let activeTab = recordingCoordinator.activeTab {
-            selectedTab = activeTab
+            selectTab(activeTab)
         }
     }
 
@@ -194,7 +236,7 @@ struct ContentView: View {
                 }
             }
         case .videoWalk:
-            selectedTab = .videoWalk
+            selectTab(.videoWalk)
             videoWalkStopRequestID = UUID()
         case nil:
             break

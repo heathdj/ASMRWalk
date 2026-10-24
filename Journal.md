@@ -509,6 +509,12 @@ Permission recovery is now deliberately specific. A denied camera points only to
 
 The permission fix also exposed a test-lab ghost: UI tests were launching with the real persistent SwiftData store. A walk left behind by an earlier run could stroll into the next test and make the empty History screen decidedly non-empty. UI-test launches now opt into a fresh in-memory container, giving every test a clean notebook while production launches continue using the private CloudKit-backed store.
 
+### The Tab Bar Takes the Steering Wheel
+
+Issue 120 came from a transition that looked fine in the simulator but folded the History screen in half on a real iPhone. Video Walk owned the landscape request in its appearance task and tried to restore portrait from `onDisappear`. By then SwiftUI had already started presenting the next tab, so the destination could measure itself against yesterday's landscape geometry—like setting a portrait table with a landscape tablecloth and trimming off whatever hangs over the edge.
+
+Orientation policy now belongs to the tab selection itself. Before the selected tab changes, the app updates its supported-orientation mask and requests the matching scene geometry: landscape-right for Video Walk and portrait everywhere else. Foreground activation reapplies the current policy, failed geometry requests leave a useful debug message, and the camera screen is responsible only for camera cleanup. The lesson is broader than rotation: state shared by sibling screens belongs with their parent navigator, not in whichever child happens to disappear last.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
