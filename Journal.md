@@ -521,6 +521,8 @@ The same investigation uncovered four UI tests that looked like navigation failu
 
 There was a subtle accessory sequel: putting an `if` inside `tabViewBottomAccessory` still creates the accessory container when the condition is false, producing a perfectly rendered empty glass bar. The modifier itself now exists only while a recording is active. Portrait restoration also retries its documented scene-geometry request for a bounded period while the tab hierarchy settles; a single request can arrive during UIKit's transition window and remain unresolved even though no error callback fires.
 
+A frightening wall of 98–99 failed tests turned out to be one failure wearing a hundred masks. The first SwiftData persistence test exhausted Core Data's connection pool, and the Swift Testing process then reported almost every remaining test as a runner crash. The supposedly in-memory configurations were still using automatic CloudKit behavior, visible in the logs as CloudKit trying to initialize a `/dev/null` store. Test containers now explicitly use `cloudKitDatabase: .none`, and the app test host detects XCTest and uses the same isolated configuration. The full 117-test plan passes again. The lesson: “in memory” describes storage location, not every integration attached to that storage—turn external integrations off explicitly in tests.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
