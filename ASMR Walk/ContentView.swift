@@ -42,6 +42,76 @@ enum AppTab: CaseIterable, Hashable {
     }
 }
 
+@MainActor
+@Observable
+final class AppTabSelection {
+    private(set) var selectedTab: AppTab
+
+    var presentedTab: AppTab {
+        get { selectedTab }
+        set { requestSelection(newValue) }
+    }
+
+    @ObservationIgnored private var transitionTask: Task<Void, Never>?
+    private let applyOrientation: @MainActor (AppTab) -> Void
+    private let prepareOrientation: @MainActor (AppTab) -> Void
+    private let requestOrientationAndWait: @MainActor (AppTab) async -> Void
+
+    init(
+        selectedTab: AppTab = .history,
+        applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy,
+        prepareOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.preparePolicy,
+        requestOrientationAndWait: @escaping @MainActor (AppTab) async -> Void = InterfaceOrientationController.requestPolicyAndWait
+    ) {
+        self.selectedTab = selectedTab
+        self.applyOrientation = applyOrientation
+        self.prepareOrientation = prepareOrientation
+        self.requestOrientationAndWait = requestOrientationAndWait
+    }
+
+    func requestSelection(_ tab: AppTab) {
+        guard tab != selectedTab else {
+            return
+        }
+
+        transitionTask?.cancel()
+        guard selectedTab == .videoWalk, tab != .videoWalk else {
+            applyOrientation(tab)
+            selectedTab = tab
+            return
+        }
+
+        transitionTask = Task { [weak self] in
+            await self?.transition(to: tab)
+        }
+    }
+
+    func transition(to tab: AppTab) async {
+        guard tab != selectedTab else {
+            return
+        }
+
+        let isLeavingVideoWalk = selectedTab == .videoWalk && tab != .videoWalk
+        if isLeavingVideoWalk {
+            prepareOrientation(tab)
+            selectedTab = tab
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(50))
+            guard Task.isCancelled == false else {
+                return
+            }
+            await requestOrientationAndWait(tab)
+        } else {
+            applyOrientation(tab)
+            selectedTab = tab
+        }
+    }
+
+    func reapplyOrientationPolicy() {
+        applyOrientation(selectedTab)
+    }
+}
+
 enum AccessibilityID {
     static let onboardingScreen = "onboarding.screen"
     static let onboardingWalkPage = "onboarding.page.walk"
@@ -95,10 +165,11 @@ enum AccessibilityQALaunchConfiguration {
 }
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
     @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
-    @State private var selectedTab: AppTab = .history
+    @State private var tabSelection = AppTabSelection()
     @State private var recordingCoordinator: RecordingCoordinator
     @State private var isShowingShortRecordingConfirmation = false
     @State private var videoWalkStopRequestID: UUID?
@@ -110,48 +181,21 @@ struct ContentView: View {
     var body: some View {
         Group {
             if hasCompletedOnboarding || Self.shouldSkipOnboardingForUITests {
-                TabView(selection: $selectedTab) {
-                    Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
-                        HistoryView {
-                            selectedTab = recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab
-                        }
-                    }
-
-                    Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
-                        WalkRecorderView(coordinator: recordingCoordinator, showActiveRecording: showActiveRecording)
-                    }
-
-                    Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
-                        VideoWalkView(
-                            coordinator: recordingCoordinator,
-                            stopRequestID: videoWalkStopRequestID,
-                            showActiveRecording: showActiveRecording
-                        )
-                    }
-
-                    Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
-                        SettingsView()
-                    }
-                }
+                tabsWithRecordingAccessory
             } else {
                 OnboardingView()
             }
         }
-        .tint(.green)
-        .preferredColorScheme(selectedTheme.colorScheme)
-        .safeAreaInset(edge: .bottom) {
-            if recordingCoordinator.hasActiveRecording {
-                ActiveRecordingBanner(
-                    mode: recordingCoordinator.activeMode,
-                    duration: recordingCoordinator.recorder.currentDuration,
-                    distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
-                    returnAction: showActiveRecording,
-                    stopAction: stopActiveRecording
-                )
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+        .task {
+            tabSelection.reapplyOrientationPolicy()
+        }
+        .onChange(of: scenePhase) {
+            if scenePhase == .active {
+                tabSelection.reapplyOrientationPolicy()
             }
         }
+        .tint(.green)
+        .preferredColorScheme(selectedTheme.colorScheme)
         .confirmationDialog("Save Short Walk?", isPresented: $isShowingShortRecordingConfirmation) {
             Button("Save Walk") {
                 Task {
@@ -168,6 +212,62 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
+    private var tabsWithRecordingAccessory: some View {
+        if #available(iOS 26.1, *) {
+            appTabs
+                .tabViewBottomAccessory(isEnabled: recordingCoordinator.hasActiveRecording) {
+                    activeRecordingBanner
+                }
+        } else {
+            appTabs
+                .tabViewBottomAccessory {
+                    if recordingCoordinator.hasActiveRecording {
+                        activeRecordingBanner
+                    }
+                }
+        }
+    }
+
+    private var activeRecordingBanner: some View {
+        ActiveRecordingBanner(
+            mode: recordingCoordinator.activeMode,
+            duration: recordingCoordinator.recorder.currentDuration,
+            distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
+            returnAction: showActiveRecording,
+            stopAction: stopActiveRecording
+        )
+    }
+
+    private var appTabs: some View {
+        TabView(selection: Binding(
+            get: { tabSelection.presentedTab },
+            set: { tabSelection.presentedTab = $0 }
+        )) {
+            Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
+                HistoryView {
+                    selectTab(recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab)
+                }
+            }
+
+            Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
+                WalkRecorderView(coordinator: recordingCoordinator, showActiveRecording: showActiveRecording)
+            }
+
+            Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
+                VideoWalkView(
+                    coordinator: recordingCoordinator,
+                    stopRequestID: videoWalkStopRequestID,
+                    showActiveRecording: showActiveRecording
+                )
+            }
+
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
+                SettingsView()
+            }
+        }
+    }
+
     private var selectedTheme: AppTheme {
         AppTheme(rawValue: appThemeRawValue) ?? .system
     }
@@ -176,9 +276,13 @@ struct ContentView: View {
         StartRecordingDestination(rawValue: startRecordingDestinationRawValue) ?? .walk
     }
 
+    private func selectTab(_ tab: AppTab) {
+        tabSelection.requestSelection(tab)
+    }
+
     private func showActiveRecording() {
         if let activeTab = recordingCoordinator.activeTab {
-            selectedTab = activeTab
+            selectTab(activeTab)
         }
     }
 
@@ -194,7 +298,7 @@ struct ContentView: View {
                 }
             }
         case .videoWalk:
-            selectedTab = .videoWalk
+            selectTab(.videoWalk)
             videoWalkStopRequestID = UUID()
         case nil:
             break

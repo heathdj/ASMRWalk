@@ -80,6 +80,7 @@ final class VideoCaptureService: NSObject {
     private var stopContinuation: CheckedContinuation<URL, Error>?
     private var activeVideoDevice: AVCaptureDevice?
     private var meterTask: Task<Void, Never>?
+    private var isSessionActive = false
 
     var isPermissionDenied: Bool {
         cameraAuthorizationStatus == .denied
@@ -157,6 +158,7 @@ final class VideoCaptureService: NSObject {
             resetCapturePipeline()
             try configureSession()
             await startSession()
+            isSessionActive = true
             try Task.checkCancellation()
             isReady = true
             errorMessage = nil
@@ -237,18 +239,21 @@ final class VideoCaptureService: NSObject {
     }
 
     func stopSession() {
-        isReady = false
-
-        guard session.isRunning else {
-            resetCapturePipeline()
+        guard isSessionActive else {
             return
         }
 
+        isSessionActive = false
+        isReady = false
+        stopAudioMetering()
+        activeVideoDevice = nil
+
         let session = session
         Task { @concurrent in
-            session.stopRunning()
+            if session.isRunning {
+                session.stopRunning()
+            }
         }
-        resetCapturePipeline()
     }
 
     func refreshPreview() {

@@ -13,7 +13,10 @@ import Testing
 @testable import ASMR_Walk
 
 func makeContainer() throws -> ModelContainer {
-    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(
+        isStoredInMemoryOnly: true,
+        cloudKitDatabase: .none
+    )
     return try ModelContainer(
         for: WalkRecording.self,
         LocationPoint.self,
@@ -92,7 +95,10 @@ func fetchRecording(id: UUID, in container: ModelContainer) throws -> WalkRecord
 }
 
 func makeTestContainer() throws -> ModelContainer {
-    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(
+        isStoredInMemoryOnly: true,
+        cloudKitDatabase: .none
+    )
     return try ModelContainer(
         for: WalkRecording.self,
         LocationPoint.self,

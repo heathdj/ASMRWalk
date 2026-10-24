@@ -43,6 +43,66 @@ struct ASMR_WalkTests {
         #expect(Set(systemImages).count == systemImages.count)
     }
 
+    @Test("Only Video Walk uses the landscape-right orientation policy")
+    func tabOrientationPolicy() {
+        #expect(AppOrientationPolicy.orientationMask(for: .videoWalk) == .landscapeRight)
+        #expect(AppOrientationPolicy.orientationMask(for: .history) == .portrait)
+        #expect(AppOrientationPolicy.orientationMask(for: .walk) == .portrait)
+        #expect(AppOrientationPolicy.orientationMask(for: .settings) == .portrait)
+    }
+
+    @Test("Leaving Video Walk commits the destination before requesting portrait geometry")
+    func tabSelectionCommitsDestinationBeforePortraitRequest() async {
+        var transitions: [(kind: String, requested: AppTab)] = []
+        let selection = AppTabSelection(
+            applyOrientation: { requestedTab in
+                transitions.append(("apply", requestedTab))
+            },
+            prepareOrientation: { requestedTab in
+                transitions.append(("prepare", requestedTab))
+            },
+            requestOrientationAndWait: { requestedTab in
+                transitions.append(("wait", requestedTab))
+            }
+        )
+
+        await selection.transition(to: .videoWalk)
+        await selection.transition(to: .history)
+        selection.reapplyOrientationPolicy()
+
+        #expect(transitions.map(\.kind) == ["apply", "prepare", "wait", "apply"])
+        #expect(transitions.map(\.requested) == [.videoWalk, .history, .history, .history])
+        #expect(selection.selectedTab == .history)
+    }
+
+    @Test("Native tab selection write-back does not cancel portrait restoration")
+    func repeatedDestinationSelectionKeepsPortraitRequestAlive() async {
+        var portraitRequestCount = 0
+        var completedPortraitRequestCount = 0
+        let selection = AppTabSelection(
+            selectedTab: .videoWalk,
+            applyOrientation: { _ in },
+            prepareOrientation: { _ in },
+            requestOrientationAndWait: { _ in
+                portraitRequestCount += 1
+                try? await Task.sleep(for: .milliseconds(50))
+                completedPortraitRequestCount += 1
+            }
+        )
+
+        selection.requestSelection(.history)
+        while selection.selectedTab != .history {
+            await Task.yield()
+        }
+        selection.requestSelection(.history)
+        for _ in 0..<30 where completedPortraitRequestCount == 0 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+
+        #expect(portraitRequestCount == 1)
+        #expect(completedPortraitRequestCount == 1)
+    }
+
     @Test("Theme choices map to the expected app color scheme")
     func appThemePresentation() {
         #expect(AppTheme.system.title == "System")

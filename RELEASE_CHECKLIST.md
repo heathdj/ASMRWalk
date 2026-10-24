@@ -92,6 +92,8 @@ Run these on physical devices before submission:
 - [ ] Confirm Walk map shows the facing-direction indicator when heading data is available.
 - [ ] Cold launch the app in light and dark appearance and confirm the native launch screen transitions directly to History.
 - [ ] Open Video Walk and confirm the tab is landscape-only, never portrait.
+- [ ] Repeatedly switch from Video Walk to History, Walk, and Settings; confirm each destination returns to a full-screen portrait layout without clipping or stale offsets.
+- [ ] Background and foreground the app while Video Walk is selected, then leave the tab and confirm landscape and portrait orientation policies are restored correctly.
 - [ ] Inspect Video Walk in landscape with accessibility Dynamic Type sizes and confirm the square route map does not overlap the REC indicator, status card, or start control.
 - [ ] Start and save a video walk.
 - [ ] Stop a video walk before 10 seconds and confirm Save/Discard behavior.

@@ -32,7 +32,8 @@ struct ASMR_WalkApp: App {
         if UITestLaunchConfiguration.usesInMemoryModelContainer {
             let configuration = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: true
+                isStoredInMemoryOnly: true,
+                cloudKitDatabase: .none
             )
 
             do {
@@ -60,6 +61,7 @@ private enum UITestLaunchConfiguration {
     static var usesInMemoryModelContainer: Bool {
         #if DEBUG
         ProcessInfo.processInfo.environment["ASMR_WALK_UI_TEST_IN_MEMORY_STORE"] == "1"
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         #else
         false
         #endif

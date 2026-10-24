@@ -173,8 +173,8 @@ struct VideoWalkView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    @State private var camera = VideoCaptureService()
     @State private var dockKitAccessory = DockKitAccessoryService()
+    @State private var camera = VideoCaptureService()
     let coordinator: RecordingCoordinator
     let stopRequestID: UUID?
     let showActiveRecording: () -> Void
@@ -211,7 +211,6 @@ struct VideoWalkView: View {
         .accessibilityIdentifier(AccessibilityID.videoWalkScreen)
         .toolbarVisibility(isRecordingVideoWalk ? .hidden : .visible, for: .tabBar)
         .task {
-            InterfaceOrientationController.lockVideoWalkLandscape()
             await preparePreviewIfAuthorized()
             dockKitAccessory.start(
                 shutterAction: handleDockKitShutter,
@@ -229,7 +228,6 @@ struct VideoWalkView: View {
                 }
                 camera.stopSession()
             }
-            InterfaceOrientationController.restoreDefaultOrientation()
         }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
