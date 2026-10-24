@@ -46,6 +46,7 @@ enum AppTab: CaseIterable, Hashable {
 @Observable
 final class AppTabSelection {
     private(set) var selectedTab: AppTab
+    private(set) var layoutRevision = 0
 
     var presentedTab: AppTab {
         get { selectedTab }
@@ -54,15 +55,18 @@ final class AppTabSelection {
 
     @ObservationIgnored private var transitionTask: Task<Void, Never>?
     private let applyOrientation: @MainActor (AppTab) -> Void
+    private let prepareOrientation: @MainActor (AppTab) -> Void
     private let requestOrientationAndWait: @MainActor (AppTab) async -> Void
 
     init(
         selectedTab: AppTab = .history,
         applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy,
+        prepareOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.preparePolicy,
         requestOrientationAndWait: @escaping @MainActor (AppTab) async -> Void = InterfaceOrientationController.requestPolicyAndWait
     ) {
         self.selectedTab = selectedTab
         self.applyOrientation = applyOrientation
+        self.prepareOrientation = prepareOrientation
         self.requestOrientationAndWait = requestOrientationAndWait
     }
 
@@ -78,16 +82,24 @@ final class AppTabSelection {
             return
         }
 
-        if selectedTab == .videoWalk, tab != .videoWalk {
+        let isLeavingVideoWalk = selectedTab == .videoWalk && tab != .videoWalk
+        if isLeavingVideoWalk {
+            prepareOrientation(tab)
+            selectedTab = tab
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(50))
+            guard Task.isCancelled == false else {
+                return
+            }
             await requestOrientationAndWait(tab)
             guard Task.isCancelled == false else {
                 return
             }
+            layoutRevision += 1
         } else {
             applyOrientation(tab)
+            selectedTab = tab
         }
-
-        selectedTab = tab
     }
 
     func reapplyOrientationPolicy() {
@@ -189,6 +201,7 @@ struct ContentView: View {
                         SettingsView()
                     }
                 }
+                .id(tabSelection.layoutRevision)
             } else {
                 OnboardingView()
             }

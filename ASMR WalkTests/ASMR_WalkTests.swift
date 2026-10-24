@@ -51,13 +51,16 @@ struct ASMR_WalkTests {
         #expect(AppOrientationPolicy.orientationMask(for: .settings) == .portrait)
     }
 
-    @Test("Leaving Video Walk waits for portrait geometry before changing tabs")
-    func tabSelectionWaitsForPortraitGeometry() async {
+    @Test("Leaving Video Walk commits the destination before requesting portrait geometry")
+    func tabSelectionCommitsDestinationBeforePortraitRequest() async {
         var transitions: [(kind: String, requested: AppTab, current: AppTab)] = []
         var selection: AppTabSelection!
         selection = AppTabSelection(
             applyOrientation: { requestedTab in
                 transitions.append(("apply", requestedTab, selection.selectedTab))
+            },
+            prepareOrientation: { requestedTab in
+                transitions.append(("prepare", requestedTab, selection.selectedTab))
             },
             requestOrientationAndWait: { requestedTab in
                 transitions.append(("wait", requestedTab, selection.selectedTab))
@@ -68,10 +71,11 @@ struct ASMR_WalkTests {
         await selection.transition(to: .history)
         selection.reapplyOrientationPolicy()
 
-        #expect(transitions.map(\.kind) == ["apply", "wait", "apply"])
-        #expect(transitions.map(\.requested) == [.videoWalk, .history, .history])
-        #expect(transitions.map(\.current) == [.history, .videoWalk, .history])
+        #expect(transitions.map(\.kind) == ["apply", "prepare", "wait", "apply"])
+        #expect(transitions.map(\.requested) == [.videoWalk, .history, .history, .history])
+        #expect(transitions.map(\.current) == [.history, .videoWalk, .history, .history])
         #expect(selection.selectedTab == .history)
+        #expect(selection.layoutRevision == 1)
     }
 
     @Test("Theme choices map to the expected app color scheme")

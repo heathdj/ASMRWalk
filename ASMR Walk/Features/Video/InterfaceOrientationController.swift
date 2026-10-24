@@ -70,7 +70,7 @@ enum InterfaceOrientationController {
         }
     }
 
-    private static func preparePolicy(for tab: AppTab) {
+    static func preparePolicy(for tab: AppTab) {
         let orientationMask = AppOrientationPolicy.orientationMask(for: tab)
         AppOrientationDelegate.supportedOrientations = orientationMask
         updateSupportedInterfaceOrientations()
