@@ -71,6 +71,10 @@ final class AppTabSelection {
     }
 
     func requestSelection(_ tab: AppTab) {
+        guard tab != selectedTab else {
+            return
+        }
+
         transitionTask?.cancel()
         transitionTask = Task { [weak self] in
             await self?.transition(to: tab)

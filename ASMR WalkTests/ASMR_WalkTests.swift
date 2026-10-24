@@ -78,6 +78,30 @@ struct ASMR_WalkTests {
         #expect(selection.layoutRevision == 1)
     }
 
+    @Test("Native tab selection write-back does not cancel portrait restoration")
+    func repeatedDestinationSelectionKeepsPortraitRequestAlive() async {
+        var portraitRequestCount = 0
+        let selection = AppTabSelection(
+            selectedTab: .videoWalk,
+            applyOrientation: { _ in },
+            prepareOrientation: { _ in },
+            requestOrientationAndWait: { _ in
+                portraitRequestCount += 1
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+        )
+
+        selection.requestSelection(.history)
+        while selection.selectedTab != .history {
+            await Task.yield()
+        }
+        selection.requestSelection(.history)
+        try? await Task.sleep(for: .milliseconds(150))
+
+        #expect(portraitRequestCount == 1)
+        #expect(selection.layoutRevision == 1)
+    }
+
     @Test("Theme choices map to the expected app color scheme")
     func appThemePresentation() {
         #expect(AppTheme.system.title == "System")
