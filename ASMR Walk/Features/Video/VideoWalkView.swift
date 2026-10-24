@@ -173,8 +173,8 @@ struct VideoWalkView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    @State private var camera = VideoCaptureService()
     @State private var dockKitAccessory = DockKitAccessoryService()
+    let camera: VideoCaptureService
     let coordinator: RecordingCoordinator
     let stopRequestID: UUID?
     let showActiveRecording: () -> Void

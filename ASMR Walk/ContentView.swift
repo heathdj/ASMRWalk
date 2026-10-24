@@ -54,17 +54,20 @@ final class AppTabSelection {
     }
 
     @ObservationIgnored private var transitionTask: Task<Void, Never>?
+    private let prepareToLeaveVideoWalk: @MainActor () -> Void
     private let applyOrientation: @MainActor (AppTab) -> Void
     private let prepareOrientation: @MainActor (AppTab) -> Void
     private let requestOrientationAndWait: @MainActor (AppTab) async -> Void
 
     init(
         selectedTab: AppTab = .history,
+        prepareToLeaveVideoWalk: @escaping @MainActor () -> Void = {},
         applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy,
         prepareOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.preparePolicy,
         requestOrientationAndWait: @escaping @MainActor (AppTab) async -> Void = InterfaceOrientationController.requestPolicyAndWait
     ) {
         self.selectedTab = selectedTab
+        self.prepareToLeaveVideoWalk = prepareToLeaveVideoWalk
         self.applyOrientation = applyOrientation
         self.prepareOrientation = prepareOrientation
         self.requestOrientationAndWait = requestOrientationAndWait
@@ -88,6 +91,7 @@ final class AppTabSelection {
 
         let isLeavingVideoWalk = selectedTab == .videoWalk && tab != .videoWalk
         if isLeavingVideoWalk {
+            prepareToLeaveVideoWalk()
             prepareOrientation(tab)
             selectedTab = tab
             await Task.yield()
@@ -168,12 +172,18 @@ struct ContentView: View {
     @AppStorage(AppTheme.storageKey) private var appThemeRawValue = AppTheme.system.rawValue
     @AppStorage(OnboardingCompletion.storageKey) private var hasCompletedOnboarding = false
     @AppStorage(StartRecordingDestination.storageKey) private var startRecordingDestinationRawValue = StartRecordingDestination.walk.rawValue
-    @State private var tabSelection = AppTabSelection()
+    @State private var tabSelection: AppTabSelection
+    @State private var videoCaptureService: VideoCaptureService
     @State private var recordingCoordinator: RecordingCoordinator
     @State private var isShowingShortRecordingConfirmation = false
     @State private var videoWalkStopRequestID: UUID?
 
     init(recordingCoordinator: RecordingCoordinator? = nil) {
+        let videoCaptureService = VideoCaptureService()
+        _videoCaptureService = State(initialValue: videoCaptureService)
+        _tabSelection = State(initialValue: AppTabSelection(
+            prepareToLeaveVideoWalk: videoCaptureService.stopSession
+        ))
         _recordingCoordinator = State(initialValue: recordingCoordinator ?? RecordingCoordinator(activeMode: Self.launchActiveRecordingMode))
     }
 
@@ -195,6 +205,7 @@ struct ContentView: View {
 
                     Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
                         VideoWalkView(
+                            camera: videoCaptureService,
                             coordinator: recordingCoordinator,
                             stopRequestID: videoWalkStopRequestID,
                             showActiveRecording: showActiveRecording

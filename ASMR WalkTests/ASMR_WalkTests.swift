@@ -54,11 +54,16 @@ struct ASMR_WalkTests {
     @Test("Leaving Video Walk commits the destination before requesting portrait geometry")
     func tabSelectionCommitsDestinationBeforePortraitRequest() async {
         var transitions: [(kind: String, requested: AppTab)] = []
+        var didPrepareCameraForExit = false
         let selection = AppTabSelection(
+            prepareToLeaveVideoWalk: {
+                didPrepareCameraForExit = true
+            },
             applyOrientation: { requestedTab in
                 transitions.append(("apply", requestedTab))
             },
             prepareOrientation: { requestedTab in
+                #expect(didPrepareCameraForExit)
                 transitions.append(("prepare", requestedTab))
             },
             requestOrientationAndWait: { requestedTab in
@@ -94,7 +99,9 @@ struct ASMR_WalkTests {
             await Task.yield()
         }
         selection.requestSelection(.history)
-        try? await Task.sleep(for: .milliseconds(150))
+        for _ in 0..<30 where selection.layoutRevision == 0 {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
 
         #expect(portraitRequestCount == 1)
         #expect(selection.layoutRevision == 1)
