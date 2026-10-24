@@ -40,7 +40,7 @@ struct MacImporterView: View {
         .frame(width: 980, height: 680)
         .fileImporter(
             isPresented: $isImportingGPX,
-            allowedContentTypes: [.gpx, .xml],
+            allowedContentTypes: UTType.supportedGPXImportTypes,
             allowsMultipleSelection: false
         ) { result in
             Task {

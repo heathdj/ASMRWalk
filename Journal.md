@@ -489,6 +489,12 @@ Issue 78 taught the overlay to speak both clocks that editors care about. **Clip
 
 Long walks also needed a sensible luggage limit. A route with tens of thousands of samples is deterministically reduced to at most 2,048 render points while keeping its first and last samples. This is less like throwing away the map and more like removing redundant breadcrumbs before entering the editing room. The same source package always selects the same points, so playback and export cannot disagree because of randomness or frame order.
 
+### Relive Arrives Without a Name Tag
+
+Issue 114 exposed a wonderfully ordinary interoperability trap: Relive's export was valid GPX 1.1, but the downloaded file had no `.gpx` extension. The parser could already understand its compact, namespace-heavy XML, fractional timestamps, elevation samples, and real pauses between points. The macOS file picker simply refused to let the file reach the parser—like a capable translator being stopped by a receptionist because the document's folder had no label.
+
+The importer now accepts extensionless data at the picker and judges it by its contents. That broader front door comes with a matching guardrail: XML must actually have a GPX root element before route-like nodes are trusted. Relive's absent accuracy and speed samples remain absent semantically (with the package's established zero accuracy fallback), while timestamps and gaps pass through untouched so the overlay animation keeps the walk's real rhythm. Tests use deliberately fictional coordinates; production bugs deserve realistic structure, not somebody's private walking route checked into source control.
+
 ### Permission Recovery Learns Everyone's Name
 
 The first App Review uncovered a subtle privacy trap in Video Walk. Camera, microphone, and location had been bundled into one big “privacy access” warning, like sending someone to a building directory without saying which office they needed. If camera access was denied before the microphone prompt appeared, the app could tell the user to enable both in Settings—even though iOS had never asked about the microphone.

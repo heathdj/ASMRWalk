@@ -233,6 +233,30 @@ struct ASMR_Walk_Mac_ImporterTests {
         }
     }
 
+    @Test("Extensionless Relive GPX imports and writes a readable route package")
+    func importsExtensionlessReliveGPX() throws {
+        let package = try ASMRGPXRouteImporter().package(
+            fromGPXText: Self.reliveGPXFixture,
+            sourceFilename: "Afternoon_Oct_9"
+        )
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension(ASMRRoutePackage.fileExtension)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+
+        try package.write(to: packageURL)
+        let loadedPackage = try ASMRRoutePackage.load(from: packageURL)
+
+        #expect(UTType.supportedGPXImportTypes.contains(.data))
+        #expect(loadedPackage.manifest.title == "Afternoon Oct 9")
+        #expect(loadedPackage.manifest.durationSeconds == 30)
+        #expect(loadedPackage.manifest.routePointCount == 4)
+        #expect(loadedPackage.routePoints.map(\.altitude) == [101.25, 102.5, 103.75, 104])
+        #expect(loadedPackage.routePoints.allSatisfy { $0.horizontalAccuracy == 0 })
+        #expect(loadedPackage.routePoints.allSatisfy { $0.speed == nil })
+        #expect(loadedPackage.sourceGPX == Self.reliveGPXFixture)
+    }
+
     private func makeRoutePackage() -> ASMRRoutePackage {
         let start = Date(timeIntervalSince1970: 2_000)
         return ASMRRoutePackage(
@@ -272,5 +296,7 @@ struct ASMR_Walk_Mac_ImporterTests {
             ]
         )
     }
+
+    private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
 
 }

@@ -92,6 +92,36 @@ struct ASMRGPXRouteImporterTests {
         #expect(package.routePoints.allSatisfy { $0.horizontalAccuracy == 0 })
     }
 
+    @Test("Compact extensionless Relive GPX preserves timed route data")
+    func importsExtensionlessReliveGPX() throws {
+        let package = try ASMRGPXRouteImporter().package(
+            fromGPXText: Self.reliveGPXFixture,
+            sourceFilename: "Afternoon_Oct_9"
+        )
+
+        #expect(package.manifest.title == "Afternoon Oct 9")
+        #expect(package.manifest.createdAt == Self.date("2026-10-09T20:24:10.000Z"))
+        #expect(package.manifest.routeStartedAt == Self.date("2026-10-09T20:24:10.000Z"))
+        #expect(package.manifest.routeEndedAt == Self.date("2026-10-09T20:24:40.000Z"))
+        #expect(package.manifest.durationSeconds == 30)
+        #expect(package.routePoints.count == 4)
+        #expect(package.routePoints.map(\.altitude) == [101.25, 102.5, 103.75, 104])
+        #expect(package.routePoints.allSatisfy { $0.horizontalAccuracy == 0 })
+        #expect(package.routePoints.allSatisfy { $0.speed == nil })
+        let thirdPoint = try #require(package.routePoints.dropFirst(2).first)
+        #expect(thirdPoint.timestamp == Self.date("2026-10-09T20:24:25.999Z"))
+        #expect(package.sourceGPX == Self.reliveGPXFixture)
+    }
+
+    @Test("XML with route-like elements but no GPX root is rejected")
+    func rejectsNonGPXXML() {
+        #expect(throws: ASMRGPXRouteImporter.ImportError.self) {
+            try ASMRGPXRouteImporter().package(
+                fromGPXText: "<route><trkpt lat=\"12.3\" lon=\"45.6\"><time>2026-10-09T20:24:10Z</time></trkpt></route>"
+            )
+        }
+    }
+
     @Test("GPX without route points fails import")
     func missingRoutePointsFailsImport() throws {
         #expect(throws: ASMRGPXRouteImporter.ImportError.missingRoutePoints) {
@@ -102,5 +132,13 @@ struct ASMRGPXRouteImporterTests {
                 """
             )
         }
+    }
+
+    private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
+
+    private static func date(_ text: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: text)
     }
 }
