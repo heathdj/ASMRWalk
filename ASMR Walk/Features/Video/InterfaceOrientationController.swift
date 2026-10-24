@@ -10,9 +10,30 @@ final class AppOrientationDelegate: NSObject, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
+        configurationForConnecting connectingSceneSession: UISceneSession,
+        options: UIScene.ConnectionOptions
+    ) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(
+            name: nil,
+            sessionRole: connectingSceneSession.role
+        )
+        if connectingSceneSession.role == .windowApplication {
+            configuration.delegateClass = AppOrientationSceneDelegate.self
+        }
+        return configuration
+    }
+
+    func application(
+        _ application: UIApplication,
         supportedInterfaceOrientationsFor window: UIWindow?
     ) -> UIInterfaceOrientationMask {
         Self.supportedOrientations
+    }
+}
+
+final class AppOrientationSceneDelegate: NSObject, UIWindowSceneDelegate {
+    func supportedInterfaceOrientations(for windowScene: UIWindowScene) -> UIInterfaceOrientationMask {
+        AppOrientationDelegate.supportedOrientations
     }
 }
 

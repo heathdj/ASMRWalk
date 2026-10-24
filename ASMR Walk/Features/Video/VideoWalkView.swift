@@ -174,7 +174,7 @@ struct VideoWalkView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     @State private var dockKitAccessory = DockKitAccessoryService()
-    let camera: VideoCaptureService
+    @State private var camera = VideoCaptureService()
     let coordinator: RecordingCoordinator
     let stopRequestID: UUID?
     let showActiveRecording: () -> Void
