@@ -142,12 +142,17 @@ nonisolated private struct GPXDocument {
             throw ASMRGPXRouteImporter.ImportError.invalidGPX(message)
         }
 
+        guard delegate.foundGPXRoot else {
+            throw ASMRGPXRouteImporter.ImportError.invalidGPX("The XML document does not have a GPX root element.")
+        }
+
         return delegate.document
     }
 }
 
 nonisolated private final class GPXDocumentParser: NSObject, XMLParserDelegate {
     private(set) var document = GPXDocument()
+    private(set) var foundGPXRoot = false
     private var elementStack: [String] = []
     private var currentText = ""
     private var currentPoint: MutablePoint?
@@ -160,6 +165,9 @@ nonisolated private final class GPXDocumentParser: NSObject, XMLParserDelegate {
         attributes attributeDict: [String: String] = [:]
     ) {
         let name = elementName.normalizedGPXElementName
+        if elementStack.isEmpty, name == "gpx" {
+            foundGPXRoot = true
+        }
         elementStack.append(name)
         currentText = ""
 
@@ -334,5 +342,9 @@ private extension String {
 extension UTType {
     static var gpx: UTType {
         UTType(filenameExtension: "gpx") ?? .xml
+    }
+
+    static var supportedGPXImportTypes: [UTType] {
+        [.gpx, .xml, .data]
     }
 }
