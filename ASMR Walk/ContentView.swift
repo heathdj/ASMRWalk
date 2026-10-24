@@ -46,7 +46,6 @@ enum AppTab: CaseIterable, Hashable {
 @Observable
 final class AppTabSelection {
     private(set) var selectedTab: AppTab
-    private(set) var layoutRevision = 0
 
     var presentedTab: AppTab {
         get { selectedTab }
@@ -102,10 +101,6 @@ final class AppTabSelection {
                 return
             }
             await requestOrientationAndWait(tab)
-            guard Task.isCancelled == false else {
-                return
-            }
-            layoutRevision += 1
         } else {
             applyOrientation(tab)
             selectedTab = tab
@@ -219,20 +214,29 @@ struct ContentView: View {
 
     @ViewBuilder
     private var tabsWithRecordingAccessory: some View {
-        if recordingCoordinator.hasActiveRecording {
+        if #available(iOS 26.1, *) {
             appTabs
-                .tabViewBottomAccessory {
-                    ActiveRecordingBanner(
-                        mode: recordingCoordinator.activeMode,
-                        duration: recordingCoordinator.recorder.currentDuration,
-                        distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
-                        returnAction: showActiveRecording,
-                        stopAction: stopActiveRecording
-                    )
+                .tabViewBottomAccessory(isEnabled: recordingCoordinator.hasActiveRecording) {
+                    activeRecordingBanner
                 }
         } else {
             appTabs
+                .tabViewBottomAccessory {
+                    if recordingCoordinator.hasActiveRecording {
+                        activeRecordingBanner
+                    }
+                }
         }
+    }
+
+    private var activeRecordingBanner: some View {
+        ActiveRecordingBanner(
+            mode: recordingCoordinator.activeMode,
+            duration: recordingCoordinator.recorder.currentDuration,
+            distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
+            returnAction: showActiveRecording,
+            stopAction: stopActiveRecording
+        )
     }
 
     private var appTabs: some View {
@@ -262,7 +266,6 @@ struct ContentView: View {
                 SettingsView()
             }
         }
-        .id(tabSelection.layoutRevision)
     }
 
     private var selectedTheme: AppTheme {
