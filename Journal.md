@@ -519,6 +519,8 @@ Physical-device testing then disproved the tempting camera-pipeline theory: stop
 
 The same investigation uncovered four UI tests that looked like navigation failures but were really hit-testing failures. The active-recording banner had been attached as a bottom safe-area inset outside the tab container, so it visually and interactively overlapped the tab bar. Tapping Settings could actually press Stop underneath the banner and open the short-recording dialog. Moving the banner to `tabViewBottomAccessory` lets SwiftUI place it above the tab bar and negotiate Liquid Glass layout correctly. When an automated tap says it succeeded but navigation does nothing, inspect both frames and hit points—the wrong control may be behaving perfectly.
 
+There was a subtle accessory sequel: putting an `if` inside `tabViewBottomAccessory` still creates the accessory container when the condition is false, producing a perfectly rendered empty glass bar. The modifier itself now exists only while a recording is active. Portrait restoration also retries its documented scene-geometry request for a bounded period while the tab hierarchy settles; a single request can arrive during UIKit's transition window and remain unresolved even though no error callback fires.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -80,14 +80,18 @@ enum InterfaceOrientationController {
             return
         }
 
-        for _ in 0..<180 {
+        for attempt in 0..<40 {
             if matches(orientationMask, orientation: scene.effectiveGeometry.interfaceOrientation) {
                 return
             }
             guard Task.isCancelled == false else {
                 return
             }
-            try? await Task.sleep(for: .milliseconds(16))
+            if attempt > 0 {
+                updateSupportedInterfaceOrientations()
+                request(orientationMask)
+            }
+            try? await Task.sleep(for: .milliseconds(125))
         }
     }
 

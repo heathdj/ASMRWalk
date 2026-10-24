@@ -184,45 +184,9 @@ struct ContentView: View {
     }
 
     var body: some View {
-        @Bindable var tabSelection = tabSelection
-
         Group {
             if hasCompletedOnboarding || Self.shouldSkipOnboardingForUITests {
-                TabView(selection: $tabSelection.presentedTab) {
-                    Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
-                        HistoryView {
-                            selectTab(recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab)
-                        }
-                    }
-
-                    Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
-                        WalkRecorderView(coordinator: recordingCoordinator, showActiveRecording: showActiveRecording)
-                    }
-
-                    Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
-                        VideoWalkView(
-                            coordinator: recordingCoordinator,
-                            stopRequestID: videoWalkStopRequestID,
-                            showActiveRecording: showActiveRecording
-                        )
-                    }
-
-                    Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
-                        SettingsView()
-                    }
-                }
-                .id(tabSelection.layoutRevision)
-                .tabViewBottomAccessory {
-                    if recordingCoordinator.hasActiveRecording {
-                        ActiveRecordingBanner(
-                            mode: recordingCoordinator.activeMode,
-                            duration: recordingCoordinator.recorder.currentDuration,
-                            distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
-                            returnAction: showActiveRecording,
-                            stopAction: stopActiveRecording
-                        )
-                    }
-                }
+                tabsWithRecordingAccessory
             } else {
                 OnboardingView()
             }
@@ -251,6 +215,54 @@ struct ContentView: View {
         } message: {
             Text("This walk is shorter than 10 seconds.")
         }
+    }
+
+    @ViewBuilder
+    private var tabsWithRecordingAccessory: some View {
+        if recordingCoordinator.hasActiveRecording {
+            appTabs
+                .tabViewBottomAccessory {
+                    ActiveRecordingBanner(
+                        mode: recordingCoordinator.activeMode,
+                        duration: recordingCoordinator.recorder.currentDuration,
+                        distanceMeters: recordingCoordinator.recorder.currentDistanceMeters,
+                        returnAction: showActiveRecording,
+                        stopAction: stopActiveRecording
+                    )
+                }
+        } else {
+            appTabs
+        }
+    }
+
+    private var appTabs: some View {
+        TabView(selection: Binding(
+            get: { tabSelection.presentedTab },
+            set: { tabSelection.presentedTab = $0 }
+        )) {
+            Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
+                HistoryView {
+                    selectTab(recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab)
+                }
+            }
+
+            Tab(AppTab.walk.title, systemImage: AppTab.walk.systemImage, value: AppTab.walk) {
+                WalkRecorderView(coordinator: recordingCoordinator, showActiveRecording: showActiveRecording)
+            }
+
+            Tab(AppTab.videoWalk.title, systemImage: AppTab.videoWalk.systemImage, value: AppTab.videoWalk) {
+                VideoWalkView(
+                    coordinator: recordingCoordinator,
+                    stopRequestID: videoWalkStopRequestID,
+                    showActiveRecording: showActiveRecording
+                )
+            }
+
+            Tab(AppTab.settings.title, systemImage: AppTab.settings.systemImage, value: AppTab.settings) {
+                SettingsView()
+            }
+        }
+        .id(tabSelection.layoutRevision)
     }
 
     private var selectedTheme: AppTheme {
