@@ -51,19 +51,24 @@ struct ASMR_WalkTests {
         #expect(AppOrientationPolicy.orientationMask(for: .settings) == .portrait)
     }
 
-    @Test("Tab orientation changes are applied before navigation state changes")
-    func tabSelectionAppliesOrientationPolicy() {
-        var transitions: [(requested: AppTab, current: AppTab)] = []
+    @Test("Leaving Video Walk waits for portrait geometry before changing tabs")
+    func tabSelectionWaitsForPortraitGeometry() async {
+        var transitions: [(kind: String, requested: AppTab, current: AppTab)] = []
         var selection: AppTabSelection!
-        selection = AppTabSelection { requestedTab in
-            transitions.append((requestedTab, selection.selectedTab))
-        }
+        selection = AppTabSelection(
+            applyOrientation: { requestedTab in
+                transitions.append(("apply", requestedTab, selection.selectedTab))
+            },
+            requestOrientationAndWait: { requestedTab in
+                transitions.append(("wait", requestedTab, selection.selectedTab))
+            }
+        )
 
-        selection.selectedTab = .videoWalk
-        selection.selectedTab = .history
-        selection.selectedTab = .history
+        await selection.transition(to: .videoWalk)
+        await selection.transition(to: .history)
         selection.reapplyOrientationPolicy()
 
+        #expect(transitions.map(\.kind) == ["apply", "wait", "apply"])
         #expect(transitions.map(\.requested) == [.videoWalk, .history, .history])
         #expect(transitions.map(\.current) == [.history, .videoWalk, .history])
         #expect(selection.selectedTab == .history)

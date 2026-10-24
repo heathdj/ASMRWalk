@@ -45,23 +45,49 @@ enum AppTab: CaseIterable, Hashable {
 @MainActor
 @Observable
 final class AppTabSelection {
-    var selectedTab: AppTab {
-        willSet {
-            guard newValue != selectedTab else {
-                return
-            }
-            applyOrientation(newValue)
-        }
+    private(set) var selectedTab: AppTab
+
+    var presentedTab: AppTab {
+        get { selectedTab }
+        set { requestSelection(newValue) }
     }
 
+    @ObservationIgnored private var transitionTask: Task<Void, Never>?
     private let applyOrientation: @MainActor (AppTab) -> Void
+    private let requestOrientationAndWait: @MainActor (AppTab) async -> Void
 
     init(
         selectedTab: AppTab = .history,
-        applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy
+        applyOrientation: @escaping @MainActor (AppTab) -> Void = InterfaceOrientationController.applyPolicy,
+        requestOrientationAndWait: @escaping @MainActor (AppTab) async -> Void = InterfaceOrientationController.requestPolicyAndWait
     ) {
         self.selectedTab = selectedTab
         self.applyOrientation = applyOrientation
+        self.requestOrientationAndWait = requestOrientationAndWait
+    }
+
+    func requestSelection(_ tab: AppTab) {
+        transitionTask?.cancel()
+        transitionTask = Task { [weak self] in
+            await self?.transition(to: tab)
+        }
+    }
+
+    func transition(to tab: AppTab) async {
+        guard tab != selectedTab else {
+            return
+        }
+
+        if selectedTab == .videoWalk, tab != .videoWalk {
+            await requestOrientationAndWait(tab)
+            guard Task.isCancelled == false else {
+                return
+            }
+        } else {
+            applyOrientation(tab)
+        }
+
+        selectedTab = tab
     }
 
     func reapplyOrientationPolicy() {
@@ -140,7 +166,7 @@ struct ContentView: View {
 
         Group {
             if hasCompletedOnboarding || Self.shouldSkipOnboardingForUITests {
-                TabView(selection: $tabSelection.selectedTab) {
+                TabView(selection: $tabSelection.presentedTab) {
                     Tab(AppTab.history.title, systemImage: AppTab.history.systemImage, value: AppTab.history) {
                         HistoryView {
                             selectTab(recordingCoordinator.activeTab ?? selectedStartRecordingDestination.tab)
@@ -215,7 +241,7 @@ struct ContentView: View {
     }
 
     private func selectTab(_ tab: AppTab) {
-        tabSelection.selectedTab = tab
+        tabSelection.requestSelection(tab)
     }
 
     private func showActiveRecording() {

@@ -46,13 +46,57 @@ enum InterfaceOrientationController {
     }
 
     static func applyPolicy(for tab: AppTab) {
+        preparePolicy(for: tab)
+        request(AppOrientationPolicy.orientationMask(for: tab))
+    }
+
+    static func requestPolicyAndWait(for tab: AppTab) async {
+        let orientationMask = AppOrientationPolicy.orientationMask(for: tab)
+        preparePolicy(for: tab)
+        request(orientationMask)
+
+        guard let scene = activeScene else {
+            return
+        }
+
+        for _ in 0..<180 {
+            if matches(orientationMask, orientation: scene.effectiveGeometry.interfaceOrientation) {
+                return
+            }
+            guard Task.isCancelled == false else {
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(16))
+        }
+    }
+
+    private static func preparePolicy(for tab: AppTab) {
         let orientationMask = AppOrientationPolicy.orientationMask(for: tab)
         AppOrientationDelegate.supportedOrientations = orientationMask
         updateSupportedInterfaceOrientations()
-        request(orientationMask)
     }
 
-    static func request(_ orientations: UIInterfaceOrientationMask) {
+    private static func matches(
+        _ orientationMask: UIInterfaceOrientationMask,
+        orientation: UIInterfaceOrientation
+    ) -> Bool {
+        switch orientation {
+        case .portrait:
+            orientationMask.contains(.portrait)
+        case .portraitUpsideDown:
+            orientationMask.contains(.portraitUpsideDown)
+        case .landscapeLeft:
+            orientationMask.contains(.landscapeLeft)
+        case .landscapeRight:
+            orientationMask.contains(.landscapeRight)
+        case .unknown:
+            false
+        @unknown default:
+            false
+        }
+    }
+
+    private static func request(_ orientations: UIInterfaceOrientationMask) {
         guard let scene = activeScene else {
             return
         }
