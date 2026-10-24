@@ -55,6 +55,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - Store user-editable recording descriptions as `walkDescription`; do not add a SwiftData `@Model` property named `description`.
 - Put ASMR Walk-specific GPX metadata in `<extensions>` and never export local sandbox video URLs.
 - GPX import must validate the document contents instead of relying on a filename extension; Relive exports may arrive as extensionless, compact GPX 1.1 XML.
+- Chronological route sorting must preserve source order when timestamps are equal; overlay playback resolves an equal-time group to its last source point.
 - Keep FxPlug frame rendering deterministic: host timing and package data may prepare state, but drawing must not access the network, Photos, MapKit, or CloudKit.
 - User-initiated exports and share links are not background collection by ASMR Walk, but privacy policy and review notes must explain what route data they contain.
 - CloudKit sync is not a developer-operated backend, but privacy policy and review notes must explain that route data and recording metadata may sync through the user's private iCloud account.
@@ -69,6 +70,7 @@ Open the project in Xcode, select the `ASMR Walk` scheme, and run on an iPhone i
 - Google Maps URLs cannot preserve every recorded route point; GPX is the fidelity-preserving export.
 - GPX exports include plugin-friendly extensions for duration, mode, video presence, accuracy, and optional speed while remaining readable by generic GPX tools.
 - Relive GPX imports may use namespace-qualified, single-line XML with fractional timestamps and missing accuracy/speed values; preserve timing gaps and use conservative defaults for absent optional measurements.
+- `GPX Export` files may omit metadata and track names, contain high-precision elevations, repeat timestamps, and include long sampling gaps; use the filename as the fallback title and never collapse timing gaps.
 - GPS background recording is supported only when the user enables it, starts a GPS Walk, and grants Always location permission.
 - Camera, microphone, and location usage descriptions must be configured before their APIs are requested.
 - Photos export and legacy Photos playback need `NSPhotoLibraryAddUsageDescription` and `NSPhotoLibraryUsageDescription`; source code guards against missing keys, but device testing requires the target settings.

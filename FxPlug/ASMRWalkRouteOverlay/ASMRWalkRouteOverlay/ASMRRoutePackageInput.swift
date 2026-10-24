@@ -31,9 +31,17 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
             )
         }
 
+        let sortedRoutePoints = routePoints.enumerated().sorted { lhs, rhs in
+            if lhs.element.timestamp == rhs.element.timestamp {
+                return lhs.offset < rhs.offset
+            }
+
+            return lhs.element.timestamp < rhs.element.timestamp
+        }.map(\.element)
+
         return ASMRRoutePackageInput(
             manifest: manifest,
-            routePoints: routePoints.sorted { $0.timestamp < $1.timestamp }
+            routePoints: sortedRoutePoints
         )
     }
 

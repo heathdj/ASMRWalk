@@ -495,6 +495,12 @@ Issue 114 exposed a wonderfully ordinary interoperability trap: Relive's export 
 
 The importer now accepts extensionless data at the picker and judges it by its contents. That broader front door comes with a matching guardrail: XML must actually have a GPX root element before route-like nodes are trusted. Relive's absent accuracy and speed samples remain absent semantically (with the package's established zero accuracy fallback), while timestamps and gaps pass through untouched so the overlay animation keeps the walk's real rhythm. Tests use deliberately fictional coordinates; production bugs deserve realistic structure, not somebody's private walking route checked into source control.
 
+### Two Breadcrumbs, One Clock Tick
+
+Issue 117 brought in GPX files whose exporter is almost aggressively modest: no metadata, no track name, just a filename and a long line of timed breadcrumbs. The filename now becomes the route's name, and the first and last usable samples supply the clock. More importantly, the real files revealed that two distinct GPS samples can share the same whole-second timestamp. Sorting only by time was like organizing two identically postmarked letters and letting the mailroom flip a coin over their order.
+
+Route sorting now keeps source order when timestamps tie, all the way from GPX parsing through package loading. At the exact shared timestamp, the overlay advances to the final sample in that group instead of drawing forward and then sneaking backward to the first one. Long gaps remain long gaps: GPX Timestamp mode keeps their elapsed time rather than squeezing the walk into an artificially even metronome.
+
 ### Permission Recovery Learns Everyone's Name
 
 The first App Review uncovered a subtle privacy trap in Video Walk. Camera, microphone, and location had been bundled into one big “privacy access” warning, like sending someone to a building directory without saying which office they needed. If camera access was denied before the microphone prompt appeared, the app could tell the user to enable both in Settings—even though iOS had never asked about the microphone.

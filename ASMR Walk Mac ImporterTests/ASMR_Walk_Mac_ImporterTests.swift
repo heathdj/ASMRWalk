@@ -257,6 +257,31 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(loadedPackage.sourceGPX == Self.reliveGPXFixture)
     }
 
+    @Test(
+        "GPX Export package round-trip preserves filename metadata and equal-time source order",
+        .bug("https://github.com/heathdj/ASMRWalk/issues/117")
+    )
+    func importsAndWritesUnnamedGPXExport() throws {
+        let package = try ASMRGPXRouteImporter().package(
+            fromGPXText: Self.gpxExportDuplicateTimestampFixture,
+            sourceFilename: "Walking 2026-10-04T185228Z.gpx"
+        )
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension(ASMRRoutePackage.fileExtension)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+
+        try package.write(to: packageURL)
+        let loadedPackage = try ASMRRoutePackage.load(from: packageURL)
+
+        #expect(loadedPackage.manifest.title == "Walking 2026-10-04T185228Z")
+        #expect(loadedPackage.manifest.durationSeconds == 3)
+        #expect(loadedPackage.manifest.routePointCount == 4)
+        #expect(loadedPackage.routePoints.map(\.altitude) == [200.123456789, 201.123456789, 202.123456789, 203.123456789])
+        #expect(loadedPackage.routePoints.allSatisfy { $0.horizontalAccuracy == 0 })
+        #expect(loadedPackage.routePoints.allSatisfy { $0.speed == nil })
+    }
+
     private func makeRoutePackage() -> ASMRRoutePackage {
         let start = Date(timeIntervalSince1970: 2_000)
         return ASMRRoutePackage(
@@ -298,5 +323,7 @@ struct ASMR_Walk_Mac_ImporterTests {
     }
 
     private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
+
+    private static let gpxExportDuplicateTimestampFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="GPX Export"><trk><trkseg><trkpt lat="10.001" lon="20.001"><ele>201.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.000" lon="20.000"><ele>200.123456789</ele><time>2026-10-04T18:31:56Z</time></trkpt><trkpt lat="10.002" lon="20.002"><ele>202.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.003" lon="20.003"><ele>203.123456789</ele><time>2026-10-04T18:31:59Z</time></trkpt></trkseg></trk></gpx>"#
 
 }
