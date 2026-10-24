@@ -91,6 +91,65 @@ struct ASMRRouteOverlayRenderPlanTests {
         #expect(plan.visibleRoutePoints.count == 2)
     }
 
+    @Test(
+        "Equal timestamps resolve to the last source point without a backward segment",
+        .bug("https://github.com/heathdj/ASMRWalk/issues/117")
+    )
+    func equalTimestampsResolveToLastSourcePoint() {
+        let routePackage = makeRoutePackage(coordinates: [
+            (latitude: 0, longitude: 0, seconds: 0),
+            (latitude: 0, longitude: 10, seconds: 10),
+            (latitude: 10, longitude: 10, seconds: 10),
+            (latitude: 10, longitude: 20, seconds: 20)
+        ])
+
+        let firstPlan = ASMRRouteOverlayRenderPlan.make(
+            from: routePackage,
+            renderTimeSeconds: 10,
+            timingMode: .routeTimestamps
+        )
+        let secondPlan = ASMRRouteOverlayRenderPlan.make(
+            from: routePackage,
+            renderTimeSeconds: 10,
+            timingMode: .routeTimestamps
+        )
+
+        #expect(firstPlan == secondPlan)
+        #expect(firstPlan.visibleRoutePoints == [
+            .init(x: 0, y: 0.75),
+            .init(x: 0.5, y: 0.75),
+            .init(x: 0.5, y: 0.25)
+        ])
+        #expect(firstPlan.currentPosition == .init(x: 0.5, y: 0.25))
+    }
+
+    @Test(
+        "GPX timestamp mode retains a long interval between source points",
+        .bug("https://github.com/heathdj/ASMRWalk/issues/117")
+    )
+    func gpxTimestampModeRetainsLongGap() throws {
+        let routePackage = makeRoutePackage(coordinates: [
+            (latitude: 0, longitude: 0, seconds: 0),
+            (latitude: 0, longitude: 10, seconds: 1),
+            (latitude: 0, longitude: 20, seconds: 60),
+            (latitude: 0, longitude: 30, seconds: 61)
+        ])
+
+        let plan = ASMRRouteOverlayRenderPlan.make(
+            from: routePackage,
+            renderTimeSeconds: 30,
+            timingMode: .routeTimestamps
+        )
+        let currentPosition = try #require(plan.currentPosition)
+        let expectedX = (1.0 / 3.0) + ((1.0 / 3.0) * (29.0 / 59.0))
+
+        #expect(currentPosition.x.isFinite)
+        #expect(currentPosition.y.isFinite)
+        #expect(abs(currentPosition.x - expectedX) < 0.000_001)
+        #expect(currentPosition.y == 0.5)
+        #expect(plan.visibleRoutePoints.count == 3)
+    }
+
     @Test("Long routes are reduced to a deterministic point budget")
     func longRoutesAreReducedToPointBudget() throws {
         let coordinates = (0..<10_000).map { index in

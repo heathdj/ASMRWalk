@@ -23,7 +23,13 @@ nonisolated struct ASMRGPXRouteImporter {
             throw ImportError.missingRoutePoints
         }
 
-        let sortedPoints = document.points.sorted { $0.timestamp < $1.timestamp }
+        let sortedPoints = document.points.enumerated().sorted { lhs, rhs in
+            if lhs.element.timestamp == rhs.element.timestamp {
+                return lhs.offset < rhs.offset
+            }
+
+            return lhs.element.timestamp < rhs.element.timestamp
+        }.map(\.element)
         let routeStartedAt = document.routeStartedAt ?? sortedPoints.first?.timestamp ?? document.createdAt ?? now()
         let routeEndedAt = document.routeEndedAt ?? sortedPoints.last?.timestamp ?? routeStartedAt
         let title = document.title ?? sourceFilename?.filenameTitle ?? "ASMR Walk Route"

@@ -113,6 +113,44 @@ struct ASMRGPXRouteImporterTests {
         #expect(package.sourceGPX == Self.reliveGPXFixture)
     }
 
+    @Test(
+        "GPX Export files use filename metadata and preserve equal-time source order",
+        .bug("https://github.com/heathdj/ASMRWalk/issues/117")
+    )
+    func importsUnnamedGPXExportWithStableEqualTimestamps() throws {
+        let package = try ASMRGPXRouteImporter().package(
+            fromGPXText: Self.gpxExportDuplicateTimestampFixture,
+            sourceFilename: "Walking 2026-10-04T185228Z.gpx"
+        )
+
+        #expect(package.manifest.title == "Walking 2026-10-04T185228Z")
+        #expect(package.manifest.createdAt == Self.wholeSecondDate("2026-10-04T18:31:56Z"))
+        #expect(package.manifest.routeStartedAt == Self.wholeSecondDate("2026-10-04T18:31:56Z"))
+        #expect(package.manifest.routeEndedAt == Self.wholeSecondDate("2026-10-04T18:31:59Z"))
+        #expect(package.manifest.durationSeconds == 3)
+        #expect(package.routePoints.map(\.altitude) == [200.123456789, 201.123456789, 202.123456789, 203.123456789])
+        #expect(package.routePoints.allSatisfy { $0.horizontalAccuracy == 0 })
+        #expect(package.routePoints.allSatisfy { $0.speed == nil })
+    }
+
+    @Test(
+        "GPX Export timestamp gaps remain in the derived route duration",
+        .bug("https://github.com/heathdj/ASMRWalk/issues/117")
+    )
+    func importsGPXExportWithLongTimestampGap() throws {
+        let package = try ASMRGPXRouteImporter().package(
+            fromGPXText: Self.gpxExportLongGapFixture,
+            sourceFilename: "Walking 2026-10-07T165238Z.gpx"
+        )
+
+        #expect(package.manifest.title == "Walking 2026-10-07T165238Z")
+        #expect(package.manifest.durationSeconds == 61)
+        #expect(package.manifest.routePointCount == 4)
+        let secondPoint = try #require(package.routePoints.dropFirst().first)
+        let thirdPoint = try #require(package.routePoints.dropFirst(2).first)
+        #expect(thirdPoint.timestamp.timeIntervalSince(secondPoint.timestamp) == 59)
+    }
+
     @Test("XML with route-like elements but no GPX root is rejected")
     func rejectsNonGPXXML() {
         #expect(throws: ASMRGPXRouteImporter.ImportError.self) {
@@ -136,9 +174,17 @@ struct ASMRGPXRouteImporterTests {
 
     private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
 
+    private static let gpxExportDuplicateTimestampFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="GPX Export"><trk><trkseg><trkpt lat="10.001" lon="20.001"><ele>201.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.000" lon="20.000"><ele>200.123456789</ele><time>2026-10-04T18:31:56Z</time></trkpt><trkpt lat="10.002" lon="20.002"><ele>202.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.003" lon="20.003"><ele>203.123456789</ele><time>2026-10-04T18:31:59Z</time></trkpt></trkseg></trk></gpx>"#
+
+    private static let gpxExportLongGapFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="GPX Export"><trk><trkseg><trkpt lat="30.000" lon="40.000"><ele>300.25</ele><time>2026-10-07T16:46:16Z</time></trkpt><trkpt lat="30.001" lon="40.001"><ele>300.5</ele><time>2026-10-07T16:46:17Z</time></trkpt><trkpt lat="30.002" lon="40.002"><ele>300.75</ele><time>2026-10-07T16:47:16Z</time></trkpt><trkpt lat="30.003" lon="40.003"><ele>301</ele><time>2026-10-07T16:47:17Z</time></trkpt></trkseg></trk></gpx>"#
+
     private static func date(_ text: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.date(from: text)
+    }
+
+    private static func wholeSecondDate(_ text: String) -> Date? {
+        ISO8601DateFormatter().date(from: text)
     }
 }

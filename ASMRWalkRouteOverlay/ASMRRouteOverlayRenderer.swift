@@ -188,18 +188,22 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         guard let firstPoint = timedPoints.first else { return nil }
         guard timedPoints.count > 1 else { return firstPoint.point }
 
-        if elapsedSeconds <= firstPoint.seconds {
+        if elapsedSeconds < firstPoint.seconds {
             return firstPoint.point
         }
 
-        for index in 1..<timedPoints.count {
-            let previousPoint = timedPoints[index - 1]
-            let nextPoint = timedPoints[index]
-
-            guard elapsedSeconds <= nextPoint.seconds else { continue }
+        var previousPoint = firstPoint
+        for nextPoint in timedPoints.dropFirst() {
+            if nextPoint.seconds <= elapsedSeconds {
+                previousPoint = nextPoint
+                continue
+            }
 
             let segmentDuration = nextPoint.seconds - previousPoint.seconds
-            guard segmentDuration > 0 else { return nextPoint.point }
+            guard segmentDuration > 0 else {
+                previousPoint = nextPoint
+                continue
+            }
 
             let progress = (elapsedSeconds - previousPoint.seconds) / segmentDuration
             return Point(

@@ -23,7 +23,13 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
         sourceGPX: String? = nil
     ) {
         self.manifest = manifest
-        self.routePoints = routePoints.sorted { $0.timestamp < $1.timestamp }
+        self.routePoints = routePoints.enumerated().sorted { lhs, rhs in
+            if lhs.element.timestamp == rhs.element.timestamp {
+                return lhs.offset < rhs.offset
+            }
+
+            return lhs.element.timestamp < rhs.element.timestamp
+        }.map(\.element)
         self.sourceGPX = sourceGPX
     }
 
