@@ -22,6 +22,28 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
     let startPosition: Point?
     let endPosition: Point?
     let style: ASMRRouteOverlayStyle
+    let mapBackground: ASMRRouteOverlayBitmap?
+    let mapStyle: ASMRRouteOverlayMapStyle
+
+    init(
+        routePoints: [Point],
+        visibleRoutePoints: [Point],
+        currentPosition: Point?,
+        startPosition: Point?,
+        endPosition: Point?,
+        style: ASMRRouteOverlayStyle,
+        mapBackground: ASMRRouteOverlayBitmap? = nil,
+        mapStyle: ASMRRouteOverlayMapStyle = .default
+    ) {
+        self.routePoints = routePoints
+        self.visibleRoutePoints = visibleRoutePoints
+        self.currentPosition = currentPosition
+        self.startPosition = startPosition
+        self.endPosition = endPosition
+        self.style = style
+        self.mapBackground = mapBackground
+        self.mapStyle = mapStyle
+    }
 
     var isEmpty: Bool {
         routePoints.isEmpty
@@ -36,6 +58,19 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         style: .default
     )
 
+    func removingMapBackgroundBitmap() -> ASMRRouteOverlayRenderPlan {
+        ASMRRouteOverlayRenderPlan(
+            routePoints: routePoints,
+            visibleRoutePoints: visibleRoutePoints,
+            currentPosition: currentPosition,
+            startPosition: startPosition,
+            endPosition: endPosition,
+            style: style,
+            mapBackground: nil,
+            mapStyle: mapStyle
+        )
+    }
+
     static func make(
         from routePackage: ASMRRoutePackageInput,
         renderTimeSeconds: TimeInterval,
@@ -45,7 +80,11 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         maximumRoutePointCount: Int = 2_048,
         style: ASMRRouteOverlayStyle = .default,
         showCurrentPosition: Bool = true,
-        showStartEndMarkers: Bool = true
+        showStartEndMarkers: Bool = true,
+        showMapBackground: Bool = true,
+        mapStyle: ASMRRouteOverlayMapStyle = .default,
+        preparedMapBackground: ASMRRouteOverlayBitmap? = nil,
+        usesPreparedMapBackground: Bool = false
     ) -> ASMRRouteOverlayRenderPlan {
         let timedPoints = simplified(
             normalizedTimedPoints(from: routePackage),
@@ -83,7 +122,11 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             currentPosition: currentPosition,
             startPosition: showStartEndMarkers ? firstPoint.point : nil,
             endPosition: showStartEndMarkers ? timedPoints.last?.point : nil,
-            style: style
+            style: style,
+            mapBackground: showMapBackground
+                ? (usesPreparedMapBackground ? preparedMapBackground : routePackage.decodedMapBackground())
+                : nil,
+            mapStyle: mapStyle
         )
     }
 
@@ -116,7 +159,15 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
 
         return points.map { routePoint in
             let normalizedPoint: Point
-            if routeSpan > 0 {
+            if let mapBackground = routePackage.manifest.mapBackground,
+               mapBackground.mapRectWidth > 0,
+               mapBackground.mapRectHeight > 0 {
+                normalizedPoint = ASMRRouteMapProjection.normalizedPoint(
+                    latitude: routePoint.latitude,
+                    longitude: routePoint.longitude,
+                    mapBackground: mapBackground
+                )
+            } else if routeSpan > 0 {
                 normalizedPoint = Point(
                     x: 0.5 + ((routePoint.longitude - longitudeMidpoint) / routeSpan),
                     y: 0.5 - ((routePoint.latitude - latitudeMidpoint) / routeSpan)
@@ -216,6 +267,27 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
     }
 }
 
+enum ASMRRouteMapProjection {
+    private static let worldWidth = 268_435_456.0
+    private static let maximumLatitude = 85.051_128_78
+
+    static func normalizedPoint(
+        latitude: Double,
+        longitude: Double,
+        mapBackground: ASMRRoutePackageInput.MapBackground
+    ) -> ASMRRouteOverlayRenderPlan.Point {
+        let mapX = (longitude + 180) / 360 * worldWidth
+        let clampedLatitude = max(-maximumLatitude, min(maximumLatitude, latitude))
+        let latitudeRadians = clampedLatitude * .pi / 180
+        let mapY = (1 - (log(tan(latitudeRadians) + (1 / cos(latitudeRadians))) / .pi)) / 2 * worldWidth
+
+        return ASMRRouteOverlayRenderPlan.Point(
+            x: (mapX - mapBackground.mapRectOriginX) / mapBackground.mapRectWidth,
+            y: (mapY - mapBackground.mapRectOriginY) / mapBackground.mapRectHeight
+        )
+    }
+}
+
 struct ASMRRouteOverlayStyle: Codable, Equatable, Sendable {
     let routeColor: ASMRRouteOverlayColor
     let currentPositionColor: ASMRRouteOverlayColor
@@ -243,7 +315,36 @@ struct ASMRRouteOverlayColor: Codable, Equatable, Sendable {
     let alpha: UInt8
 }
 
-struct ASMRRouteOverlayBitmap: Equatable, Sendable {
+struct ASMRRouteOverlayMapStyle: Codable, Equatable, Sendable {
+    let centerX: Double
+    let centerY: Double
+    let widthFraction: Double
+    let heightFraction: Double
+    let cornerRadiusFraction: Double
+    let opacity: Double
+
+    static let `default` = ASMRRouteOverlayMapStyle(
+        centerX: 0.75,
+        centerY: 0.25,
+        widthFraction: 0.42,
+        heightFraction: 0.42,
+        cornerRadiusFraction: 0.06,
+        opacity: 0.9
+    )
+
+    func pixelRect(outputWidth: Int, outputHeight: Int) -> (originX: Double, originY: Double, width: Double, height: Double) {
+        let width = Double(outputWidth) * max(0, min(1, widthFraction))
+        let height = Double(outputHeight) * max(0, min(1, heightFraction))
+        return (
+            (Double(outputWidth) * centerX) - (width / 2),
+            (Double(outputHeight) * centerY) - (height / 2),
+            width,
+            height
+        )
+    }
+}
+
+struct ASMRRouteOverlayBitmap: Codable, Equatable, Sendable {
     let width: Int
     let height: Int
     var rgbaPixels: [UInt8]
@@ -252,6 +353,15 @@ struct ASMRRouteOverlayBitmap: Equatable, Sendable {
         self.width = max(0, width)
         self.height = max(0, height)
         rgbaPixels = Array(repeating: 0, count: self.width * self.height * 4)
+    }
+
+    init(width: Int, height: Int, rgbaPixels: [UInt8]) {
+        self.width = max(0, width)
+        self.height = max(0, height)
+        let expectedCount = self.width * self.height * 4
+        self.rgbaPixels = rgbaPixels.count == expectedCount
+            ? rgbaPixels
+            : Array(repeating: 0, count: expectedCount)
     }
 }
 
@@ -286,7 +396,8 @@ enum ASMRRouteOverlayRenderer {
         width: Int,
         height: Int,
         bytesPerRow: Int,
-        pixelFormat: ASMRRouteOverlayPixelFormat
+        pixelFormat: ASMRRouteOverlayPixelFormat,
+        mapBackgroundOverride: ASMRRouteOverlayBitmap? = nil
     ) {
         guard width > 0, height > 0, bytesPerRow >= width * 4 else { return }
 
@@ -306,13 +417,20 @@ enum ASMRRouteOverlayRenderer {
             }
         }
 
-        draw(plan: plan, width: width, height: height, pixelWriter: writer)
+        draw(
+            plan: plan,
+            width: width,
+            height: height,
+            mapBackground: mapBackgroundOverride ?? plan.mapBackground,
+            pixelWriter: writer
+        )
     }
 
     private static func draw(
         plan: ASMRRouteOverlayRenderPlan,
         width: Int,
         height: Int,
+        mapBackground: ASMRRouteOverlayBitmap?,
         pixelWriter: PixelWriter
     ) {
         let shorterSide = Double(min(width, height))
@@ -321,11 +439,21 @@ enum ASMRRouteOverlayRenderer {
         let dotRadius = max(1, shorterSide * plan.style.currentDotRadiusFraction)
         let markerRadius = max(1, shorterSide * plan.style.markerRadiusFraction)
 
+        if let background = mapBackground {
+            drawMapBackground(
+                background,
+                style: plan.mapStyle,
+                outputWidth: width,
+                outputHeight: height,
+                pixelWriter: pixelWriter
+            )
+        }
+
         if plan.visibleRoutePoints.count > 1 {
             for index in 1..<plan.visibleRoutePoints.count {
                 drawLine(
-                    from: pixelPoint(plan.visibleRoutePoints[index - 1], width: width, height: height, padding: padding),
-                    to: pixelPoint(plan.visibleRoutePoints[index], width: width, height: height, padding: padding),
+                    from: pixelPoint(plan.visibleRoutePoints[index - 1], plan: plan, width: width, height: height, padding: padding),
+                    to: pixelPoint(plan.visibleRoutePoints[index], plan: plan, width: width, height: height, padding: padding),
                     radius: lineWidth / 2,
                     color: plan.style.routeColor,
                     pixelWriter: pixelWriter
@@ -335,7 +463,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let startPosition = plan.startPosition {
             drawCircle(
-                center: pixelPoint(startPosition, width: width, height: height, padding: padding),
+                center: pixelPoint(startPosition, plan: plan, width: width, height: height, padding: padding),
                 radius: markerRadius,
                 color: plan.style.markerColor,
                 pixelWriter: pixelWriter
@@ -344,7 +472,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let endPosition = plan.endPosition {
             drawCircle(
-                center: pixelPoint(endPosition, width: width, height: height, padding: padding),
+                center: pixelPoint(endPosition, plan: plan, width: width, height: height, padding: padding),
                 radius: markerRadius,
                 color: plan.style.markerColor,
                 pixelWriter: pixelWriter
@@ -353,7 +481,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let currentPosition = plan.currentPosition {
             drawCircle(
-                center: pixelPoint(currentPosition, width: width, height: height, padding: padding),
+                center: pixelPoint(currentPosition, plan: plan, width: width, height: height, padding: padding),
                 radius: dotRadius,
                 color: plan.style.currentPositionColor,
                 pixelWriter: pixelWriter
@@ -363,10 +491,19 @@ enum ASMRRouteOverlayRenderer {
 
     private static func pixelPoint(
         _ point: ASMRRouteOverlayRenderPlan.Point,
+        plan: ASMRRouteOverlayRenderPlan,
         width: Int,
         height: Int,
         padding: Double
     ) -> ASMRRouteOverlayRenderPlan.Point {
+        if plan.mapBackground != nil {
+            let panel = plan.mapStyle.pixelRect(outputWidth: width, outputHeight: height)
+            return ASMRRouteOverlayRenderPlan.Point(
+                x: panel.originX + (point.x * panel.width),
+                y: panel.originY + (point.y * panel.height)
+            )
+        }
+
         let drawableWidth = max(0, Double(width) - (padding * 2))
         let drawableHeight = max(0, Double(height) - (padding * 2))
 
@@ -374,6 +511,51 @@ enum ASMRRouteOverlayRenderer {
             x: padding + (point.x * drawableWidth),
             y: padding + (point.y * drawableHeight)
         )
+    }
+
+    private static func drawMapBackground(
+        _ background: ASMRRouteOverlayBitmap,
+        style: ASMRRouteOverlayMapStyle,
+        outputWidth: Int,
+        outputHeight: Int,
+        pixelWriter: PixelWriter
+    ) {
+        guard background.width > 0, background.height > 0 else { return }
+        let panel = style.pixelRect(outputWidth: outputWidth, outputHeight: outputHeight)
+        guard panel.width > 0, panel.height > 0 else { return }
+        let minX = max(0, Int(panel.originX.rounded(.down)))
+        let maxX = min(outputWidth, Int((panel.originX + panel.width).rounded(.up)))
+        let minY = max(0, Int(panel.originY.rounded(.down)))
+        let maxY = min(outputHeight, Int((panel.originY + panel.height).rounded(.up)))
+        let radius = min(panel.width, panel.height) * max(0, style.cornerRadiusFraction)
+
+        for y in minY..<maxY {
+            for x in minX..<maxX {
+                let localX = Double(x) + 0.5 - panel.originX
+                let localY = Double(y) + 0.5 - panel.originY
+                guard isInsideRoundedRect(x: localX, y: localY, width: panel.width, height: panel.height, radius: radius) else { continue }
+                let sourceX = min(background.width - 1, max(0, Int(localX / panel.width * Double(background.width))))
+                let sourceY = min(background.height - 1, max(0, Int(localY / panel.height * Double(background.height))))
+                let offset = ((sourceY * background.width) + sourceX) * 4
+                guard offset + 3 < background.rgbaPixels.count else { continue }
+                pixelWriter.write(x, y, ASMRRouteOverlayColor(
+                    red: background.rgbaPixels[offset],
+                    green: background.rgbaPixels[offset + 1],
+                    blue: background.rgbaPixels[offset + 2],
+                    alpha: UInt8(max(0, min(255, round(Double(background.rgbaPixels[offset + 3]) * style.opacity))))
+                ))
+            }
+        }
+    }
+
+    private static func isInsideRoundedRect(x: Double, y: Double, width: Double, height: Double, radius: Double) -> Bool {
+        guard x >= 0, y >= 0, x <= width, y <= height else { return false }
+        guard radius > 0 else { return true }
+        let nearestX = max(radius, min(width - radius, x))
+        let nearestY = max(radius, min(height - radius, y))
+        let dx = x - nearestX
+        let dy = y - nearestY
+        return (dx * dx) + (dy * dy) <= radius * radius
     }
 
     private static func drawLine(

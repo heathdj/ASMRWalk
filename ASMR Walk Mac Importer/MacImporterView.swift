@@ -27,6 +27,7 @@ struct MacImporterView: View {
                     cloudSyncPanel
                     syncedRecordingList
                     photosVideoPanel
+                    mapBackgroundPanel
                     statusPanel
                     actionBar
                 }
@@ -163,6 +164,47 @@ struct MacImporterView: View {
                     viewModel.clearPhotosVideoPairing()
                 }
                 .disabled(viewModel.hasSelectedVideo == false)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var mapBackgroundPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Map Background")
+                .font(.headline)
+
+            if let background = viewModel.preparedMapBackground, let image = background.image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 160)
+                    .clipShape(.rect(cornerRadius: 8))
+                    .accessibilityLabel("Prepared map background preview")
+
+                Text("This PNG will be stored inside the route package for deterministic offline rendering.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Prepare a static MapKit image for the plugin, or export the existing transparent route-only overlay.")
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Button("Prepare Map", systemImage: "map") {
+                    Task { await viewModel.prepareMapBackground() }
+                }
+                .disabled(viewModel.routePreview == nil || viewModel.isPreparingMapBackground)
+
+                if viewModel.isPreparingMapBackground {
+                    ProgressView()
+                        .controlSize(.small)
+                }
+
+                Button("Use Route Only", systemImage: "xmark.circle") {
+                    viewModel.clearMapBackground()
+                }
+                .disabled(viewModel.preparedMapBackground == nil)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -7,6 +7,166 @@ import Foundation
 import Testing
 
 struct ASMRRouteOverlayRenderPlanTests {
+    @Test("Map style converts normalized position and size to output pixels", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func mapStyleProducesExpectedPixelRect() {
+        let style = ASMRRouteOverlayMapStyle(
+            centerX: 0.75,
+            centerY: 0.25,
+            widthFraction: 0.4,
+            heightFraction: 0.5,
+            cornerRadiusFraction: 0.1,
+            opacity: 0.75
+        )
+
+        let rect = style.pixelRect(outputWidth: 1_000, outputHeight: 800)
+
+        #expect(rect.originX == 550)
+        #expect(rect.originY == 0)
+        #expect(rect.width == 400)
+        #expect(rect.height == 400)
+    }
+
+    @Test("Stored map bounds project Web Mercator coordinates deterministically", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func storedMapBoundsProjectCoordinates() {
+        let background = ASMRRoutePackageInput.MapBackground(
+            filename: "map-background.png",
+            pixelWidth: 1_280,
+            pixelHeight: 720,
+            scale: 1,
+            mapRectOriginX: 0,
+            mapRectOriginY: 0,
+            mapRectWidth: 268_435_456,
+            mapRectHeight: 268_435_456
+        )
+
+        let center = ASMRRouteMapProjection.normalizedPoint(
+            latitude: 0,
+            longitude: 0,
+            mapBackground: background
+        )
+        let northWest = ASMRRouteMapProjection.normalizedPoint(
+            latitude: 85.051_128_78,
+            longitude: -180,
+            mapBackground: background
+        )
+
+        #expect(abs(center.x - 0.5) < 0.000_001)
+        #expect(abs(center.y - 0.5) < 0.000_001)
+        #expect(abs(northWest.x) < 0.000_001)
+        #expect(abs(northWest.y) < 0.000_001)
+    }
+
+    @Test("Non-square map bounds preserve high-latitude Web Mercator projection", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func nonSquareHighLatitudeProjection() {
+        let worldWidth = 268_435_456.0
+        let background = ASMRRoutePackageInput.MapBackground(
+            filename: "map-background.png",
+            pixelWidth: 1_280,
+            pixelHeight: 720,
+            scale: 1,
+            mapRectOriginX: 0,
+            mapRectOriginY: 0,
+            mapRectWidth: worldWidth,
+            mapRectHeight: worldWidth / 2
+        )
+
+        let point = ASMRRouteMapProjection.normalizedPoint(
+            latitude: 60,
+            longitude: 90,
+            mapBackground: background
+        )
+        let latitudeRadians = 60.0 * Double.pi / 180
+        let expectedY = 1 - (log(tan(latitudeRadians) + (1 / cos(latitudeRadians))) / Double.pi)
+
+        #expect(abs(point.x - 0.75) < 0.000_001)
+        #expect(abs(point.y - expectedY) < 0.000_001)
+    }
+
+    @Test("Map availability distinguishes valid, missing, and unsupported assets", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func mapAssetAvailability() throws {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        manifest.mapBackground = ASMRRoutePackageInput.MapBackground(
+            filename: "map-background.png",
+            pixelWidth: 1,
+            pixelHeight: 1,
+            scale: 1,
+            mapRectOriginX: 0,
+            mapRectOriginY: 0,
+            mapRectWidth: 1,
+            mapRectHeight: 1
+        )
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="))
+        let gif = try #require(Data(base64Encoded: "R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="))
+
+        let valid = ASMRRoutePackageInput(manifest: manifest, routePoints: original.routePoints, mapBackgroundData: png)
+        let missing = ASMRRoutePackageInput(manifest: manifest, routePoints: original.routePoints)
+        let unsupported = ASMRRoutePackageInput(manifest: manifest, routePoints: original.routePoints, mapBackgroundData: gif)
+
+        #expect(valid.mapAvailability == .available)
+        #expect(missing.mapAvailability == .unusable)
+        #expect(unsupported.mapAvailability == .unusable)
+        #expect(unsupported.mapAvailability.statusMessage.contains("unsupported"))
+    }
+
+    @Test("Schema-one package reports route-only map availability", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func routeOnlyMapAvailability() {
+        #expect(makeRoutePackage().mapAvailability == .routeOnly)
+    }
+
+    @Test("Corrupt map data falls back to the route-only plan", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func corruptMapFallsBackToRouteOnly() {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        manifest.mapBackground = ASMRRoutePackageInput.MapBackground(
+            filename: "map-background.png",
+            pixelWidth: 100,
+            pixelHeight: 100,
+            scale: 1,
+            mapRectOriginX: 0,
+            mapRectOriginY: 0,
+            mapRectWidth: 1,
+            mapRectHeight: 1
+        )
+        let package = ASMRRoutePackageInput(
+            manifest: manifest,
+            routePoints: original.routePoints,
+            mapBackgroundData: Data("not a png".utf8)
+        )
+
+        let plan = ASMRRouteOverlayRenderPlan.make(from: package, renderTimeSeconds: 10)
+
+        #expect(plan.mapBackground == nil)
+        #expect(plan.routePoints.isEmpty == false)
+    }
+
+    @Test("Prepared package cache reuses state and invalidates when route data changes", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func packageCacheReusesAndInvalidates() throws {
+        let package = makeRoutePackage()
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+        try FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let manifestURL = packageURL.appending(path: ASMRRoutePackageInput.manifestFilename)
+        let routeURL = packageURL.appending(path: package.manifest.routePointsFile)
+        try encoder.encode(package.manifest).write(to: manifestURL)
+        try encoder.encode(package.routePoints).write(to: routeURL)
+        let cache = ASMRRouteOverlayPackageCache()
+
+        _ = try cache.preparedPackage(at: packageURL)
+        _ = try cache.preparedPackage(at: packageURL)
+        #expect(cache.loadCount == 1)
+
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(10)],
+            ofItemAtPath: routeURL.path
+        )
+        _ = try cache.preparedPackage(at: packageURL)
+        #expect(cache.loadCount == 2)
+    }
+
     @Test("Route progress interpolates from package timestamps", .bug("https://github.com/heathdj/ASMRWalk/issues/77"))
     func routeProgressInterpolatesFromPackageTimestamps() throws {
         let routePackage = makeRoutePackage()
@@ -236,6 +396,92 @@ struct ASMRRouteOverlayRenderPlanTests {
 }
 
 struct ASMRRouteOverlayRendererTests {
+    @Test("Map panel composites locally and keeps pixels outside transparent", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func mapPanelCompositesWithTransparentOutside() {
+        let background = ASMRRouteOverlayBitmap(
+            width: 2,
+            height: 2,
+            rgbaPixels: Array(repeating: [UInt8(200), 100, 50, 255], count: 4).flatMap { $0 }
+        )
+        let transparentStyle = ASMRRouteOverlayStyle(
+            routeColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            currentPositionColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            markerColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            paddingFraction: 0,
+            lineWidthFraction: 0,
+            currentDotRadiusFraction: 0,
+            markerRadiusFraction: 0
+        )
+        let plan = ASMRRouteOverlayRenderPlan(
+            routePoints: [.init(x: 0.5, y: 0.5)],
+            visibleRoutePoints: [],
+            currentPosition: nil,
+            startPosition: nil,
+            endPosition: nil,
+            style: transparentStyle,
+            mapBackground: background,
+            mapStyle: .init(
+                centerX: 0.5,
+                centerY: 0.5,
+                widthFraction: 0.5,
+                heightFraction: 0.5,
+                cornerRadiusFraction: 0,
+                opacity: 0.5
+            )
+        )
+
+        let bitmap = ASMRRouteOverlayRenderer.bitmap(for: plan, width: 8, height: 8)
+        let outside = Array(bitmap.rgbaPixels[0..<4])
+        let centerOffset = ((4 * 8) + 4) * 4
+        let center = Array(bitmap.rgbaPixels[centerOffset..<(centerOffset + 4)])
+
+        #expect(outside == [0, 0, 0, 0])
+        #expect(center == [200, 100, 50, 128])
+    }
+
+    @Test("Rounded map corners clip panel pixels", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func roundedMapCornersClipPixels() {
+        let background = ASMRRouteOverlayBitmap(
+            width: 1,
+            height: 1,
+            rgbaPixels: [200, 100, 50, 255]
+        )
+        let transparentStyle = ASMRRouteOverlayStyle(
+            routeColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            currentPositionColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            markerColor: .init(red: 0, green: 0, blue: 0, alpha: 0),
+            paddingFraction: 0,
+            lineWidthFraction: 0,
+            currentDotRadiusFraction: 0,
+            markerRadiusFraction: 0
+        )
+        let plan = ASMRRouteOverlayRenderPlan(
+            routePoints: [.init(x: 0.5, y: 0.5)],
+            visibleRoutePoints: [],
+            currentPosition: nil,
+            startPosition: nil,
+            endPosition: nil,
+            style: transparentStyle,
+            mapBackground: background,
+            mapStyle: .init(
+                centerX: 0.5,
+                centerY: 0.5,
+                widthFraction: 1,
+                heightFraction: 1,
+                cornerRadiusFraction: 0.5,
+                opacity: 1
+            )
+        )
+
+        let bitmap = ASMRRouteOverlayRenderer.bitmap(for: plan, width: 8, height: 8)
+        let corner = Array(bitmap.rgbaPixels[0..<4])
+        let centerOffset = ((4 * 8) + 4) * 4
+        let center = Array(bitmap.rgbaPixels[centerOffset..<(centerOffset + 4)])
+
+        #expect(corner == [0, 0, 0, 0])
+        #expect(center == [200, 100, 50, 255])
+    }
+
     @Test("Bitmap rendering is deterministic and leaves untouched pixels transparent", .bug("https://github.com/heathdj/ASMRWalk/issues/77"))
     func bitmapRenderingIsDeterministicAndTransparent() {
         let plan = makePlan()

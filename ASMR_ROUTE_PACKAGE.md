@@ -2,13 +2,14 @@
 
 `.asmrroute` is the ASMR Walk handoff package for the Mac importer and the future Final Cut Pro/Motion renderer. It is a directory package with deterministic JSON metadata and route data. The renderer should be able to load it without reaching back into iCloud, Photos, or an iPhone sandbox during timeline playback or export.
 
-## Version 1 Layout
+## Version 2 Layout
 
 ```text
 Example Walk.asmrroute/
   manifest.json
   route-points.json
   source.gpx        optional
+  map-background.png optional
 ```
 
 ## `manifest.json`
@@ -17,7 +18,7 @@ The manifest is UTF-8 JSON encoded with stable sorted keys.
 
 Required fields:
 
-- `schemaVersion`: currently `1`.
+- `schemaVersion`: currently `2`; consumers continue to accept route-only schema `1` packages.
 - `packageIdentifier`: UUID, normally the ASMR Walk recording ID.
 - `title`: display title.
 - `createdAt`: ISO-8601 package/recording date.
@@ -36,6 +37,13 @@ Optional fields:
 - `distanceMeters`
 - `captureDeviceName`
 - `sourceGPXFile`
+- `mapBackground`
+
+## Prepared Map Background
+
+Schema 2 may include `map-background.png` plus a `mapBackground` manifest object. The object stores the portable relative filename, pixel width and height, image scale, and the exact MapKit Web Mercator map rectangle (`mapRectOriginX`, `mapRectOriginY`, `mapRectWidth`, and `mapRectHeight`) used to create the snapshot.
+
+The Mac importer generates this asset only after an explicit **Prepare Map** action. FxPlug reads and caches the local PNG, projects route coordinates against the stored rectangle, and never contacts MapKit, Photos, CloudKit, or the network during timeline rendering or export. The renderer requires a PNG matching the manifest dimensions and valid positive scale/map bounds. Missing, corrupt, unsupported, or mismatched images fall back to the transparent route-only renderer, disable the map controls, and surface the reason through the plugin's Map Status field.
 
 ## `route-points.json`
 
@@ -75,7 +83,8 @@ For Version 1.1.0, `isEmbedded` should normally be `false`. A later importer may
 
 ## Compatibility Rules
 
-- Consumers must reject unsupported `schemaVersion` values.
+- Consumers accept schema versions 1 and 2 and must reject other values.
 - Consumers should verify that `routePointCount` matches the decoded route point file.
 - Route rendering should rely on normalized route points, not `source.gpx` parsing.
 - Missing video references must be shown as a recoverable state, not a package failure.
+- Map paths must remain relative to the package. Missing or corrupt map assets are recoverable route-only states.
