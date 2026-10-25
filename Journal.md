@@ -525,6 +525,18 @@ That conditional modifier carried one more trap: switching between “plain tabs
 
 A frightening wall of 98–99 failed tests turned out to be one failure wearing a hundred masks. The first SwiftData persistence test exhausted Core Data's connection pool, and the Swift Testing process then reported almost every remaining test as a runner crash. The supposedly in-memory configurations were still using automatic CloudKit behavior, visible in the logs as CloudKit trying to initialize a `/dev/null` store. Test containers now explicitly use `cloudKitDatabase: .none`, and the app test host detects XCTest and uses the same isolated configuration. The full 117-test plan passes again. The lesson: “in memory” describes storage location, not every integration attached to that storage—turn external integrations off explicitly in tests.
 
+### Filesystem Video Gets a Durable Luggage Tag
+
+Issue 118 puts **Choose Video File** beside the Photos picker so an editor can pair ordinary MP4 and MOV footage without first importing it into Photos. The movie itself stays where the user put it; the route package carries a security-scoped bookmark, which is more like a durable luggage tag than a copy of the suitcase. The importer opens security-scoped access only long enough to validate the movie and read its duration and creation date, then closes access again.
+
+Photos and filesystem selections deliberately share one pairing slot. Choosing either replaces the other, so an exported package never leaves the plugin guessing which video owns the timing relationship. A reliable creation date produces the same signed route offset used by Photos pairing; missing metadata remains an honest “no automatic alignment” state instead of invented precision.
+
+The owner validated the real-world path on October 24, 2026: the Mac importer selected a MOV from the filesystem and paired it with a route delivered through iCloud. MP4 uses the same validated content-type and bookmark path, but remains an explicit release-check item so automated confidence is not mistaken for a physical-account test.
+
+One subtle correction came out of the acceptance review: a file's filesystem creation date says when that particular copy arrived, not necessarily when the camera started recording. Automatic route alignment now trusts only AVFoundation's embedded asset creation metadata. The importer also proves that its security-scoped bookmark resolves before accepting the pairing, displays duration when available, and turns stale, malformed, unreadable, or inaccessible references into instructions the editor can recover from.
+
+Final owner testing confirmed MP4 selection and produced a MOV-backed `Pumpkin-Fest-Franklin-Tn.asmrroute` package. Its manifest contains exactly one external `localVideo` reference, the selected filename, embedded start time, a 0.157-second route offset, and the security-scoped bookmark; the package holds 27 route points and does not copy the 144 MB movie into itself. That is the intended lightweight handoff rather than a video file wearing a route-package trench coat.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

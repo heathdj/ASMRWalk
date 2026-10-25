@@ -16,6 +16,7 @@ struct MacImporterView: View {
     @State private var viewModel = MacImporterViewModel()
     @State private var cloudSyncStatus = CloudSyncStatus()
     @State private var isImportingGPX = false
+    @State private var isImportingVideo = false
     @State private var selectedPhotosVideo: PhotosPickerItem?
 
     var body: some View {
@@ -46,6 +47,13 @@ struct MacImporterView: View {
             Task {
                 await viewModel.handleGPXImportResult(result)
             }
+        }
+        .fileImporter(
+            isPresented: $isImportingVideo,
+            allowedContentTypes: FileVideoReference.supportedContentTypes,
+            allowsMultipleSelection: false
+        ) { result in
+            Task { await viewModel.handleVideoImportResult(result) }
         }
         .onChange(of: selectedPhotosVideo) {
             guard let selectedPhotosVideo else {
@@ -127,10 +135,10 @@ struct MacImporterView: View {
 
     private var photosVideoPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Photos Video")
+            Text("Video Pairing")
                 .font(.headline)
 
-            Text(viewModel.photosVideoPairingMessage)
+            Text(viewModel.videoPairingMessage)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
 
@@ -145,11 +153,16 @@ struct MacImporterView: View {
                 }
                 .buttonStyle(.bordered)
 
+                Button("Choose Video File", systemImage: "film") {
+                    isImportingVideo = true
+                }
+                .buttonStyle(.bordered)
+
                 Button("Clear", systemImage: "xmark.circle") {
                     selectedPhotosVideo = nil
                     viewModel.clearPhotosVideoPairing()
                 }
-                .disabled(viewModel.selectedPhotosVideoReference == nil)
+                .disabled(viewModel.hasSelectedVideo == false)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

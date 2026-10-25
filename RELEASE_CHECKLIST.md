@@ -159,10 +159,15 @@ Run these on physical devices before submission:
 - [ ] Create an `.asmrroute` package from a synced recording in the Mac importer.
 - [ ] Load the generated `.asmrroute` package and confirm manifest metadata, source device, route timing, and route-point count match the source recording.
 - [ ] Confirm GPX import fallback still creates an `.asmrroute` package when synced recordings are unavailable.
+- [x] Select a filesystem MOV and pair it with an iCloud-synced route in the Mac importer. Verified by the owner on October 24, 2026.
+- [x] Select a filesystem MP4 and pair it with an iCloud-synced route in the Mac importer. Verified by the owner on October 25, 2026.
+- [x] Export a package for a filesystem MOV selection and confirm it contains one non-embedded `localVideo` reference with the selected filename, timing metadata, and a security-scoped bookmark. Verified October 25, 2026.
+- [ ] Export a package for a filesystem MP4 selection and confirm it contains one non-embedded `localVideo` reference with a usable security-scoped bookmark.
+- [x] Confirm Swift Testing covers filesystem-video filtering, local reference creation, duration/no-metadata presentation, cancellation, Clear, replacement, malformed bookmarks, and recoverable selection errors.
 
 ### Automated Coverage Gate
 
-- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, local-only video presentation, Mac importer CloudKit configuration, and package generation from synced recordings.
+- [ ] Confirm Swift Testing covers permission policy, permission recovery after Settings changes, Always authorization upgrade requests, concurrent recording prevention, GPS/video scene transition policy, video stop outcomes through the coordinator flow, local video storage semantics, Photos export/legacy fallback semantics, checkpoint recovery, large-route persistence, iCloud configuration, sync status messaging, local-only video presentation, Mac importer CloudKit configuration, package generation from synced recordings, and external MP4/MOV package references.
 - [ ] Confirm XCUI tests cover first-launch onboarding, returning-user launch, permission recovery surfaces, active-recording cross-tab behavior, and accessibility QA surfaces with deterministic launch environment hooks.
 
 ## App Store Connect
