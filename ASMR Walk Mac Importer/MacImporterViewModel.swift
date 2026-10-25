@@ -19,19 +19,23 @@ final class MacImporterViewModel {
     private(set) var routePreview: RoutePreview?
     private(set) var selectedRoutePointID: RoutePreview.RoutePoint.ID?
     private(set) var selectedPhotosVideoReference: PhotosVideoReference?
+    private(set) var selectedFileVideoReference: FileVideoReference?
 
     private let importer: ASMRGPXRouteImporter
     private let fileManager: FileManager
     private let photosMetadataLoader: any PhotosVideoMetadataLoading
+    private let fileVideoReferenceLoader: any FileVideoReferenceLoading
 
     init(
         importer: ASMRGPXRouteImporter = ASMRGPXRouteImporter(),
         fileManager: FileManager = .default,
-        photosMetadataLoader: (any PhotosVideoMetadataLoading)? = nil
+        photosMetadataLoader: (any PhotosVideoMetadataLoading)? = nil,
+        fileVideoReferenceLoader: (any FileVideoReferenceLoading)? = nil
     ) {
         self.importer = importer
         self.fileManager = fileManager
         self.photosMetadataLoader = photosMetadataLoader ?? PhotoLibraryVideoMetadataLoader()
+        self.fileVideoReferenceLoader = fileVideoReferenceLoader ?? FileVideoReferenceLoader()
     }
 
     func handleGPXImportResult(_ result: Result<[URL], any Error>) async {
@@ -76,7 +80,7 @@ final class MacImporterViewModel {
 
     func exportLoadedRoute() throws {
         guard let package = routePreview?.exportPackage(
-            photosVideoReference: selectedPhotosVideoReference?.packageReference(relativeTo: routePreview)
+            videoReference: selectedVideoPackageReference
         ) else {
             throw ImportError.noRouteLoaded
         }
@@ -96,6 +100,7 @@ final class MacImporterViewModel {
             supportedContentTypes: supportedContentTypes,
             metadata: nil
         )
+        selectedFileVideoReference = nil
 
         do {
             let metadata = try await photosMetadataLoader.metadata(forItemIdentifier: itemIdentifier)
@@ -118,15 +123,41 @@ final class MacImporterViewModel {
     }
 
     func clearPhotosVideoPairing() {
-        guard selectedPhotosVideoReference != nil else {
+        guard selectedPhotosVideoReference != nil || selectedFileVideoReference != nil else {
             return
         }
 
         selectedPhotosVideoReference = nil
+        selectedFileVideoReference = nil
         packageURL = nil
-        statusTitle = "Photos Video Removed"
-        statusMessage = "The pending route package will not include a Photos video reference."
+        statusTitle = "Video Removed"
+        statusMessage = "The pending route package will not include a video reference."
         statusSystemImage = "photo.on.rectangle.angled"
+    }
+
+    func pairVideoFile(at url: URL) async {
+        do {
+            let reference = try await fileVideoReferenceLoader.load(from: url)
+            selectedFileVideoReference = reference
+            selectedPhotosVideoReference = nil
+            packageURL = nil
+            statusTitle = "Video File Paired"
+            statusMessage = videoPairingMessage
+            statusSystemImage = "film"
+        } catch {
+            showFailure(error)
+        }
+    }
+
+    func handleVideoImportResult(_ result: Result<[URL], any Error>) async {
+        do {
+            guard let selectedURL = try result.get().first else { return }
+            await pairVideoFile(at: selectedURL)
+        } catch let error as CocoaError where error.code == .userCancelled {
+            // Cancellation intentionally preserves the current video pairing.
+        } catch {
+            showFailure(error)
+        }
     }
 
     func selectRoutePoint(id: RoutePreview.RoutePoint.ID) {
@@ -180,6 +211,29 @@ final class MacImporterViewModel {
         }
 
         return "\(selectedPhotosVideoReference.displayName) will be referenced in the next .asmrroute package. The video file will not be copied into the package."
+    }
+
+    var videoPairingMessage: String {
+        if let selectedFileVideoReference {
+            let durationDescription = selectedFileVideoReference.durationText.map { " Duration: \($0)." } ?? ""
+            guard routePreview != nil else {
+                return "\(selectedFileVideoReference.displayName) is selected.\(durationDescription) Load a route before creating an .asmrroute package."
+            }
+            if let offsetText = selectedFileVideoReference.offsetText(relativeTo: routePreview) {
+                return "\(selectedFileVideoReference.displayName) will remain external to the package.\(durationDescription) Embedded creation time gives a route offset of \(offsetText)."
+            }
+            return "\(selectedFileVideoReference.displayName) will remain external to the package.\(durationDescription) No embedded creation time was available for automatic alignment."
+        }
+        return photosVideoPairingMessage
+    }
+
+    var hasSelectedVideo: Bool {
+        selectedPhotosVideoReference != nil || selectedFileVideoReference != nil
+    }
+
+    private var selectedVideoPackageReference: ASMRRoutePackage.VideoReference? {
+        selectedFileVideoReference?.packageReference(relativeTo: routePreview)
+            ?? selectedPhotosVideoReference?.packageReference(relativeTo: routePreview)
     }
 
     private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {

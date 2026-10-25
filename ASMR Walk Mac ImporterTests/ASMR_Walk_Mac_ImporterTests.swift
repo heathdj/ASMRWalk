@@ -150,7 +150,7 @@ struct ASMR_Walk_Mac_ImporterTests {
             metadata: nil
         )
 
-        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference)
+        let exportPackage = preview.exportPackage(videoReference: photosReference.packageReference)
         let videoReference = try #require(exportPackage.manifest.videoReferences.first)
 
         #expect(exportPackage.manifest.videoReferences.count == 1)
@@ -187,7 +187,7 @@ struct ASMR_Walk_Mac_ImporterTests {
             metadata: nil
         )
 
-        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference)
+        let exportPackage = preview.exportPackage(videoReference: photosReference.packageReference)
         let videoReference = try #require(exportPackage.manifest.videoReferences.first)
 
         #expect(exportPackage.manifest.videoReferences.count == 1)
@@ -208,7 +208,7 @@ struct ASMR_Walk_Mac_ImporterTests {
             )
         )
 
-        let exportPackage = preview.exportPackage(photosVideoReference: photosReference.packageReference(relativeTo: preview))
+        let exportPackage = preview.exportPackage(videoReference: photosReference.packageReference(relativeTo: preview))
         let videoReference = try #require(exportPackage.manifest.videoReferences.first)
 
         #expect(videoReference.startsAt == routeStart.addingTimeInterval(-12))
@@ -223,6 +223,190 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(viewModel.selectedPhotosVideoReference == nil)
         #expect(viewModel.statusTitle == "Import Failed")
         #expect(viewModel.statusMessage == MacImporterViewModel.ImportError.photosVideoIdentifierUnavailable.localizedDescription)
+    }
+
+    @Test func supportedFilesystemVideoTypesIncludeMP4AndMOV() {
+        #expect(FileVideoReference.supportedContentTypes.contains(.mpeg4Movie))
+        #expect(FileVideoReference.supportedContentTypes.contains(.quickTimeMovie))
+    }
+
+    @Test func filesystemVideoExportsAsExternalLocalVideoReference() throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let start = Date(timeIntervalSince1970: 1_988)
+        let fileReference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: start,
+            duration: 96
+        )
+
+        let package = preview.exportPackage(videoReference: fileReference.packageReference(relativeTo: preview))
+        let reference = try #require(package.manifest.videoReferences.first)
+
+        #expect(reference.kind == .localVideo)
+        #expect(reference.displayName == "Walking.mov")
+        #expect(reference.sourceIdentifier == "security-scoped-bookmark:dGVzdA==")
+        #expect(reference.startsAt == start)
+        #expect(reference.offsetSeconds == -12)
+        #expect(reference.isEmbedded == false)
+    }
+
+    @Test func filesystemVideoWithoutEmbeddedCreationDateDoesNotInferOffset() throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "GPX file: Preview.gpx")
+        let fileReference = FileVideoReference(
+            displayName: "Copied.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: 96
+        )
+
+        let reference = try #require(
+            preview.exportPackage(videoReference: fileReference.packageReference(relativeTo: preview))
+                .manifest.videoReferences.first
+        )
+
+        #expect(reference.startsAt == nil)
+        #expect(reference.offsetSeconds == nil)
+        #expect(fileReference.durationText == "0:01:36")
+    }
+
+    @Test func filesystemVideoMessageShowsDurationAndAlignmentState() async {
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: 96
+        )
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference))
+        )
+        viewModel.loadSyncedRecording(makeSyncedRecording())
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        #expect(viewModel.videoPairingMessage.contains("Walking.mov"))
+        #expect(viewModel.videoPairingMessage.contains("0:01:36"))
+        #expect(viewModel.videoPairingMessage.contains("No embedded creation time"))
+    }
+
+    @Test func cancellingFilesystemPickerPreservesSelection() async {
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: nil
+        )
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference))
+        )
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        await viewModel.handleVideoImportResult(.failure(CocoaError(.userCancelled)))
+
+        #expect(viewModel.selectedFileVideoReference == reference)
+        #expect(viewModel.statusTitle == "Video File Paired")
+    }
+
+    @Test(
+        "Filesystem video errors remain recoverable",
+        arguments: [
+            FileVideoReference.FileVideoError.unsupportedFormat,
+            .accessDenied,
+            .unreadable,
+            .inaccessible,
+            .bookmarkCreationFailed
+        ]
+    )
+    func filesystemVideoErrorsAreReported(_ expectedError: FileVideoReference.FileVideoError) async {
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .failure(expectedError))
+        )
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Bad.video"))
+
+        #expect(viewModel.selectedFileVideoReference == nil)
+        #expect(viewModel.statusTitle == "Import Failed")
+        #expect(viewModel.statusMessage == expectedError.localizedDescription)
+    }
+
+    @Test func malformedFilesystemBookmarkReportsInvalidReference() {
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "not-a-bookmark",
+            creationDate: nil,
+            duration: nil
+        )
+
+        #expect(throws: FileVideoReference.FileVideoError.invalidBookmark) {
+            try reference.resolveURL()
+        }
+    }
+
+    @Test func clearRemovesFilesystemVideoPairing() async {
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: nil
+        )
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference))
+        )
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        viewModel.clearPhotosVideoPairing()
+
+        #expect(viewModel.hasSelectedVideo == false)
+        #expect(viewModel.selectedFileVideoReference == nil)
+        #expect(viewModel.statusTitle == "Video Removed")
+    }
+
+    @Test func photosAndFilesystemSelectionsReplaceEachOther() async {
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: nil
+        )
+        let viewModel = MacImporterViewModel(
+            photosMetadataLoader: StubPhotosVideoMetadataLoader(),
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference))
+        )
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+        await viewModel.pairPhotosVideo(itemIdentifier: "photos-id", supportedContentTypes: [.movie])
+
+        #expect(viewModel.selectedFileVideoReference == nil)
+        #expect(viewModel.selectedPhotosVideoReference?.itemIdentifier == "photos-id")
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        #expect(viewModel.selectedPhotosVideoReference == nil)
+        #expect(viewModel.selectedFileVideoReference == reference)
+    }
+
+    @Test func selectedFilesystemVideoReplacesPhotosAndLocalReferences() {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        manifest.videoReferences = [
+            .init(kind: .photosAsset, displayName: "Photos", sourceIdentifier: "photos", startsAt: nil, offsetSeconds: nil, isEmbedded: false),
+            .init(kind: .localVideo, displayName: "Old.mov", sourceIdentifier: "old", startsAt: nil, offsetSeconds: nil, isEmbedded: false)
+        ]
+        let preview = RoutePreview(
+            package: ASMRRoutePackage(manifest: manifest, routePoints: original.routePoints),
+            sourceDescription: "GPX file: Preview.gpx"
+        )
+        let replacement = FileVideoReference(
+            displayName: "New.mp4",
+            bookmarkIdentifier: "security-scoped-bookmark:bmV3",
+            creationDate: nil,
+            duration: nil
+        )
+
+        let package = preview.exportPackage(videoReference: replacement.packageReference(relativeTo: preview))
+
+        #expect(package.manifest.videoReferences.count == 1)
+        #expect(package.manifest.videoReferences.first?.displayName == "New.mp4")
     }
 
     @Test func exportWithoutLoadedRouteReportsFailure() {
@@ -322,8 +506,54 @@ struct ASMR_Walk_Mac_ImporterTests {
         )
     }
 
+    private func makeSyncedRecording() -> WalkRecording {
+        let start = Date(timeIntervalSince1970: 2_000)
+        return WalkRecording(
+            title: "Synced Walk",
+            createdAt: start,
+            duration: 90,
+            distanceMeters: 450,
+            mode: .walk,
+            routeStartedAt: start,
+            routeEndedAt: start.addingTimeInterval(90),
+            points: [
+                LocationPoint(
+                    timestamp: start,
+                    latitude: 36.11,
+                    longitude: -86.66,
+                    horizontalAccuracy: 5
+                ),
+                LocationPoint(
+                    timestamp: start.addingTimeInterval(90),
+                    latitude: 36.12,
+                    longitude: -86.67,
+                    horizontalAccuracy: 4
+                )
+            ]
+        )
+    }
+
     private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
 
     private static let gpxExportDuplicateTimestampFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="GPX Export"><trk><trkseg><trkpt lat="10.001" lon="20.001"><ele>201.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.000" lon="20.000"><ele>200.123456789</ele><time>2026-10-04T18:31:56Z</time></trkpt><trkpt lat="10.002" lon="20.002"><ele>202.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.003" lon="20.003"><ele>203.123456789</ele><time>2026-10-04T18:31:59Z</time></trkpt></trkseg></trk></gpx>"#
 
+}
+
+private struct StubFileVideoReferenceLoader: FileVideoReferenceLoading {
+    let result: Result<FileVideoReference, FileVideoReference.FileVideoError>
+
+    func load(from url: URL) async throws -> FileVideoReference {
+        try result.get()
+    }
+}
+
+private struct StubPhotosVideoMetadataLoader: PhotosVideoMetadataLoading {
+    func metadata(forItemIdentifier itemIdentifier: String) async throws -> PhotoLibraryVideoMetadata {
+        PhotoLibraryVideoMetadata(
+            creationDate: nil,
+            duration: 0,
+            latitude: nil,
+            longitude: nil
+        )
+    }
 }
