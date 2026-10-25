@@ -7,20 +7,24 @@ import Foundation
 import UniformTypeIdentifiers
 
 nonisolated struct ASMRRoutePackage: Equatable, Sendable {
-    static let schemaVersion = 1
+    static let schemaVersion = 2
+    static let minimumSupportedSchemaVersion = 1
     static let fileExtension = "asmrroute"
     static let manifestFilename = "manifest.json"
     static let routePointsFilename = "route-points.json"
     static let sourceGPXFilename = "source.gpx"
+    static let mapBackgroundFilename = "map-background.png"
 
     let manifest: Manifest
     let routePoints: [RoutePoint]
     let sourceGPX: String?
+    let mapBackgroundData: Data?
 
     init(
         manifest: Manifest,
         routePoints: [RoutePoint],
-        sourceGPX: String? = nil
+        sourceGPX: String? = nil,
+        mapBackgroundData: Data? = nil
     ) {
         self.manifest = manifest
         self.routePoints = routePoints.enumerated().sorted { lhs, rhs in
@@ -31,6 +35,7 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
             return lhs.element.timestamp < rhs.element.timestamp
         }.map(\.element)
         self.sourceGPX = sourceGPX
+        self.mapBackgroundData = mapBackgroundData
     }
 
     func write(to packageURL: URL, fileManager: FileManager = .default) throws {
@@ -54,6 +59,10 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
                 options: .atomic
             )
         }
+
+        if let mapBackgroundData, let mapBackground = manifest.mapBackground {
+            try mapBackgroundData.write(to: packageURL.appending(path: mapBackground.filename), options: .atomic)
+        }
     }
 
     static func load(from packageURL: URL) throws -> ASMRRoutePackage {
@@ -61,7 +70,7 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
             Manifest.self,
             from: Data(contentsOf: packageURL.appending(path: manifestFilename))
         )
-        guard manifest.schemaVersion == schemaVersion else {
+        guard (minimumSupportedSchemaVersion...schemaVersion).contains(manifest.schemaVersion) else {
             throw PackageError.unsupportedSchemaVersion(manifest.schemaVersion)
         }
 
@@ -78,6 +87,9 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
         } else {
             sourceGPX = nil
         }
+        let mapBackgroundData = manifest.mapBackground.flatMap {
+            try? Data(contentsOf: packageURL.appending(path: $0.filename))
+        }
 
         guard routePoints.count == manifest.routePointCount else {
             throw PackageError.routePointCountMismatch(
@@ -89,7 +101,8 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
         return ASMRRoutePackage(
             manifest: manifest,
             routePoints: routePoints,
-            sourceGPX: sourceGPX
+            sourceGPX: sourceGPX,
+            mapBackgroundData: mapBackgroundData
         )
     }
 
@@ -138,7 +151,19 @@ extension ASMRRoutePackage {
         var routePointsFile = ASMRRoutePackage.routePointsFilename
         var sourceGPXFile: String?
         var videoReferences: [VideoReference]
+        var mapBackground: MapBackground? = nil
         var createdBy = "ASMR Walk"
+    }
+
+    nonisolated struct MapBackground: Codable, Equatable, Sendable {
+        let filename: String
+        let pixelWidth: Int
+        let pixelHeight: Int
+        let scale: Double
+        let mapRectOriginX: Double
+        let mapRectOriginY: Double
+        let mapRectWidth: Double
+        let mapRectHeight: Double
     }
 
     nonisolated struct RoutePoint: Codable, Equatable, Sendable {

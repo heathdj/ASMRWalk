@@ -100,6 +100,58 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(preview.routePointCount == 2)
     }
 
+    @Test("Map-backed package writes a portable relative PNG", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func mapBackedPackageRoundTrip() throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "Synced route")
+        let mapData = Data([0x89, 0x50, 0x4E, 0x47])
+        let background = PreparedMapBackground(
+            metadata: ASMRRoutePackage.MapBackground(
+                filename: ASMRRoutePackage.mapBackgroundFilename,
+                pixelWidth: 1_280,
+                pixelHeight: 720,
+                scale: 2,
+                mapRectOriginX: 100,
+                mapRectOriginY: 200,
+                mapRectWidth: 300,
+                mapRectHeight: 400
+            ),
+            imageData: mapData
+        )
+        let package = preview.exportPackage(videoReference: nil, mapBackground: background)
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension(ASMRRoutePackage.fileExtension)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+
+        try package.write(to: packageURL)
+        let loaded = try ASMRRoutePackage.load(from: packageURL)
+
+        #expect(loaded.manifest.schemaVersion == 2)
+        #expect(loaded.manifest.mapBackground == background.metadata)
+        #expect(loaded.mapBackgroundData == mapData)
+        #expect(background.metadata.filename.contains("/") == false)
+    }
+
+    @Test("Schema 1 route-only packages remain readable", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func schemaOnePackageRemainsReadable() throws {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        manifest.schemaVersion = 1
+        manifest.mapBackground = nil
+        let package = ASMRRoutePackage(manifest: manifest, routePoints: original.routePoints)
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension(ASMRRoutePackage.fileExtension)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+
+        try package.write(to: packageURL)
+        let loaded = try ASMRRoutePackage.load(from: packageURL)
+
+        #expect(loaded.manifest.schemaVersion == 1)
+        #expect(loaded.manifest.mapBackground == nil)
+        #expect(loaded.mapBackgroundData == nil)
+    }
+
     @Test func deletingPreviewPointOnlyChangesPendingExport() throws {
         let package = makeRoutePackage()
         var preview = RoutePreview(package: package, sourceDescription: "GPX file: Preview.gpx")
@@ -385,6 +437,50 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(viewModel.selectedFileVideoReference == reference)
     }
 
+    @Test("Selecting a Photos video preserves the prepared map in the pending package", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func photosVideoPreservesPreparedMap() async throws {
+        let background = makePreparedMapBackground()
+        let viewModel = MacImporterViewModel(
+            photosMetadataLoader: StubPhotosVideoMetadataLoader(),
+            mapBackgroundPreparer: StubMapBackgroundPreparer(background: background)
+        )
+        viewModel.loadSyncedRecording(makeSyncedRecording())
+        await viewModel.prepareMapBackground()
+
+        await viewModel.pairPhotosVideo(itemIdentifier: "photos-id", supportedContentTypes: [.movie])
+
+        let package = try #require(viewModel.pendingExportPackage)
+        #expect(package.manifest.mapBackground == background.metadata)
+        #expect(package.mapBackgroundData == background.imageData)
+        #expect(package.manifest.videoReferences.first?.kind == .photosAsset)
+        #expect(viewModel.statusMessage?.contains("prepared map background will also be included") == true)
+    }
+
+    @Test("Selecting a filesystem video preserves the prepared map in the pending package", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
+    func filesystemVideoPreservesPreparedMap() async throws {
+        let background = makePreparedMapBackground()
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: 96
+        )
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference)),
+            mapBackgroundPreparer: StubMapBackgroundPreparer(background: background)
+        )
+        viewModel.loadSyncedRecording(makeSyncedRecording())
+        await viewModel.prepareMapBackground()
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        let package = try #require(viewModel.pendingExportPackage)
+        #expect(package.manifest.mapBackground == background.metadata)
+        #expect(package.mapBackgroundData == background.imageData)
+        #expect(package.manifest.videoReferences.first?.kind == .localVideo)
+        #expect(viewModel.statusMessage?.contains("prepared map background will also be included") == true)
+    }
+
     @Test func selectedFilesystemVideoReplacesPhotosAndLocalReferences() {
         let original = makeRoutePackage()
         var manifest = original.manifest
@@ -533,6 +629,22 @@ struct ASMR_Walk_Mac_ImporterTests {
         )
     }
 
+    private func makePreparedMapBackground() -> PreparedMapBackground {
+        PreparedMapBackground(
+            metadata: ASMRRoutePackage.MapBackground(
+                filename: ASMRRoutePackage.mapBackgroundFilename,
+                pixelWidth: 1_280,
+                pixelHeight: 720,
+                scale: 1,
+                mapRectOriginX: 100,
+                mapRectOriginY: 200,
+                mapRectWidth: 300,
+                mapRectHeight: 400
+            ),
+            imageData: Data([0x89, 0x50, 0x4E, 0x47])
+        )
+    }
+
     private static let reliveGPXFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Relive" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3"><metadata><time>2026-10-09T20:24:10.000Z</time><name>Afternoon Oct 9</name></metadata><trk><trkseg><trkpt lat="12.345100" lon="45.678100"><time>2026-10-09T20:24:10.000Z</time><ele>101.25</ele></trkpt><trkpt lat="12.345200" lon="45.678200"><time>2026-10-09T20:24:11.000Z</time><ele>102.5</ele></trkpt><trkpt lat="12.345300" lon="45.678300"><time>2026-10-09T20:24:25.999Z</time><ele>103.75</ele></trkpt><trkpt lat="12.345400" lon="45.678400"><time>2026-10-09T20:24:40.000Z</time><ele>104</ele></trkpt></trkseg></trk></gpx>"#
 
     private static let gpxExportDuplicateTimestampFixture = #"<?xml version="1.0" encoding="UTF-8"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="GPX Export"><trk><trkseg><trkpt lat="10.001" lon="20.001"><ele>201.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.000" lon="20.000"><ele>200.123456789</ele><time>2026-10-04T18:31:56Z</time></trkpt><trkpt lat="10.002" lon="20.002"><ele>202.123456789</ele><time>2026-10-04T18:31:57Z</time></trkpt><trkpt lat="10.003" lon="20.003"><ele>203.123456789</ele><time>2026-10-04T18:31:59Z</time></trkpt></trkseg></trk></gpx>"#
@@ -555,5 +667,13 @@ private struct StubPhotosVideoMetadataLoader: PhotosVideoMetadataLoading {
             latitude: nil,
             longitude: nil
         )
+    }
+}
+
+private struct StubMapBackgroundPreparer: MapBackgroundPreparing {
+    let background: PreparedMapBackground
+
+    func prepare(for route: RoutePreview) async throws -> PreparedMapBackground {
+        background
     }
 }

@@ -6,18 +6,26 @@
 import Foundation
 
 struct ASMRRoutePackageInput: Equatable, Sendable {
-    static let expectedSchemaVersion = 1
+    static let expectedSchemaVersion = 2
+    static let minimumSupportedSchemaVersion = 1
     static let manifestFilename = "manifest.json"
     static let routePointsFilename = "route-points.json"
 
     let manifest: Manifest
     let routePoints: [RoutePoint]
+    let mapBackgroundData: Data?
+
+    init(manifest: Manifest, routePoints: [RoutePoint], mapBackgroundData: Data? = nil) {
+        self.manifest = manifest
+        self.routePoints = routePoints
+        self.mapBackgroundData = mapBackgroundData
+    }
 
     static func load(from packageURL: URL) throws -> ASMRRoutePackageInput {
         let manifestURL = packageURL.appending(path: manifestFilename)
         let manifest = try decode(Manifest.self, from: Data(contentsOf: manifestURL))
 
-        guard manifest.schemaVersion == expectedSchemaVersion else {
+        guard (minimumSupportedSchemaVersion...expectedSchemaVersion).contains(manifest.schemaVersion) else {
             throw LoadError.unsupportedSchemaVersion(manifest.schemaVersion)
         }
 
@@ -39,9 +47,14 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
             return lhs.element.timestamp < rhs.element.timestamp
         }.map(\.element)
 
+        let mapBackgroundData = manifest.mapBackground.flatMap {
+            try? Data(contentsOf: packageURL.appending(path: $0.filename))
+        }
+
         return ASMRRoutePackageInput(
             manifest: manifest,
-            routePoints: sortedRoutePoints
+            routePoints: sortedRoutePoints,
+            mapBackgroundData: mapBackgroundData
         )
     }
 
@@ -70,7 +83,19 @@ extension ASMRRoutePackageInput {
         let routePointsFile: String
         let sourceGPXFile: String?
         let videoReferences: [VideoReference]
+        var mapBackground: MapBackground? = nil
         let createdBy: String
+    }
+
+    struct MapBackground: Codable, Equatable, Sendable {
+        let filename: String
+        let pixelWidth: Int
+        let pixelHeight: Int
+        let scale: Double
+        let mapRectOriginX: Double
+        let mapRectOriginY: Double
+        let mapRectWidth: Double
+        let mapRectHeight: Double
     }
 
     struct RoutePoint: Codable, Equatable, Sendable {

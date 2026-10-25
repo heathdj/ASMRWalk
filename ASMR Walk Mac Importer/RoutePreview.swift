@@ -42,11 +42,15 @@ struct RoutePreview: Equatable, Identifiable {
     }
 
     var exportPackage: ASMRRoutePackage {
-        exportPackage(videoReference: nil)
+        exportPackage(videoReference: nil, mapBackground: nil)
     }
 
-    func exportPackage(videoReference: ASMRRoutePackage.VideoReference?) -> ASMRRoutePackage {
+    func exportPackage(
+        videoReference: ASMRRoutePackage.VideoReference?,
+        mapBackground: PreparedMapBackground? = nil
+    ) -> ASMRRoutePackage {
         var manifest = originalPackage.manifest
+        manifest.schemaVersion = ASMRRoutePackage.schemaVersion
         manifest.routePointCount = routePoints.count
         manifest.routeStartedAt = routePoints.first?.timestamp ?? manifest.routeStartedAt
         manifest.routeEndedAt = routePoints.last?.timestamp ?? manifest.routeEndedAt
@@ -57,11 +61,13 @@ struct RoutePreview: Equatable, Identifiable {
             manifest.videoReferences.removeAll { $0.kind == .photosAsset || $0.kind == .localVideo }
             manifest.videoReferences.append(videoReference)
         }
+        manifest.mapBackground = mapBackground?.metadata
 
         return ASMRRoutePackage(
             manifest: manifest,
             routePoints: routePoints.map(\.packagePoint),
-            sourceGPX: originalPackage.sourceGPX
+            sourceGPX: originalPackage.sourceGPX,
+            mapBackgroundData: mapBackground?.imageData
         )
     }
 

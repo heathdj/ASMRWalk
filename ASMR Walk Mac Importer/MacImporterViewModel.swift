@@ -20,22 +20,27 @@ final class MacImporterViewModel {
     private(set) var selectedRoutePointID: RoutePreview.RoutePoint.ID?
     private(set) var selectedPhotosVideoReference: PhotosVideoReference?
     private(set) var selectedFileVideoReference: FileVideoReference?
+    private(set) var preparedMapBackground: PreparedMapBackground?
+    private(set) var isPreparingMapBackground = false
 
     private let importer: ASMRGPXRouteImporter
     private let fileManager: FileManager
     private let photosMetadataLoader: any PhotosVideoMetadataLoading
     private let fileVideoReferenceLoader: any FileVideoReferenceLoading
+    private let mapBackgroundPreparer: any MapBackgroundPreparing
 
     init(
         importer: ASMRGPXRouteImporter = ASMRGPXRouteImporter(),
         fileManager: FileManager = .default,
         photosMetadataLoader: (any PhotosVideoMetadataLoading)? = nil,
-        fileVideoReferenceLoader: (any FileVideoReferenceLoading)? = nil
+        fileVideoReferenceLoader: (any FileVideoReferenceLoading)? = nil,
+        mapBackgroundPreparer: (any MapBackgroundPreparing)? = nil
     ) {
         self.importer = importer
         self.fileManager = fileManager
         self.photosMetadataLoader = photosMetadataLoader ?? PhotoLibraryVideoMetadataLoader()
         self.fileVideoReferenceLoader = fileVideoReferenceLoader ?? FileVideoReferenceLoader()
+        self.mapBackgroundPreparer = mapBackgroundPreparer ?? MapBackgroundPreparer()
     }
 
     func handleGPXImportResult(_ result: Result<[URL], any Error>) async {
@@ -79,13 +84,49 @@ final class MacImporterViewModel {
     }
 
     func exportLoadedRoute() throws {
-        guard let package = routePreview?.exportPackage(
-            videoReference: selectedVideoPackageReference
-        ) else {
+        guard let package = pendingExportPackage else {
             throw ImportError.noRouteLoaded
         }
 
         try writePackage(package, successMessage: "\(package.manifest.routePointCount) route points were written to %@.")
+    }
+
+    var pendingExportPackage: ASMRRoutePackage? {
+        routePreview?.exportPackage(
+            videoReference: selectedVideoPackageReference,
+            mapBackground: preparedMapBackground
+        )
+    }
+
+    func prepareMapBackground() async {
+        guard let routePreview else {
+            showFailure(ImportError.noRouteLoaded)
+            return
+        }
+
+        isPreparingMapBackground = true
+        defer { isPreparingMapBackground = false }
+        do {
+            preparedMapBackground = try await mapBackgroundPreparer.prepare(for: routePreview)
+            packageURL = nil
+            statusTitle = "Map Background Ready"
+            statusMessage = "The next package will include a local map image. Final Cut Pro rendering will not contact MapKit."
+            statusSystemImage = "map.fill"
+        } catch {
+            preparedMapBackground = nil
+            statusTitle = "Map Background Unavailable"
+            statusMessage = "\(error.localizedDescription) You can still export the route-only package."
+            statusSystemImage = "map"
+        }
+    }
+
+    func clearMapBackground() {
+        guard preparedMapBackground != nil else { return }
+        preparedMapBackground = nil
+        packageURL = nil
+        statusTitle = "Route-Only Export"
+        statusMessage = "The prepared map was removed. The next package will keep a transparent route overlay."
+        statusSystemImage = "point.topleft.down.curvedto.point.bottomright.up"
     }
 
     func pairPhotosVideo(itemIdentifier: String?, supportedContentTypes: [UTType]) async {
@@ -118,7 +159,7 @@ final class MacImporterViewModel {
 
         packageURL = nil
         statusTitle = "Photos Video Paired"
-        statusMessage = pairingMessage ?? photosVideoPairingMessage
+        statusMessage = messagePreservingPreparedMap(pairingMessage ?? photosVideoPairingMessage)
         statusSystemImage = "photo.on.rectangle"
     }
 
@@ -142,7 +183,7 @@ final class MacImporterViewModel {
             selectedPhotosVideoReference = nil
             packageURL = nil
             statusTitle = "Video File Paired"
-            statusMessage = videoPairingMessage
+            statusMessage = messagePreservingPreparedMap(videoPairingMessage)
             statusSystemImage = "film"
         } catch {
             showFailure(error)
@@ -176,6 +217,7 @@ final class MacImporterViewModel {
         }
 
         routePreview = preview
+        preparedMapBackground = nil
         self.selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Point Removed"
@@ -190,6 +232,7 @@ final class MacImporterViewModel {
 
         preview.resetEdits()
         routePreview = preview
+        preparedMapBackground = nil
         selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Restored"
@@ -238,6 +281,7 @@ final class MacImporterViewModel {
 
     private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {
         routePreview = RoutePreview(package: package, sourceDescription: sourceDescription)
+        preparedMapBackground = nil
         selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Loaded"
@@ -288,6 +332,11 @@ final class MacImporterViewModel {
         }
 
         return url
+    }
+
+    private func messagePreservingPreparedMap(_ message: String) -> String {
+        guard preparedMapBackground != nil else { return message }
+        return "\(message) The prepared map background will also be included."
     }
 
     func showFailure(_ error: any Error) {

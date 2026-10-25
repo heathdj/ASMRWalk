@@ -65,5 +65,6 @@ extension ASMRRoutePackage {
         )
         self.routePoints = routePoints
         sourceGPX = nil
+        mapBackgroundData = nil
     }
 }

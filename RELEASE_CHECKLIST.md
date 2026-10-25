@@ -164,6 +164,9 @@ Run these on physical devices before submission:
 - [x] Export a package for a filesystem MOV selection and confirm it contains one non-embedded `localVideo` reference with the selected filename, timing metadata, and a security-scoped bookmark. Verified October 25, 2026.
 - [ ] Export a package for a filesystem MP4 selection and confirm it contains one non-embedded `localVideo` reference with a usable security-scoped bookmark.
 - [x] Confirm Swift Testing covers filesystem-video filtering, local reference creation, duration/no-metadata presentation, cancellation, Clear, replacement, malformed bookmarks, and recoverable selection errors.
+- [x] Prepare a map in the Mac importer, preview it, and export a schema-2 `.asmrroute` containing `map-background.png`.
+- [ ] In Final Cut Pro and Motion, verify Map Background and Route Only modes, every position/size/corner/opacity choice, route alignment, timeline playback, and export on HD and 4K projects.
+- [ ] Remove, corrupt, or replace `map-background.png` with an unsupported image and confirm the plugin disables map controls, explains the fallback in Map Status, and renders the route-only overlay instead of an empty frame.
 
 ### Automated Coverage Gate
 

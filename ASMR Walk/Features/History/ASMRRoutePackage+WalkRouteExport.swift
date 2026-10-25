@@ -70,5 +70,6 @@ extension ASMRRoutePackage {
         )
         routePoints = points.sorted { $0.timestamp < $1.timestamp }
         self.sourceGPX = sourceGPX
+        mapBackgroundData = nil
     }
 }
