@@ -84,10 +84,31 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         showMapBackground: Bool = true,
         mapStyle: ASMRRouteOverlayMapStyle = .default,
         preparedMapBackground: ASMRRouteOverlayBitmap? = nil,
+        preparedMapBackgrounds: [ASMRRoutePackageInput.DecodedMapBackground] = [],
         usesPreparedMapBackground: Bool = false
     ) -> ASMRRouteOverlayRenderPlan {
+        let routeStart = routePackage.manifest.routeStartedAt
+        let rawRouteDuration = max(
+            0,
+            routePackage.routePoints.last?.timestamp.timeIntervalSince(routeStart)
+                ?? routePackage.manifest.durationSeconds
+        )
+        let elapsedSeconds = routeElapsedSeconds(
+            renderTimeSeconds: renderTimeSeconds,
+            effectStartSeconds: effectStartSeconds,
+            effectDurationSeconds: effectDurationSeconds,
+            routeDurationSeconds: rawRouteDuration,
+            timingMode: timingMode
+        )
+        let activePreparedBackground = activeMapBackground(
+            from: preparedMapBackgrounds,
+            routeStart: routeStart,
+            elapsedSeconds: elapsedSeconds
+        )
+        let projectionMetadata = activePreparedBackground?.metadata
+            ?? routePackage.manifest.mapBackground
         let timedPoints = simplified(
-            normalizedTimedPoints(from: routePackage),
+            normalizedTimedPoints(from: routePackage, mapBackground: projectionMetadata),
             maximumPointCount: maximumRoutePointCount
         )
 
@@ -102,17 +123,6 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             )
         }
 
-        let routeDuration = max(
-            0,
-            timedPoints.last?.seconds ?? routePackage.manifest.durationSeconds
-        )
-        let elapsedSeconds = routeElapsedSeconds(
-            renderTimeSeconds: renderTimeSeconds,
-            effectStartSeconds: effectStartSeconds,
-            effectDurationSeconds: effectDurationSeconds,
-            routeDurationSeconds: routeDuration,
-            timingMode: timingMode
-        )
         let visibleRoutePoints = visiblePoints(from: timedPoints, elapsedSeconds: elapsedSeconds)
         let currentPosition = showCurrentPosition ? interpolatedPoint(from: timedPoints, elapsedSeconds: elapsedSeconds) : nil
 
@@ -124,7 +134,9 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             endPosition: showStartEndMarkers ? timedPoints.last?.point : nil,
             style: style,
             mapBackground: showMapBackground
-                ? (usesPreparedMapBackground ? preparedMapBackground : routePackage.decodedMapBackground())
+                ? (usesPreparedMapBackground
+                    ? (activePreparedBackground?.bitmap ?? preparedMapBackground ?? preparedMapBackgrounds.first?.bitmap)
+                    : (activePreparedBackground?.bitmap ?? routePackage.decodedMapBackground()))
                 : nil,
             mapStyle: mapStyle
         )
@@ -135,7 +147,10 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         let point: Point
     }
 
-    private static func normalizedTimedPoints(from routePackage: ASMRRoutePackageInput) -> [TimedPoint] {
+    private static func normalizedTimedPoints(
+        from routePackage: ASMRRoutePackageInput,
+        mapBackground: ASMRRoutePackageInput.MapBackground?
+    ) -> [TimedPoint] {
         let points = routePackage.routePoints
         guard !points.isEmpty else { return [] }
 
@@ -159,7 +174,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
 
         return points.map { routePoint in
             let normalizedPoint: Point
-            if let mapBackground = routePackage.manifest.mapBackground,
+            if let mapBackground,
                mapBackground.mapRectWidth > 0,
                mapBackground.mapRectHeight > 0 {
                 normalizedPoint = ASMRRouteMapProjection.normalizedPoint(
@@ -180,6 +195,28 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
                 seconds: max(0, routePoint.timestamp.timeIntervalSince(routeStart)),
                 point: normalizedPoint
             )
+        }
+    }
+
+    private static func activeMapBackground(
+        from backgrounds: [ASMRRoutePackageInput.DecodedMapBackground],
+        routeStart: Date,
+        elapsedSeconds: TimeInterval
+    ) -> ASMRRoutePackageInput.DecodedMapBackground? {
+        guard backgrounds.isEmpty == false else { return nil }
+        let timestamp = routeStart.addingTimeInterval(elapsedSeconds)
+        if let containing = backgrounds.first(where: { background in
+            guard let start = background.metadata.startTimestamp,
+                  let end = background.metadata.endTimestamp else { return false }
+            return start...end ~= timestamp
+        }) {
+            return containing
+        }
+
+        return backgrounds.min { lhs, rhs in
+            let lhsDistance = abs((lhs.metadata.startTimestamp ?? routeStart).timeIntervalSince(timestamp))
+            let rhsDistance = abs((rhs.metadata.startTimestamp ?? routeStart).timeIntervalSince(timestamp))
+            return lhsDistance < rhsDistance
         }
     }
 

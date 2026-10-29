@@ -253,7 +253,7 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             availability = .unusable
         }
 
-        let mapAvailable = availability == .available
+        let mapAvailable = availability.isAvailable
         settingAPI.setStringParameterValue(
             availability.statusMessage,
             toParameter: ASMRWalkRouteOverlayParameterID.mapStatus
@@ -387,6 +387,7 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
                 showMapBackground: showMapBackground,
                 mapStyle: mapStyle,
                 preparedMapBackground: preparedPackage.mapBackground,
+                preparedMapBackgrounds: preparedPackage.mapBackgrounds,
                 usesPreparedMapBackground: true
             )
         } catch {

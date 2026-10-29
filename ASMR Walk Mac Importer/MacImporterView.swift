@@ -174,7 +174,30 @@ struct MacImporterView: View {
             Text("Map Background")
                 .font(.headline)
 
-            if let background = viewModel.preparedMapBackground, let image = background.image {
+            if viewModel.preparedMapBackgrounds.isEmpty == false {
+                ScrollView(.horizontal) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.preparedMapBackgrounds, id: \.metadata.filename) { background in
+                            if let image = background.image {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Image(nsImage: image)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(width: 220, height: 124)
+                                        .clipShape(.rect(cornerRadius: 8))
+                                    Text(background.metadata.filename)
+                                        .font(.caption.monospaced())
+                                }
+                            }
+                        }
+                    }
+                }
+                .accessibilityLabel("Prepared map segment previews")
+
+                Text("\(viewModel.preparedMapBackgrounds.count) PNG map segments will be stored inside the route package.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let background = viewModel.preparedMapBackground, let image = background.image {
                 Image(nsImage: image)
                     .resizable()
                     .scaledToFit()
@@ -196,6 +219,14 @@ struct MacImporterView: View {
                 }
                 .disabled(viewModel.routePreview == nil || viewModel.isPreparingMapBackground)
 
+                if let pointCount = viewModel.routePreview?.routePointCount, pointCount > 100 {
+                    Button("Prepare Segmented Maps", systemImage: "square.stack.3d.up") {
+                        Task { await viewModel.prepareSegmentedMapBackgrounds() }
+                    }
+                    .disabled(viewModel.isPreparingMapBackground)
+                    .help("Create overlapping map images with no more than 100 route points each.")
+                }
+
                 if viewModel.isPreparingMapBackground {
                     ProgressView()
                         .controlSize(.small)
@@ -204,7 +235,10 @@ struct MacImporterView: View {
                 Button("Use Route Only", systemImage: "xmark.circle") {
                     viewModel.clearMapBackground()
                 }
-                .disabled(viewModel.preparedMapBackground == nil)
+                .disabled(
+                    viewModel.preparedMapBackground == nil
+                        && viewModel.preparedMapBackgrounds.isEmpty
+                )
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

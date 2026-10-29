@@ -165,7 +165,12 @@ Run these on physical devices before submission:
 - [ ] Export a package for a filesystem MP4 selection and confirm it contains one non-embedded `localVideo` reference with a usable security-scoped bookmark.
 - [x] Confirm Swift Testing covers filesystem-video filtering, local reference creation, duration/no-metadata presentation, cancellation, Clear, replacement, malformed bookmarks, and recoverable selection errors.
 - [x] Prepare a map in the Mac importer, preview it, and export a schema-2 `.asmrroute` containing `map-background.png`.
+- [ ] Load a route over 100 points, prepare segmented maps, and confirm every preview contains no more than 100 points with a five-point overlap.
+- [ ] Export a schema-3 package and confirm ordered `map-background-###.png` assets match their manifest point ranges, timestamps, dimensions, and projection bounds.
+- [ ] Pair both Photos and filesystem video after segmented preparation and confirm every segment remains in the exported package.
 - [ ] In Final Cut Pro and Motion, verify Map Background and Route Only modes, every position/size/corner/opacity choice, route alignment, timeline playback, and export on HD and 4K projects.
+- [ ] In Final Cut Pro and Motion, verify a representative long schema-3 route switches map segments without blank frames during playback, frame-by-frame scrubbing, and HD/4K export.
+- [ ] Remove or corrupt one middle segment and confirm Map Status explains the degraded package while rendering another usable segment or the route-only fallback.
 - [ ] Remove, corrupt, or replace `map-background.png` with an unsupported image and confirm the plugin disables map controls, explains the fallback in Map Status, and renders the route-only overlay instead of an empty frame.
 
 ### Automated Coverage Gate
