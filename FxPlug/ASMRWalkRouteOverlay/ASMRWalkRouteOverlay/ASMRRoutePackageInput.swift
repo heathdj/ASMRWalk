@@ -6,7 +6,7 @@
 import Foundation
 
 struct ASMRRoutePackageInput: Equatable, Sendable {
-    static let expectedSchemaVersion = 2
+    static let expectedSchemaVersion = 3
     static let minimumSupportedSchemaVersion = 1
     static let manifestFilename = "manifest.json"
     static let routePointsFilename = "route-points.json"
@@ -14,11 +14,18 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
     let manifest: Manifest
     let routePoints: [RoutePoint]
     let mapBackgroundData: Data?
+    let mapBackgroundDataByFilename: [String: Data]
 
-    init(manifest: Manifest, routePoints: [RoutePoint], mapBackgroundData: Data? = nil) {
+    init(
+        manifest: Manifest,
+        routePoints: [RoutePoint],
+        mapBackgroundData: Data? = nil,
+        mapBackgroundDataByFilename: [String: Data] = [:]
+    ) {
         self.manifest = manifest
         self.routePoints = routePoints
         self.mapBackgroundData = mapBackgroundData
+        self.mapBackgroundDataByFilename = mapBackgroundDataByFilename
     }
 
     static func load(from packageURL: URL) throws -> ASMRRoutePackageInput {
@@ -50,11 +57,18 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
         let mapBackgroundData = manifest.mapBackground.flatMap {
             try? Data(contentsOf: packageURL.appending(path: $0.filename))
         }
+        let mapBackgroundDataByFilename = Dictionary(
+            uniqueKeysWithValues: (manifest.mapBackgrounds ?? []).compactMap { background in
+                let url = packageURL.appending(path: background.filename)
+                return (try? Data(contentsOf: url)).map { (background.filename, $0) }
+            }
+        )
 
         return ASMRRoutePackageInput(
             manifest: manifest,
             routePoints: sortedRoutePoints,
-            mapBackgroundData: mapBackgroundData
+            mapBackgroundData: mapBackgroundData,
+            mapBackgroundDataByFilename: mapBackgroundDataByFilename
         )
     }
 
@@ -84,6 +98,7 @@ extension ASMRRoutePackageInput {
         let sourceGPXFile: String?
         let videoReferences: [VideoReference]
         var mapBackground: MapBackground? = nil
+        var mapBackgrounds: [MapBackground]? = nil
         let createdBy: String
     }
 
@@ -96,6 +111,10 @@ extension ASMRRoutePackageInput {
         let mapRectOriginY: Double
         let mapRectWidth: Double
         let mapRectHeight: Double
+        var firstRoutePointIndex: Int? = nil
+        var lastRoutePointIndex: Int? = nil
+        var startTimestamp: Date? = nil
+        var endTimestamp: Date? = nil
     }
 
     struct RoutePoint: Codable, Equatable, Sendable {

@@ -146,7 +146,7 @@ The app uses a native static launch screen configured through the target Info se
 
 ## ASMR Route Packages
 
-The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Schema 2 packages contain a deterministic `manifest.json`, normalized `route-points.json`, optional preserved `source.gpx`, and an optional importer-prepared map PNG with exact projection bounds. The FxPlug renderer consumes only these local assets during playback and export; schema 1 route-only packages remain supported.
+The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Schema 3 packages contain a deterministic `manifest.json`, normalized `route-points.json`, optional preserved `source.gpx`, and either one importer-prepared map PNG or ordered, overlapping map segments for routes over 100 points. Every map stores exact projection bounds and route/timestamp coverage. The FxPlug renderer consumes only these local assets during playback and export; schema 1 route-only and schema 2 single-map packages remain supported.
 
 The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
 

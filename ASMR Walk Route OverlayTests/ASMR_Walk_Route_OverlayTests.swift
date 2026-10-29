@@ -114,6 +114,74 @@ struct ASMRRouteOverlayRenderPlanTests {
         #expect(makeRoutePackage().mapAvailability == .routeOnly)
     }
 
+    @Test("Segment selection follows route timestamps at boundaries", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
+    func segmentedMapSelection() {
+        let package = makeRoutePackage()
+        let start = package.manifest.routeStartedAt
+        let firstBitmap = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [1, 2, 3, 255])
+        let secondBitmap = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [4, 5, 6, 255])
+        let worldWidth = 268_435_456.0
+        let backgrounds = [
+            ASMRRoutePackageInput.DecodedMapBackground(
+                metadata: .init(
+                    filename: "map-background-001.png",
+                    pixelWidth: 1,
+                    pixelHeight: 1,
+                    scale: 1,
+                    mapRectOriginX: 0,
+                    mapRectOriginY: 0,
+                    mapRectWidth: worldWidth,
+                    mapRectHeight: worldWidth,
+                    firstRoutePointIndex: 0,
+                    lastRoutePointIndex: 1,
+                    startTimestamp: start,
+                    endTimestamp: start.addingTimeInterval(10)
+                ),
+                bitmap: firstBitmap
+            ),
+            ASMRRoutePackageInput.DecodedMapBackground(
+                metadata: .init(
+                    filename: "map-background-002.png",
+                    pixelWidth: 1,
+                    pixelHeight: 1,
+                    scale: 1,
+                    mapRectOriginX: 0,
+                    mapRectOriginY: 0,
+                    mapRectWidth: worldWidth,
+                    mapRectHeight: worldWidth,
+                    firstRoutePointIndex: 1,
+                    lastRoutePointIndex: 2,
+                    startTimestamp: start.addingTimeInterval(10),
+                    endTimestamp: start.addingTimeInterval(20)
+                ),
+                bitmap: secondBitmap
+            )
+        ]
+
+        let firstPlan = ASMRRouteOverlayRenderPlan.make(
+            from: package,
+            renderTimeSeconds: 9.9,
+            preparedMapBackgrounds: backgrounds,
+            usesPreparedMapBackground: true
+        )
+        let boundaryPlan = ASMRRouteOverlayRenderPlan.make(
+            from: package,
+            renderTimeSeconds: 10,
+            preparedMapBackgrounds: backgrounds,
+            usesPreparedMapBackground: true
+        )
+        let finalPlan = ASMRRouteOverlayRenderPlan.make(
+            from: package,
+            renderTimeSeconds: 20,
+            preparedMapBackgrounds: backgrounds,
+            usesPreparedMapBackground: true
+        )
+
+        #expect(firstPlan.mapBackground == firstBitmap)
+        #expect(boundaryPlan.mapBackground == firstBitmap)
+        #expect(finalPlan.mapBackground == secondBitmap)
+    }
+
     @Test("Corrupt map data falls back to the route-only plan", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
     func corruptMapFallsBackToRouteOnly() {
         let original = makeRoutePackage()
@@ -165,6 +233,59 @@ struct ASMRRouteOverlayRenderPlanTests {
         )
         _ = try cache.preparedPackage(at: packageURL)
         #expect(cache.loadCount == 2)
+    }
+
+    @Test("Segment cache invalidates when one PNG changes and reports partial fallback", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
+    func segmentedPackageCacheInvalidation() throws {
+        let original = makeRoutePackage()
+        let start = original.manifest.routeStartedAt
+        let metadata: [ASMRRoutePackageInput.MapBackground] = [0, 1].map { index in
+            .init(
+                filename: String(format: "map-background-%03d.png", index + 1),
+                pixelWidth: 1,
+                pixelHeight: 1,
+                scale: 1,
+                mapRectOriginX: 0,
+                mapRectOriginY: 0,
+                mapRectWidth: 268_435_456,
+                mapRectHeight: 268_435_456,
+                firstRoutePointIndex: index,
+                lastRoutePointIndex: index + 1,
+                startTimestamp: start.addingTimeInterval(Double(index * 10)),
+                endTimestamp: start.addingTimeInterval(Double((index + 1) * 10))
+            )
+        }
+        var manifest = original.manifest
+        manifest.mapBackgrounds = metadata
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+        try FileManager.default.createDirectory(at: packageURL, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(manifest).write(to: packageURL.appending(path: ASMRRoutePackageInput.manifestFilename))
+        try encoder.encode(original.routePoints).write(to: packageURL.appending(path: manifest.routePointsFile))
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="))
+        try png.write(to: packageURL.appending(path: metadata[0].filename))
+        try png.write(to: packageURL.appending(path: metadata[1].filename))
+        let cache = ASMRRouteOverlayPackageCache()
+
+        let complete = try cache.preparedPackage(at: packageURL)
+        #expect(complete.mapAvailability == .segmented(available: 2, total: 2))
+        _ = try cache.preparedPackage(at: packageURL)
+        #expect(cache.loadCount == 1)
+
+        let secondURL = packageURL.appending(path: metadata[1].filename)
+        try Data("corrupt".utf8).write(to: secondURL)
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(10)],
+            ofItemAtPath: secondURL.path
+        )
+        let degraded = try cache.preparedPackage(at: packageURL)
+
+        #expect(cache.loadCount == 2)
+        #expect(degraded.mapAvailability == .segmented(available: 1, total: 2))
+        #expect(degraded.mapAvailability.statusMessage.contains("degraded"))
     }
 
     @Test("Route progress interpolates from package timestamps", .bug("https://github.com/heathdj/ASMRWalk/issues/77"))

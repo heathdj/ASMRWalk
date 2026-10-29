@@ -547,6 +547,12 @@ The fallback is now visible in the editor instead of being a quiet magic trick. 
 
 An owner test caught a state-handoff ambiguity: after preparing the map, choosing a video made it look as though the map had fallen out of the pending package. Package assembly now has one explicit source of truth that combines the current route, selected video, and prepared map, and the video-pairing status confirms that the map will also be included. Regression tests cover both Photos and filesystem videos—the digital equivalent of checking the lunchbox after adding dessert to make sure the sandwich is still there.
 
+### Long Routes Get a Map Flipbook
+
+Issue 128 fixes the opposite problem from point reduction: a single map can technically contain a long walk while making every street too tiny to recognize. The importer can now turn routes over 100 points into a deterministic flipbook of map PNGs. Each page covers at most 100 breadcrumbs and shares five with the next page, so the renderer changes context without teleporting the route at the seam.
+
+Schema 3 records each page's filename, Web Mercator rectangle, point indices, and timestamps. The plugin chooses the active page from route time, projects the trail against that page, and keeps decoded pages in its package cache instead of reopening PNGs every frame. A missing page is a torn sheet, not a ruined book: another usable page or the transparent route remains visible. Pairing a video after preparation carries the whole flipbook forward, which closes the same state-handoff trap that the original single-map feature exposed.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.

@@ -47,7 +47,8 @@ struct RoutePreview: Equatable, Identifiable {
 
     func exportPackage(
         videoReference: ASMRRoutePackage.VideoReference?,
-        mapBackground: PreparedMapBackground? = nil
+        mapBackground: PreparedMapBackground? = nil,
+        mapBackgrounds: [PreparedMapBackground] = []
     ) -> ASMRRoutePackage {
         var manifest = originalPackage.manifest
         manifest.schemaVersion = ASMRRoutePackage.schemaVersion
@@ -62,12 +63,16 @@ struct RoutePreview: Equatable, Identifiable {
             manifest.videoReferences.append(videoReference)
         }
         manifest.mapBackground = mapBackground?.metadata
+        manifest.mapBackgrounds = mapBackgrounds.isEmpty ? nil : mapBackgrounds.map(\.metadata)
 
         return ASMRRoutePackage(
             manifest: manifest,
             routePoints: routePoints.map(\.packagePoint),
             sourceGPX: originalPackage.sourceGPX,
-            mapBackgroundData: mapBackground?.imageData
+            mapBackgroundData: mapBackground?.imageData,
+            mapBackgroundDataByFilename: Dictionary(
+                uniqueKeysWithValues: mapBackgrounds.map { ($0.metadata.filename, $0.imageData) }
+            )
         )
     }
 

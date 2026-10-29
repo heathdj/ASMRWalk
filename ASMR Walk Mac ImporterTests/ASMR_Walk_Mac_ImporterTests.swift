@@ -126,10 +126,74 @@ struct ASMR_Walk_Mac_ImporterTests {
         try package.write(to: packageURL)
         let loaded = try ASMRRoutePackage.load(from: packageURL)
 
-        #expect(loaded.manifest.schemaVersion == 2)
+        #expect(loaded.manifest.schemaVersion == 3)
         #expect(loaded.manifest.mapBackground == background.metadata)
         #expect(loaded.mapBackgroundData == mapData)
         #expect(background.metadata.filename.contains("/") == false)
+    }
+
+    @Test("Long routes are split deterministically with five-point overlap", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
+    func segmentedMapRanges() {
+        #expect(MapBackgroundPreparer.segmentRanges(pointCount: 100) == [0...99])
+        #expect(MapBackgroundPreparer.segmentRanges(pointCount: 101) == [0...99, 95...100])
+        #expect(MapBackgroundPreparer.segmentRanges(pointCount: 196) == [0...99, 95...194, 190...195])
+    }
+
+    @Test("Schema 3 segmented backgrounds round trip in manifest order", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
+    func segmentedMapPackageRoundTrip() throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "Synced route")
+        let start = preview.routePoints[0].timestamp
+        let end = preview.routePoints[1].timestamp
+        let backgrounds = [
+            PreparedMapBackground(
+                metadata: .init(
+                    filename: "map-background-001.png",
+                    pixelWidth: 2,
+                    pixelHeight: 2,
+                    scale: 1,
+                    mapRectOriginX: 10,
+                    mapRectOriginY: 20,
+                    mapRectWidth: 30,
+                    mapRectHeight: 40,
+                    firstRoutePointIndex: 0,
+                    lastRoutePointIndex: 0,
+                    startTimestamp: start,
+                    endTimestamp: start
+                ),
+                imageData: Data([1, 2, 3])
+            ),
+            PreparedMapBackground(
+                metadata: .init(
+                    filename: "map-background-002.png",
+                    pixelWidth: 2,
+                    pixelHeight: 2,
+                    scale: 1,
+                    mapRectOriginX: 50,
+                    mapRectOriginY: 60,
+                    mapRectWidth: 70,
+                    mapRectHeight: 80,
+                    firstRoutePointIndex: 1,
+                    lastRoutePointIndex: 1,
+                    startTimestamp: end,
+                    endTimestamp: end
+                ),
+                imageData: Data([4, 5, 6])
+            )
+        ]
+        let package = preview.exportPackage(videoReference: nil, mapBackgrounds: backgrounds)
+        let packageURL = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString)
+            .appendingPathExtension(ASMRRoutePackage.fileExtension)
+        defer { try? FileManager.default.removeItem(at: packageURL) }
+
+        try package.write(to: packageURL)
+        let loaded = try ASMRRoutePackage.load(from: packageURL)
+
+        #expect(loaded.manifest.schemaVersion == 3)
+        #expect(loaded.manifest.mapBackground == nil)
+        #expect(loaded.manifest.mapBackgrounds == backgrounds.map(\.metadata))
+        #expect(loaded.mapBackgroundDataByFilename["map-background-001.png"] == Data([1, 2, 3]))
+        #expect(loaded.mapBackgroundDataByFilename["map-background-002.png"] == Data([4, 5, 6]))
     }
 
     @Test("Schema 1 route-only packages remain readable", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
@@ -481,6 +545,35 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(viewModel.statusMessage?.contains("prepared map background will also be included") == true)
     }
 
+    @Test("Selecting a filesystem video preserves every prepared map segment", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
+    func filesystemVideoPreservesPreparedMapSegments() async throws {
+        let first = makePreparedMapBackground(filename: "map-background-001.png")
+        let second = makePreparedMapBackground(filename: "map-background-002.png")
+        let reference = FileVideoReference(
+            displayName: "Walking.mov",
+            bookmarkIdentifier: "security-scoped-bookmark:dGVzdA==",
+            creationDate: nil,
+            duration: 96
+        )
+        let viewModel = MacImporterViewModel(
+            fileVideoReferenceLoader: StubFileVideoReferenceLoader(result: .success(reference)),
+            mapBackgroundPreparer: StubMapBackgroundPreparer(
+                background: first,
+                segmentedBackgrounds: [first, second]
+            )
+        )
+        viewModel.loadSyncedRecording(makeSyncedRecording())
+        await viewModel.prepareSegmentedMapBackgrounds()
+
+        await viewModel.pairVideoFile(at: URL(filePath: "/Walking.mov"))
+
+        let package = try #require(viewModel.pendingExportPackage)
+        #expect(package.manifest.mapBackgrounds == [first.metadata, second.metadata])
+        #expect(package.mapBackgroundDataByFilename[first.metadata.filename] == first.imageData)
+        #expect(package.mapBackgroundDataByFilename[second.metadata.filename] == second.imageData)
+        #expect(viewModel.statusMessage?.contains("All 2 prepared map segments") == true)
+    }
+
     @Test func selectedFilesystemVideoReplacesPhotosAndLocalReferences() {
         let original = makeRoutePackage()
         var manifest = original.manifest
@@ -629,10 +722,12 @@ struct ASMR_Walk_Mac_ImporterTests {
         )
     }
 
-    private func makePreparedMapBackground() -> PreparedMapBackground {
+    private func makePreparedMapBackground(
+        filename: String = ASMRRoutePackage.mapBackgroundFilename
+    ) -> PreparedMapBackground {
         PreparedMapBackground(
             metadata: ASMRRoutePackage.MapBackground(
-                filename: ASMRRoutePackage.mapBackgroundFilename,
+                filename: filename,
                 pixelWidth: 1_280,
                 pixelHeight: 720,
                 scale: 1,
@@ -672,8 +767,13 @@ private struct StubPhotosVideoMetadataLoader: PhotosVideoMetadataLoading {
 
 private struct StubMapBackgroundPreparer: MapBackgroundPreparing {
     let background: PreparedMapBackground
+    var segmentedBackgrounds: [PreparedMapBackground]? = nil
 
     func prepare(for route: RoutePreview) async throws -> PreparedMapBackground {
         background
+    }
+
+    func prepareSegments(for route: RoutePreview) async throws -> [PreparedMapBackground] {
+        segmentedBackgrounds ?? [background]
     }
 }
