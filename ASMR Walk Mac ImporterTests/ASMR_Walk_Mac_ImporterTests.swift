@@ -777,3 +777,81 @@ private struct StubMapBackgroundPreparer: MapBackgroundPreparing {
         segmentedBackgrounds ?? [background]
     }
 }
+
+struct FxPlugInstallationServiceTests {
+    @Test("Missing wrapper reports not installed", .bug("https://github.com/heathdj/ASMRWalk/issues/99"))
+    func missingWrapperReportsNotInstalled() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory
+        ).inspect()
+
+        #expect(inspection.state == .notInstalled)
+    }
+
+    @Test("Wrapper without embedded plugin reports incomplete")
+    func missingEmbeddedPluginReportsIncomplete() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        try FileManager.default.createDirectory(
+            at: applicationsDirectory.appending(path: FxPlugInstallationService.wrapperApplicationName),
+            withIntermediateDirectories: true
+        )
+
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory
+        ).inspect()
+
+        #expect(inspection.state == .incomplete)
+    }
+
+    @Test("Expected embedded plugin reports ready")
+    func expectedPluginReportsReady() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        try makePluginBundle(
+            in: applicationsDirectory,
+            identifier: FxPlugInstallationService.expectedPluginIdentifier
+        )
+
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory
+        ).inspect()
+
+        #expect(inspection.state == .ready)
+    }
+
+    @Test("Unexpected embedded plugin identifier requests repair")
+    func unexpectedIdentifierRequestsRepair() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        try makePluginBundle(in: applicationsDirectory, identifier: "example.invalid")
+
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory
+        ).inspect()
+
+        #expect(inspection.state == .invalidPluginIdentifier("example.invalid"))
+    }
+
+    private func temporaryDirectory() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private func makePluginBundle(in applicationsDirectory: URL, identifier: String) throws {
+        let pluginContents = applicationsDirectory
+            .appending(path: FxPlugInstallationService.wrapperApplicationName, directoryHint: .isDirectory)
+            .appending(path: "Contents/PlugIns/\(FxPlugInstallationService.pluginBundleName)/Contents", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: pluginContents, withIntermediateDirectories: true)
+        let plist = try PropertyListSerialization.data(
+            fromPropertyList: [
+                "CFBundleIdentifier": identifier,
+                "CFBundlePackageType": "XPC!",
+                "CFBundleVersion": "1"
+            ],
+            format: .xml,
+            options: 0
+        )
+        try plist.write(to: pluginContents.appending(path: "Info.plist"))
+    }
+}

@@ -547,6 +547,14 @@ Issue 124 replaces the FxPlug's typed sandbox path with a real chooser and a sec
 
 Timing now has a written rule instead of folklore. Package `offsetSeconds` wins over a derived `startsAt` value, the selected primary video reference wins over other references, and an explicit inspector offset is added last. Positive advances the route, negative delays it. If an older package contains several videos but never says which one is primary, the renderer refuses to play roulette and uses only the editor's manual offset.
 
+### One Installer, Two Mac Tools
+
+Issue 99 turns the Mac release from a scavenger hunt into one signed delivery. The importer and route-overlay wrapper now travel in the same notarized package and land together in Applications. The wrapper is the sealed shipping crate for the embedded `.pluginkit`; the importer can inspect the label and launch it for registration, but it never pries the crate open and invalidates the code signature.
+
+The release script follows the complete Developer ID relay race: archive, export, verify nested signatures, sign the installer, notarize, and staple. A separate verifier checks Gatekeeper and PlugInKit on the destination Mac. That split matters because a successful Xcode build proves the code compiles, while a host smoke test proves the component actually made it through macOS security and into Final Cut Pro's field of view.
+
+Installation testing also uncovered two tiny strings with enormous consequences. The plugin metadata key is case-sensitive `PlugInKit`, not `PluginKit`, and the executable needs `@loader_path/../Frameworks` so it can load the frameworks packed beside it. With both corrected, the installed component finally appeared in PlugInKit. Apple’s host contract revealed one more relay baton: Motion can use FxPlug directly, while Final Cut Pro needs a published Motion generator template. Issue #131 now owns that template and its installer payload before #79 begins.
+
 Schema 2 is deliberately additive. Old schema-1 route-only packages still load, while a missing or damaged map image simply sends the renderer back to its transparent route mode. The plugin caches package geometry and decoded map pixels by package modification state, and its controls move, resize, round, fade, or hide the panel without disturbing route alignment. It is the difference between redrawing a street atlas for every video frame and laminating the map once before walking into the edit suite.
 
 The fallback is now visible in the editor instead of being a quiet magic trick. The plugin validates that the asset is a PNG whose dimensions and projection metadata match the manifest, disables map controls when no usable map exists, and reports whether the package is map-backed, intentionally route-only, or falling back because an asset is missing, corrupt, unsupported, or mismatched. Route-only rendering remains the safety net, but the editor no longer has to guess why it appeared.
