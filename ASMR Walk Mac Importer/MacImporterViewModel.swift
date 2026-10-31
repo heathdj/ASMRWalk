@@ -21,6 +21,7 @@ final class MacImporterViewModel {
     private(set) var selectedPhotosVideoReference: PhotosVideoReference?
     private(set) var selectedFileVideoReference: FileVideoReference?
     private(set) var preparedMapBackground: PreparedMapBackground?
+    private(set) var preparedMapBackgrounds: [PreparedMapBackground] = []
     private(set) var isPreparingMapBackground = false
 
     private let importer: ASMRGPXRouteImporter
@@ -94,7 +95,8 @@ final class MacImporterViewModel {
     var pendingExportPackage: ASMRRoutePackage? {
         routePreview?.exportPackage(
             videoReference: selectedVideoPackageReference,
-            mapBackground: preparedMapBackground
+            mapBackground: preparedMapBackground,
+            mapBackgrounds: preparedMapBackgrounds
         )
     }
 
@@ -108,6 +110,7 @@ final class MacImporterViewModel {
         defer { isPreparingMapBackground = false }
         do {
             preparedMapBackground = try await mapBackgroundPreparer.prepare(for: routePreview)
+            preparedMapBackgrounds = []
             packageURL = nil
             statusTitle = "Map Background Ready"
             statusMessage = "The next package will include a local map image. Final Cut Pro rendering will not contact MapKit."
@@ -120,9 +123,33 @@ final class MacImporterViewModel {
         }
     }
 
+    func prepareSegmentedMapBackgrounds() async {
+        guard let routePreview else {
+            showFailure(ImportError.noRouteLoaded)
+            return
+        }
+
+        isPreparingMapBackground = true
+        defer { isPreparingMapBackground = false }
+        do {
+            preparedMapBackgrounds = try await mapBackgroundPreparer.prepareSegments(for: routePreview)
+            preparedMapBackground = nil
+            packageURL = nil
+            statusTitle = "Segmented Maps Ready"
+            statusMessage = "\(preparedMapBackgrounds.count) local map images will be included for deterministic offline rendering."
+            statusSystemImage = "map.fill"
+        } catch {
+            preparedMapBackgrounds = []
+            statusTitle = "Segmented Maps Unavailable"
+            statusMessage = "\(error.localizedDescription) Retry, prepare one map, or export the route only."
+            statusSystemImage = "map"
+        }
+    }
+
     func clearMapBackground() {
-        guard preparedMapBackground != nil else { return }
+        guard preparedMapBackground != nil || preparedMapBackgrounds.isEmpty == false else { return }
         preparedMapBackground = nil
+        preparedMapBackgrounds = []
         packageURL = nil
         statusTitle = "Route-Only Export"
         statusMessage = "The prepared map was removed. The next package will keep a transparent route overlay."
@@ -218,6 +245,7 @@ final class MacImporterViewModel {
 
         routePreview = preview
         preparedMapBackground = nil
+        preparedMapBackgrounds = []
         self.selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Point Removed"
@@ -233,6 +261,7 @@ final class MacImporterViewModel {
         preview.resetEdits()
         routePreview = preview
         preparedMapBackground = nil
+        preparedMapBackgrounds = []
         selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Restored"
@@ -282,6 +311,7 @@ final class MacImporterViewModel {
     private func loadRoutePreview(_ package: ASMRRoutePackage, sourceDescription: String) {
         routePreview = RoutePreview(package: package, sourceDescription: sourceDescription)
         preparedMapBackground = nil
+        preparedMapBackgrounds = []
         selectedRoutePointID = nil
         packageURL = nil
         statusTitle = "Route Loaded"
@@ -335,6 +365,9 @@ final class MacImporterViewModel {
     }
 
     private func messagePreservingPreparedMap(_ message: String) -> String {
+        if preparedMapBackgrounds.isEmpty == false {
+            return "\(message) All \(preparedMapBackgrounds.count) prepared map segments will also be included."
+        }
         guard preparedMapBackground != nil else { return message }
         return "\(message) The prepared map background will also be included."
     }

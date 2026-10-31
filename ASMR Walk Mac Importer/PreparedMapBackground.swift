@@ -18,18 +18,77 @@ struct PreparedMapBackground: Equatable, Sendable {
 @MainActor
 protocol MapBackgroundPreparing {
     func prepare(for route: RoutePreview) async throws -> PreparedMapBackground
+    func prepareSegments(for route: RoutePreview) async throws -> [PreparedMapBackground]
+}
+
+extension MapBackgroundPreparing {
+    func prepareSegments(for route: RoutePreview) async throws -> [PreparedMapBackground] {
+        [try await prepare(for: route)]
+    }
 }
 
 @MainActor
 struct MapBackgroundPreparer: MapBackgroundPreparing {
     static let outputSize = CGSize(width: 1_280, height: 720)
+    static let maximumSegmentPointCount = 100
+    static let segmentOverlapPointCount = 5
 
     func prepare(for route: RoutePreview) async throws -> PreparedMapBackground {
-        guard route.routePoints.isEmpty == false else {
+        try await prepare(
+            points: route.routePoints,
+            filename: ASMRRoutePackage.mapBackgroundFilename,
+            pointRange: nil
+        )
+    }
+
+    func prepareSegments(for route: RoutePreview) async throws -> [PreparedMapBackground] {
+        let ranges = Self.segmentRanges(pointCount: route.routePoints.count)
+        return try await withThrowingTaskGroup(of: (Int, PreparedMapBackground).self) { group in
+            for (offset, range) in ranges.enumerated() {
+                let points = Array(route.routePoints[range])
+                group.addTask { @MainActor in
+                    let background = try await prepare(
+                        points: points,
+                        filename: String(format: "map-background-%03d.png", offset + 1),
+                        pointRange: range
+                    )
+                    return (offset, background)
+                }
+            }
+
+            var prepared: [(Int, PreparedMapBackground)] = []
+            for try await result in group {
+                prepared.append(result)
+            }
+            return prepared.sorted { $0.0 < $1.0 }.map(\.1)
+        }
+    }
+
+    static func segmentRanges(pointCount: Int) -> [ClosedRange<Int>] {
+        guard pointCount > 0 else { return [] }
+        guard pointCount > maximumSegmentPointCount else { return [0...(pointCount - 1)] }
+
+        var ranges: [ClosedRange<Int>] = []
+        var startIndex = 0
+        while startIndex < pointCount {
+            let endIndex = min(startIndex + maximumSegmentPointCount - 1, pointCount - 1)
+            ranges.append(startIndex...endIndex)
+            guard endIndex < pointCount - 1 else { break }
+            startIndex = endIndex - segmentOverlapPointCount + 1
+        }
+        return ranges
+    }
+
+    private func prepare(
+        points: [RoutePreview.RoutePoint],
+        filename: String,
+        pointRange: ClosedRange<Int>?
+    ) async throws -> PreparedMapBackground {
+        guard points.isEmpty == false else {
             throw PreparationError.emptyRoute
         }
 
-        let mapRect = Self.mapRect(for: route.routePoints)
+        let mapRect = Self.mapRect(for: points)
         let options = MKMapSnapshotter.Options()
         options.mapRect = mapRect
         options.size = Self.outputSize
@@ -57,14 +116,18 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
 
         return PreparedMapBackground(
             metadata: ASMRRoutePackage.MapBackground(
-                filename: ASMRRoutePackage.mapBackgroundFilename,
+                filename: filename,
                 pixelWidth: bitmap.pixelsWide,
                 pixelHeight: bitmap.pixelsHigh,
                 scale: Double(bitmap.pixelsWide) / Self.outputSize.width,
                 mapRectOriginX: mapRect.origin.x,
                 mapRectOriginY: mapRect.origin.y,
                 mapRectWidth: mapRect.size.width,
-                mapRectHeight: mapRect.size.height
+                mapRectHeight: mapRect.size.height,
+                firstRoutePointIndex: pointRange?.lowerBound,
+                lastRoutePointIndex: pointRange?.upperBound,
+                startTimestamp: points.first?.timestamp,
+                endTimestamp: points.last?.timestamp
             ),
             imageData: pngData
         )
