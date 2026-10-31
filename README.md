@@ -152,6 +152,8 @@ In the Final Cut Pro or Motion inspector, use **Choose or Replace Route Packageâ
 
 The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
 
+The release installer ships the Mac importer and Final Cut Pro/Motion route-overlay wrapper together. Developer ID signing, notarization, installation, registration, and host smoke-test steps are documented in `Installer/README.md`.
+
 ## Current Limitations
 
 - Exported Google Maps URLs sample waypoints; GPX remains the complete route export.

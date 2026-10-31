@@ -24,5 +24,13 @@ struct ASMRWalkMacImporterApp: App {
                 .modelContainer(modelContainer)
         }
         .windowResizability(.contentSize)
+        .commands {
+            FxPlugInstallationCommands()
+        }
+
+        Window("Final Cut Pro Plugin", id: "fxplug-installation") {
+            FxPlugInstallationView()
+        }
+        .defaultSize(width: 540, height: 280)
     }
 }

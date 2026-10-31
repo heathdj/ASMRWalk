@@ -156,6 +156,11 @@ Run these on physical devices before submission:
 - [ ] Confirm iPhone-created GPS walks appear in the Mac importer after iCloud sync.
 - [ ] Confirm Watch-created GPS walks appear in the Mac importer after iCloud sync.
 - [ ] Confirm iCloud sign-out or restricted account state explains that GPX import remains available.
+- [ ] Build the Mac tools installer with Developer ID Application and Installer identities, submit it to notarization, staple it, and confirm `pkgutil --check-signature` reports the expected team.
+- [ ] Install the notarized package and run `Installer/verify-installed-tools.sh`; confirm both apps pass Gatekeeper and `com.bald-traveler.ASMRWalkRouteOverlay` is visible to PlugInKit.
+- [ ] In the importer, open **Final Cut Pro Plugin…**, confirm Installed status, and run **Register or Repair Plugin**.
+- [ ] Quit and reopen Motion, locate **ASMR Walk Route Overlay** in the **ASMR Walk** group, and add it to a new project.
+- [ ] Complete #131, install the ASMR Walk Motion generator template, and confirm its inspector controls appear in Final Cut Pro before beginning issue #124 and #79 validation.
 - [ ] Create an `.asmrroute` package from a synced recording in the Mac importer.
 - [ ] Load the generated `.asmrroute` package and confirm manifest metadata, source device, route timing, and route-point count match the source recording.
 - [ ] Confirm GPX import fallback still creates an `.asmrroute` package when synced recordings are unavailable.
