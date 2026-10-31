@@ -541,6 +541,12 @@ Final owner testing confirmed MP4 selection and produced a MOV-backed `Pumpkin-F
 
 Issue 123 gives the Final Cut Pro overlay geographical context without inviting the network into the render loop. The Mac importer asks MapKit for a static PNG only after the editor presses **Prepare Map**, then packs that image beside the route with the exact Web Mercator rectangle used to frame it. The plugin receives a packed lunch: pixels, bounds, and route points, with no reason to call MapKit, Photos, CloudKit, or anything else during playback.
 
+### The Route Package Gets a Real Key
+
+Issue 124 replaces the FxPlug's typed sandbox path with a real chooser and a security-scoped bookmark. The bookmark is the effect's coat-check ticket: Final Cut can save it with the project, reopen later, and regain read-only access without asking the editor to type an implementation detail. The inspector also gives the editor honest status, Replace, and Clear controls; moved or deleted packages are a recoverable problem rather than a mysterious transparent frame.
+
+Timing now has a written rule instead of folklore. Package `offsetSeconds` wins over a derived `startsAt` value, the selected primary video reference wins over other references, and an explicit inspector offset is added last. Positive advances the route, negative delays it. If an older package contains several videos but never says which one is primary, the renderer refuses to play roulette and uses only the editor's manual offset.
+
 Schema 2 is deliberately additive. Old schema-1 route-only packages still load, while a missing or damaged map image simply sends the renderer back to its transparent route mode. The plugin caches package geometry and decoded map pixels by package modification state, and its controls move, resize, round, fade, or hide the panel without disturbing route alignment. It is the difference between redrawing a street atlas for every video frame and laminating the map once before walking into the edit suite.
 
 The fallback is now visible in the editor instead of being a quiet magic trick. The plugin validates that the asset is a PNG whose dimensions and projection metadata match the manifest, disables map controls when no usable map exists, and reports whether the package is map-backed, intentionally route-only, or falling back because an asset is missing, corrupt, unsupported, or mismatched. Route-only rendering remains the safety net, but the editor no longer has to guess why it appeared.

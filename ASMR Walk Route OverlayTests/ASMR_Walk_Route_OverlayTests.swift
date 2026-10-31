@@ -471,12 +471,99 @@ struct ASMRRouteOverlayRenderPlanTests {
         #expect(plan.currentPosition == .init(x: 0.5, y: 0.5))
     }
 
+    @Test("Package and manual timing offsets are additive", .bug("https://github.com/heathdj/ASMRWalk/issues/124"))
+    func packageAndManualTimingOffsetsAreAdditive() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let video = ASMRRoutePackageInput.VideoReference(
+            kind: "externalCamera",
+            displayName: "Camera.mov",
+            sourceIdentifier: nil,
+            startsAt: start.addingTimeInterval(3),
+            offsetSeconds: 5,
+            isEmbedded: false
+        )
+        let package = makeRoutePackage(videoReferences: [video])
+        let alignment = ASMRRouteTimingAlignment.resolve(
+            manifest: package.manifest,
+            explicitOffsetSeconds: -2
+        )
+        let aligned = ASMRRouteOverlayRenderPlan.make(
+            from: package,
+            renderTimeSeconds: 0,
+            routeTimingOffsetSeconds: alignment.totalOffsetSeconds
+        )
+        let expected = ASMRRouteOverlayRenderPlan.make(from: package, renderTimeSeconds: 3)
+
+        #expect(alignment.packageOffsetSeconds == 5)
+        #expect(alignment.totalOffsetSeconds == 3)
+        #expect(aligned.currentPosition == expected.currentPosition)
+    }
+
+    @Test("startsAt supplies positive, zero, and negative package offsets")
+    func startsAtFallbackSupportsSignedOffsets() {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        for expected in [-8.0, 0.0, 12.5] {
+            let video = ASMRRoutePackageInput.VideoReference(
+                kind: "externalCamera",
+                displayName: "Camera.mov",
+                sourceIdentifier: nil,
+                startsAt: start.addingTimeInterval(expected),
+                offsetSeconds: nil,
+                isEmbedded: false
+            )
+            let package = makeRoutePackage(videoReferences: [video])
+            let alignment = ASMRRouteTimingAlignment.resolve(
+                manifest: package.manifest,
+                explicitOffsetSeconds: 0
+            )
+            #expect(alignment.packageOffsetSeconds == expected)
+        }
+    }
+
+    @Test("Multiple video references require an explicit primary reference")
+    func multipleReferencesDoNotGuess() {
+        let videos = [4.0, 9.0].map { offset in
+            ASMRRoutePackageInput.VideoReference(
+                kind: "externalCamera",
+                displayName: "Camera \(offset)",
+                sourceIdentifier: nil,
+                startsAt: nil,
+                offsetSeconds: offset,
+                isEmbedded: false
+            )
+        }
+        let ambiguous = makeRoutePackage(videoReferences: videos)
+        let selected = makeRoutePackage(videoReferences: videos, primaryVideoReferenceIndex: 1)
+
+        #expect(ASMRRouteTimingAlignment.resolve(
+            manifest: ambiguous.manifest,
+            explicitOffsetSeconds: 2
+        ).totalOffsetSeconds == 2)
+        #expect(ASMRRouteTimingAlignment.resolve(
+            manifest: selected.manifest,
+            explicitOffsetSeconds: 2
+        ).totalOffsetSeconds == 11)
+    }
+
+    @Test("Saved package selections round trip without exposing bookmark bytes")
+    func packageSelectionRoundTrips() throws {
+        let selection = ASMRRoutePackageSelection(
+            bookmarkData: Data([1, 2, 3, 4]),
+            displayName: "Evening Walk",
+            lastKnownPath: "/tmp/Evening Walk.asmrroute"
+        )
+
+        #expect(try ASMRRoutePackageSelection.decode(selection.encoded()) == selection)
+    }
+
     private func makeRoutePackage(
         coordinates: [(latitude: Double, longitude: Double, seconds: TimeInterval)] = [
             (latitude: 0, longitude: 0, seconds: 0),
             (latitude: 10, longitude: 10, seconds: 10),
             (latitude: 0, longitude: 20, seconds: 20)
-        ]
+        ],
+        videoReferences: [ASMRRoutePackageInput.VideoReference] = [],
+        primaryVideoReferenceIndex: Int? = nil
     ) -> ASMRRoutePackageInput {
         let start = Date(timeIntervalSinceReferenceDate: 1_000)
         let duration = coordinates.map(\.seconds).max() ?? 0
@@ -508,7 +595,8 @@ struct ASMRRouteOverlayRenderPlanTests {
                 routePointCount: routePoints.count,
                 routePointsFile: "route-points.json",
                 sourceGPXFile: nil,
-                videoReferences: [],
+                videoReferences: videoReferences,
+                primaryVideoReferenceIndex: primaryVideoReferenceIndex,
                 createdBy: "ASMR Walk Tests"
             ),
             routePoints: routePoints

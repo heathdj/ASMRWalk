@@ -39,6 +39,7 @@ Optional fields:
 - `distanceMeters`
 - `captureDeviceName`
 - `sourceGPXFile`
+- `primaryVideoReferenceIndex`: zero-based index of the video reference whose timing belongs to the edited clip.
 - `mapBackground`
 - `mapBackgrounds`
 
@@ -83,6 +84,8 @@ Each video reference includes:
 - `startsAt`
 - `offsetSeconds`
 - `isEmbedded`
+
+FxPlug uses `offsetSeconds` when present and otherwise derives the offset from `startsAt - routeStartedAt`. A positive value means the video begins after route recording, so the route is already that many seconds into the walk at the video's first frame. A negative value means the video begins before the route and the overlay remains at the route start until route time reaches zero. The inspector's manual timing offset is added to package timing. When a package has multiple video references it must declare `primaryVideoReferenceIndex`; consumers do not guess between ambiguous references.
 
 For Version 1.1.0, `isEmbedded` should normally be `false`. A later importer may add explicit user-controlled media copying, but the first renderer contract should not depend on Photos, iCloud, or large video files being available inside the package.
 

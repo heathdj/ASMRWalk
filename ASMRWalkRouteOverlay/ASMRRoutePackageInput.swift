@@ -246,6 +246,11 @@ final class ASMRRouteOverlayPackageCache: @unchecked Sendable {
     private var entries: [URL: Entry] = [:]
     private(set) var loadCount = 0
 
+    func cachedPreparedPackage(at packageURL: URL) -> PreparedPackage? {
+        let canonicalURL = packageURL.standardizedFileURL
+        return lock.withLock { entries[canonicalURL]?.preparedPackage }
+    }
+
     func preparedPackage(at packageURL: URL) throws -> PreparedPackage {
         let canonicalURL = packageURL.standardizedFileURL
         return try lock.withLock {
@@ -311,6 +316,7 @@ extension ASMRRoutePackageInput {
         let routePointsFile: String
         let sourceGPXFile: String?
         let videoReferences: [VideoReference]
+        var primaryVideoReferenceIndex: Int? = nil
         var mapBackground: MapBackground? = nil
         var mapBackgrounds: [MapBackground]? = nil
         let createdBy: String
@@ -361,5 +367,86 @@ extension ASMRRoutePackageInput {
                 "The .asmrroute package expected \(expected) route points but found \(actual)."
             }
         }
+    }
+}
+
+struct ASMRRouteTimingAlignment: Equatable, Sendable {
+    enum MetadataSource: Equatable, Sendable {
+        case primaryVideoReference
+        case singleVideoReference
+        case noVideoReference
+        case ambiguousVideoReferences
+    }
+
+    let packageOffsetSeconds: TimeInterval
+    let explicitOffsetSeconds: TimeInterval
+    let metadataSource: MetadataSource
+
+    var totalOffsetSeconds: TimeInterval {
+        packageOffsetSeconds + explicitOffsetSeconds
+    }
+
+    var statusMessage: String {
+        switch metadataSource {
+        case .primaryVideoReference, .singleVideoReference:
+            "Package timing: \(packageOffsetSeconds.formatted(.number.precision(.fractionLength(2)))) s"
+        case .noVideoReference:
+            "No package video timing; using manual offset only"
+        case .ambiguousVideoReferences:
+            "Multiple video references; using manual offset only"
+        }
+    }
+
+    static func resolve(
+        manifest: ASMRRoutePackageInput.Manifest,
+        explicitOffsetSeconds: TimeInterval
+    ) -> ASMRRouteTimingAlignment {
+        let reference: ASMRRoutePackageInput.VideoReference?
+        let source: MetadataSource
+
+        if let index = manifest.primaryVideoReferenceIndex,
+           manifest.videoReferences.indices.contains(index) {
+            reference = manifest.videoReferences[index]
+            source = .primaryVideoReference
+        } else if manifest.videoReferences.count == 1 {
+            reference = manifest.videoReferences[0]
+            source = .singleVideoReference
+        } else if manifest.videoReferences.isEmpty {
+            reference = nil
+            source = .noVideoReference
+        } else {
+            reference = nil
+            source = .ambiguousVideoReferences
+        }
+
+        let packageOffset = reference.flatMap { reference in
+            reference.offsetSeconds
+                ?? reference.startsAt?.timeIntervalSince(manifest.routeStartedAt)
+        } ?? 0
+
+        return ASMRRouteTimingAlignment(
+            packageOffsetSeconds: packageOffset,
+            explicitOffsetSeconds: explicitOffsetSeconds,
+            metadataSource: source
+        )
+    }
+}
+
+struct ASMRRoutePackageSelection: Codable, Equatable, Sendable {
+    let bookmarkData: Data
+    let displayName: String
+    let lastKnownPath: String
+
+    func encoded() throws -> String {
+        try JSONEncoder().encode(self).base64EncodedString()
+    }
+
+    static func decode(_ encoded: String) throws -> ASMRRoutePackageSelection {
+        guard let data = Data(base64Encoded: encoded) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: [], debugDescription: "The saved route-package selection is invalid.")
+            )
+        }
+        return try JSONDecoder().decode(Self.self, from: data)
     }
 }

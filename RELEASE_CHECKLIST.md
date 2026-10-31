@@ -170,6 +170,10 @@ Run these on physical devices before submission:
 - [ ] Pair both Photos and filesystem video after segmented preparation and confirm every segment remains in the exported package.
 - [ ] In Final Cut Pro and Motion, verify Map Background and Route Only modes, every position/size/corner/opacity choice, route alignment, timeline playback, and export on HD and 4K projects.
 - [ ] In Final Cut Pro and Motion, verify a representative long schema-3 route switches map segments without blank frames during playback, frame-by-frame scrubbing, and HD/4K export.
+- [ ] In Final Cut Pro and Motion, choose an `.asmrroute` from the effect inspector, save and reopen the project, and confirm the package title and overlay return without choosing it again.
+- [ ] Move or delete the selected package and confirm the inspector reports a recoverable unavailable state; use Replace and Clear and confirm both update immediately.
+- [ ] Verify positive, zero, and negative package video offsets in both Clip Duration and GPX Timestamps modes, then confirm the manual timing offset adds to package timing with the documented sign convention.
+- [ ] Verify a package with multiple video references uses `primaryVideoReferenceIndex`, and an older ambiguous package reports that manual timing is being used rather than guessing.
 - [ ] Remove or corrupt one middle segment and confirm Map Status explains the degraded package while rendering another usable segment or the route-only fallback.
 - [ ] Remove, corrupt, or replace `map-background.png` with an unsupported image and confirm the plugin disables map controls, explains the fallback in Map Status, and renders the route-only overlay instead of an empty frame.
 
