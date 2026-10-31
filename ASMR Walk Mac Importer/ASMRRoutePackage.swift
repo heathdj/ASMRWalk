@@ -173,6 +173,7 @@ extension ASMRRoutePackage {
         var routePointsFile = ASMRRoutePackage.routePointsFilename
         var sourceGPXFile: String?
         var videoReferences: [VideoReference]
+        var primaryVideoReferenceIndex: Int? = nil
         var mapBackground: MapBackground? = nil
         var mapBackgrounds: [MapBackground]? = nil
         var createdBy = "ASMR Walk"

@@ -148,6 +148,8 @@ The app uses a native static launch screen configured through the target Info se
 
 The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Schema 3 packages contain a deterministic `manifest.json`, normalized `route-points.json`, optional preserved `source.gpx`, and either one importer-prepared map PNG or ordered, overlapping map segments for routes over 100 points. Every map stores exact projection bounds and route/timestamp coverage. The FxPlug renderer consumes only these local assets during playback and export; schema 1 route-only and schema 2 single-map packages remain supported.
 
+In the Final Cut Pro or Motion inspector, use **Choose or Replace Route Package…** instead of typing a filesystem path. The effect stores a read-only security-scoped bookmark in the project, shows the selected package title and recovery status, and provides **Clear Route Package**. Package video timing is applied automatically; **Timing Offset (seconds)** is an additive adjustment where positive values advance the route and negative values delay it.
+
 The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
 
 ## Current Limitations

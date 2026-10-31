@@ -61,6 +61,12 @@ struct RoutePreview: Equatable, Identifiable {
         if let videoReference {
             manifest.videoReferences.removeAll { $0.kind == .photosAsset || $0.kind == .localVideo }
             manifest.videoReferences.append(videoReference)
+            manifest.primaryVideoReferenceIndex = manifest.videoReferences.indices.last
+        } else if manifest.videoReferences.count == 1 {
+            manifest.primaryVideoReferenceIndex = 0
+        } else if let index = manifest.primaryVideoReferenceIndex,
+                  manifest.videoReferences.indices.contains(index) == false {
+            manifest.primaryVideoReferenceIndex = nil
         }
         manifest.mapBackground = mapBackground?.metadata
         manifest.mapBackgrounds = mapBackgrounds.isEmpty ? nil : mapBackgrounds.map(\.metadata)

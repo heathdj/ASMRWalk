@@ -76,6 +76,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         renderTimeSeconds: TimeInterval,
         effectStartSeconds: TimeInterval = 0,
         effectDurationSeconds: TimeInterval? = nil,
+        routeTimingOffsetSeconds: TimeInterval = 0,
         timingMode: ASMRRouteOverlayTimingMode = .clipDuration,
         maximumRoutePointCount: Int = 2_048,
         style: ASMRRouteOverlayStyle = .default,
@@ -94,7 +95,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
                 ?? routePackage.manifest.durationSeconds
         )
         let elapsedSeconds = routeElapsedSeconds(
-            renderTimeSeconds: renderTimeSeconds,
+            renderTimeSeconds: renderTimeSeconds + routeTimingOffsetSeconds,
             effectStartSeconds: effectStartSeconds,
             effectDurationSeconds: effectDurationSeconds,
             routeDurationSeconds: rawRouteDuration,

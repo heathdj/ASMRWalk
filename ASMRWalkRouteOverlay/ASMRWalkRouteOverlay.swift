@@ -3,10 +3,12 @@
 //  ASMRWalkRouteOverlay
 //
 
+import AppKit
 import CoreMedia
 import CoreVideo
 import Foundation
 import IOSurface
+import UniformTypeIdentifiers
 
 @objc(ASMRWalkRouteOverlayPlugin)
 final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
@@ -35,10 +37,28 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         }
 
         parameterAPI.addStringParameter(
-            withName: "ASMR Route Package Path",
-            parameterID: ASMRWalkRouteOverlayParameterID.packagePath,
+            withName: "Saved Route Package Selection",
+            parameterID: ASMRWalkRouteOverlayParameterID.packageSelection,
             defaultValue: "",
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE | kFxParameterFlag_HIDDEN)
+        )
+        parameterAPI.addPushButton(
+            withName: "Choose or Replace Route Package…",
+            parameterID: ASMRWalkRouteOverlayParameterID.choosePackage,
+            selector: #selector(chooseRoutePackage),
             parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
+        )
+        parameterAPI.addPushButton(
+            withName: "Clear Route Package",
+            parameterID: ASMRWalkRouteOverlayParameterID.clearPackage,
+            selector: #selector(clearRoutePackage),
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
+        )
+        parameterAPI.addStringParameter(
+            withName: "Route Package",
+            parameterID: ASMRWalkRouteOverlayParameterID.packageStatus,
+            defaultValue: "No route package selected",
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE | kFxParameterFlag_DISABLED)
         )
 
         parameterAPI.addPopupMenu(
@@ -47,6 +67,23 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             defaultValue: UInt32(ASMRRouteOverlayTimingMode.clipDuration.rawValue),
             menuEntries: ["Clip Duration", "GPX Timestamps"],
             parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
+        )
+        parameterAPI.addFloatSlider(
+            withName: "Timing Offset (seconds)",
+            parameterID: ASMRWalkRouteOverlayParameterID.timingOffset,
+            defaultValue: 0,
+            parameterMin: -86_400,
+            parameterMax: 86_400,
+            sliderMin: -30,
+            sliderMax: 30,
+            delta: 0.1,
+            parameterFlags: FxParameterFlags(kFxParameterFlag_DEFAULT)
+        )
+        parameterAPI.addStringParameter(
+            withName: "Timing Status",
+            parameterID: ASMRWalkRouteOverlayParameterID.timingStatus,
+            defaultValue: "No package video timing",
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE | kFxParameterFlag_DISABLED)
         )
 
         parameterAPI.addToggleButton(
@@ -108,12 +145,14 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
     }
 
     func pluginInstanceAddedToDocument() {
-        updateMapControls(at: .zero)
+        updatePackageControls(at: .zero)
     }
 
     func parameterChanged(_ parameterID: UInt32, at time: CMTime) throws {
-        guard parameterID == ASMRWalkRouteOverlayParameterID.packagePath else { return }
-        updateMapControls(at: time)
+        if parameterID == ASMRWalkRouteOverlayParameterID.packageSelection
+            || parameterID == ASMRWalkRouteOverlayParameterID.timingOffset {
+            updatePackageControls(at: time)
+        }
     }
 
     func pluginState(
@@ -121,7 +160,8 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         at renderTime: CMTime,
         quality qualityLevel: FxQuality
     ) throws {
-        let packagePath = packagePath()
+        let selectionData = packageSelectionData()
+        let packageURL = resolvedPackageURL(from: selectionData)
         let showCurrentPosition = boolParameter(
             ASMRWalkRouteOverlayParameterID.showCurrentPosition,
             defaultValue: true,
@@ -133,6 +173,11 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             at: renderTime
         )
         let timingMode = timingMode(at: renderTime)
+        let explicitTimingOffset = floatParameter(
+            ASMRWalkRouteOverlayParameterID.timingOffset,
+            defaultValue: 0,
+            at: renderTime
+        )
         let showMapBackground = boolParameter(
             ASMRWalkRouteOverlayParameterID.showMapBackground,
             defaultValue: true,
@@ -141,11 +186,12 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         let mapStyle = mapStyle(at: renderTime)
         let effectTiming = effectTiming()
         let renderPlan = Self.renderPlan(
-            packagePath: packagePath,
+            packageURL: packageURL,
             renderTimeSeconds: renderTime.seconds,
             effectStartSeconds: effectTiming.startSeconds,
             effectDurationSeconds: effectTiming.durationSeconds,
             timingMode: timingMode,
+            explicitTimingOffsetSeconds: explicitTimingOffset,
             showCurrentPosition: showCurrentPosition,
             showStartEndMarkers: showStartEndMarkers,
             showMapBackground: showMapBackground,
@@ -153,7 +199,7 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         )
 
         let state = ASMRWalkRouteOverlayState(
-            packagePath: packagePath,
+            packageSelectionData: selectionData,
             renderTimeSeconds: renderTime.seconds,
             qualityLevel: UInt(qualityLevel),
             renderPlan: renderPlan.removingMapBackgroundBitmap(),
@@ -201,9 +247,8 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         }
         let mapBackground: ASMRRouteOverlayBitmap? = state.flatMap { state in
             guard state.showsMapBackground else { return nil }
-            return try? Self.packageCache.preparedPackage(
-                at: URL(fileURLWithPath: state.packagePath)
-            ).mapBackground
+            guard let url = Self.resolvedPackageURL(from: state.packageSelectionData) else { return nil }
+            return Self.packageCache.cachedPreparedPackage(at: url)?.mapBackground
         }
         let width = IOSurfaceGetWidth(surface)
         let height = IOSurfaceGetHeight(surface)
@@ -225,32 +270,100 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         )
     }
 
-    private func packagePath() -> String {
+    private func packageSelectionData() -> String {
         guard let retrievalAPI = apiManager?.api(for: FxParameterRetrievalAPI_v6.self)
             as? FxParameterRetrievalAPI_v6 else {
             return ""
         }
 
         var value = "" as NSString
-        guard retrievalAPI.getStringParameterValue(&value, fromParameter: ASMRWalkRouteOverlayParameterID.packagePath) else {
+        guard retrievalAPI.getStringParameterValue(&value, fromParameter: ASMRWalkRouteOverlayParameterID.packageSelection) else {
             return ""
         }
 
         return (value as String).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func updateMapControls(at time: CMTime) {
+    @objc private func chooseRoutePackage() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose an ASMR Route Package"
+        panel.prompt = "Choose"
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [UTType(filenameExtension: "asmrroute") ?? .package]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+
+        do {
+            _ = try Self.withSecurityScopedAccess(to: url) {
+                try Self.packageCache.preparedPackage(at: url)
+            }
+            let bookmark = try url.bookmarkData(
+                options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+                includingResourceValuesForKeys: [.nameKey],
+                relativeTo: nil
+            )
+            let selection = ASMRRoutePackageSelection(
+                bookmarkData: bookmark,
+                displayName: url.deletingPathExtension().lastPathComponent,
+                lastKnownPath: url.path
+            )
+            setPackageSelectionData(try selection.encoded())
+        } catch {
+            setStatus("Could not open package: \(error.localizedDescription)")
+        }
+        updatePackageControls(at: .zero)
+    }
+
+    @objc private func clearRoutePackage() {
+        setPackageSelectionData("")
+        updatePackageControls(at: .zero)
+    }
+
+    private func setPackageSelectionData(_ value: String) {
+        guard let settingAPI = apiManager?.api(for: FxParameterSettingAPI_v5.self)
+            as? FxParameterSettingAPI_v5 else { return }
+        settingAPI.setStringParameterValue(value, toParameter: ASMRWalkRouteOverlayParameterID.packageSelection)
+    }
+
+    private func setStatus(_ value: String) {
+        guard let settingAPI = apiManager?.api(for: FxParameterSettingAPI_v5.self)
+            as? FxParameterSettingAPI_v5 else { return }
+        settingAPI.setStringParameterValue(value, toParameter: ASMRWalkRouteOverlayParameterID.packageStatus)
+    }
+
+    private func updatePackageControls(at time: CMTime) {
         guard let settingAPI = apiManager?.api(for: FxParameterSettingAPI_v5.self)
             as? FxParameterSettingAPI_v5 else { return }
 
-        let path = packagePath()
+        let selectionData = packageSelectionData()
+        let packageURL = resolvedPackageURL(from: selectionData)
         let availability: ASMRRouteMapAvailability
-        if path.isEmpty {
+        let packageStatus: String
+        let timingStatus: String
+        if selectionData.isEmpty {
             availability = .routeOnly
-        } else if let preparedPackage = try? Self.packageCache.preparedPackage(at: URL(fileURLWithPath: path)) {
+            packageStatus = "No route package selected"
+            timingStatus = "No package video timing"
+        } else if let packageURL,
+                  let preparedPackage = try? Self.withSecurityScopedAccess(to: packageURL, {
+                      try Self.packageCache.preparedPackage(at: packageURL)
+                  }) {
             availability = preparedPackage.mapAvailability
+            packageStatus = "\(preparedPackage.routePackage.manifest.title) — Ready"
+            let alignment = ASMRRouteTimingAlignment.resolve(
+                manifest: preparedPackage.routePackage.manifest,
+                explicitOffsetSeconds: floatParameter(
+                    ASMRWalkRouteOverlayParameterID.timingOffset,
+                    defaultValue: 0,
+                    at: time
+                )
+            )
+            timingStatus = alignment.statusMessage
         } else {
             availability = .unusable
+            packageStatus = "Route package is unavailable — choose it again"
+            timingStatus = "Package timing unavailable"
         }
 
         let mapAvailable = availability.isAvailable
@@ -258,6 +371,8 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             availability.statusMessage,
             toParameter: ASMRWalkRouteOverlayParameterID.mapStatus
         )
+        settingAPI.setStringParameterValue(packageStatus, toParameter: ASMRWalkRouteOverlayParameterID.packageStatus)
+        settingAPI.setStringParameterValue(timingStatus, toParameter: ASMRWalkRouteOverlayParameterID.timingStatus)
         settingAPI.setBoolValue(
             mapAvailable,
             toParameter: ASMRWalkRouteOverlayParameterID.showMapBackground,
@@ -281,6 +396,40 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         ] {
             settingAPI.setParameterFlags(controlFlags, toParameter: parameterID)
         }
+    }
+
+    private func floatParameter(_ parameterID: UInt32, defaultValue: Double, at time: CMTime) -> Double {
+        guard let retrievalAPI = apiManager?.api(for: FxParameterRetrievalAPI_v6.self)
+            as? FxParameterRetrievalAPI_v6 else { return defaultValue }
+        var value = defaultValue
+        return retrievalAPI.getFloatValue(&value, fromParameter: parameterID, at: time) ? value : defaultValue
+    }
+
+    private func resolvedPackageURL(from selectionData: String) -> URL? {
+        Self.resolvedPackageURL(from: selectionData)
+    }
+
+    private static func resolvedPackageURL(from selectionData: String) -> URL? {
+        guard selectionData.isEmpty == false else { return nil }
+        if selectionData.hasPrefix("/") {
+            return URL(fileURLWithPath: selectionData)
+        }
+        guard let selection = try? ASMRRoutePackageSelection.decode(selectionData) else { return nil }
+        var isStale = false
+        return try? URL(
+            resolvingBookmarkData: selection.bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+    }
+
+    private static func withSecurityScopedAccess<T>(to url: URL, _ operation: () throws -> T) rethrows -> T {
+        let didStartAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccess { url.stopAccessingSecurityScopedResource() }
+        }
+        return try operation()
     }
 
     private func boolParameter(_ parameterID: UInt32, defaultValue: Bool, at time: CMTime) -> Bool {
@@ -362,25 +511,37 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
     }
 
     private static func renderPlan(
-        packagePath: String,
+        packageURL: URL?,
         renderTimeSeconds: TimeInterval,
         effectStartSeconds: TimeInterval,
         effectDurationSeconds: TimeInterval?,
         timingMode: ASMRRouteOverlayTimingMode,
+        explicitTimingOffsetSeconds: TimeInterval,
         showCurrentPosition: Bool,
         showStartEndMarkers: Bool,
         showMapBackground: Bool,
         mapStyle: ASMRRouteOverlayMapStyle
     ) -> ASMRRouteOverlayRenderPlan {
-        guard !packagePath.isEmpty else { return .empty }
+        guard let packageURL else { return .empty }
 
         do {
-            let preparedPackage = try packageCache.preparedPackage(at: URL(fileURLWithPath: packagePath))
+            let preparedPackage = if let cached = packageCache.cachedPreparedPackage(at: packageURL) {
+                cached
+            } else {
+                try withSecurityScopedAccess(to: packageURL) {
+                    try packageCache.preparedPackage(at: packageURL)
+                }
+            }
+            let alignment = ASMRRouteTimingAlignment.resolve(
+                manifest: preparedPackage.routePackage.manifest,
+                explicitOffsetSeconds: explicitTimingOffsetSeconds
+            )
             return ASMRRouteOverlayRenderPlan.make(
                 from: preparedPackage.routePackage,
                 renderTimeSeconds: renderTimeSeconds,
                 effectStartSeconds: effectStartSeconds,
                 effectDurationSeconds: effectDurationSeconds,
+                routeTimingOffsetSeconds: alignment.totalOffsetSeconds,
                 timingMode: timingMode,
                 showCurrentPosition: showCurrentPosition,
                 showStartEndMarkers: showStartEndMarkers,
@@ -408,7 +569,7 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
 }
 
 private struct ASMRWalkRouteOverlayState: Codable {
-    let packagePath: String
+    let packageSelectionData: String
     let renderTimeSeconds: Double
     let qualityLevel: UInt
     let renderPlan: ASMRRouteOverlayRenderPlan
@@ -416,7 +577,7 @@ private struct ASMRWalkRouteOverlayState: Codable {
 }
 
 private enum ASMRWalkRouteOverlayParameterID {
-    static let packagePath: UInt32 = 1
+    static let packageSelection: UInt32 = 1
     static let showCurrentPosition: UInt32 = 2
     static let showStartEndMarkers: UInt32 = 3
     static let timingMode: UInt32 = 4
@@ -426,4 +587,9 @@ private enum ASMRWalkRouteOverlayParameterID {
     static let mapCorners: UInt32 = 8
     static let mapOpacity: UInt32 = 9
     static let mapStatus: UInt32 = 10
+    static let choosePackage: UInt32 = 11
+    static let clearPackage: UInt32 = 12
+    static let packageStatus: UInt32 = 13
+    static let timingOffset: UInt32 = 14
+    static let timingStatus: UInt32 = 15
 }

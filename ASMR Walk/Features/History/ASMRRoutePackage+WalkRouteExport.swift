@@ -51,6 +51,11 @@ extension ASMRRoutePackage {
             nil
         }
 
+        let packagedVideoReferences = externalVideoReference.map { resolvedVideoReferences + [$0] } ?? resolvedVideoReferences
+        let primaryVideoReferenceIndex = externalVideoReference == nil
+            ? (packagedVideoReferences.count == 1 ? 0 : nil)
+            : packagedVideoReferences.indices.last
+
         manifest = Manifest(
             packageIdentifier: export.recordingID,
             title: export.title,
@@ -66,7 +71,8 @@ extension ASMRRoutePackage {
             routePointCount: points.count,
             routePointsFile: Self.routePointsFilename,
             sourceGPXFile: sourceGPX == nil ? nil : Self.sourceGPXFilename,
-            videoReferences: externalVideoReference.map { resolvedVideoReferences + [$0] } ?? resolvedVideoReferences
+            videoReferences: packagedVideoReferences,
+            primaryVideoReferenceIndex: primaryVideoReferenceIndex
         )
         routePoints = points.sorted { $0.timestamp < $1.timestamp }
         self.sourceGPX = sourceGPX
