@@ -29,6 +29,57 @@ As features grow, recording services, models, and feature views should move into
 
 ## The Journey
 
+### The file picker that lived on the wrong thread
+
+Final Cut Pro calls FxPlug push-button selectors on a worker queue. Creating an
+`NSOpenPanel` directly in that callback caused AppKit to throw before the chooser
+could appear, which looked to the user like a dead button and caused Final Cut to
+disable the crashed plug-in process. The fix is a two-part handshake: present the
+panel on the main thread, then wrap the asynchronous parameter update in
+FxPlug's `FxCustomParameterActionAPI_v4` transaction. The Clear action also exits
+without touching host parameters when there is no saved selection. Think of it
+as moving the front-desk conversation to the lobby, then signing the paperwork
+through the host's official ledger.
+
+The second wrinkle was subtler: moving the panel to the main thread stopped the
+crash, but an FxPlug service still cannot surface its own independent window.
+The plug-in now asks Motion or Final Cut Pro for an `FxRemoteWindowAPI_v2`
+window and attaches the chooser as a sheet to that host-owned window. It is the
+difference between shouting from the kitchen and asking the maître d' for a
+table where the conversation is actually allowed to happen.
+
+One more timing trap remained: the remote-window reply can arrive before the
+returned view has joined a window. Asking for a sheet at that instant silently
+does nothing and leaves an empty host window. A small chooser view now waits for
+`viewDidMoveToWindow`, opens the sheet on the following main-run-loop turn, and
+keeps a visible Choose button as a retry path.
+
+The remote window also cannot be treated like an ordinary local parent for an
+AppKit sheet. The chooser now uses `NSOpenPanel.begin` after the host window is
+active; attaching it with `beginSheetModal` silently ignored both automatic and
+button-triggered requests. Remote UI may look like a normal window, but its
+ownership boundary matters.
+
+Ultimately, even a standalone open panel remained unreliable inside the FxPlug
+view service. The durable solution is a Finder drop zone rendered inside the
+host-owned remote window. Dragging grants the plug-in access to the selected
+package without asking the sandboxed service to create another window, and the
+same validation and security-scoped bookmark path still protects rendering.
+
+Because selecting the package requires a trip to Finder, the host-owned drop
+window is promoted to AppKit's floating level, opts out of hide-on-deactivate,
+and participates as a full-screen auxiliary window. Otherwise the very act of
+finding the package buries the destination behind Final Cut Pro—a wonderfully
+literal version of losing the task beneath the work.
+
+The first Finder drop reached the plug-in but exposed a signing-capability gap:
+the wrapper had user-selected read access while the nested FxPlug service had
+only the base sandbox entitlement. A drag is the front-door handoff, but a
+security-scoped bookmark is the return ticket; the service needs User Selected
+File read-only access to issue that ticket. Remote views also arrive with host
+coordinate details that should not be reused as a child frame, so the drop zone
+is pinned to the parent with edge constraints instead.
+
 ### The Screen Marker That Stole the Name Tags
 
 UI testing caught a sneaky SwiftUI accessibility gotcha: putting an accessibility identifier on a broad `ZStack` can leak that identifier onto the child controls instead of creating a clean screen marker. The Walk screen looked present to automation, but the status card and start button could lose their own identifiers in the accessibility tree.
@@ -555,6 +606,10 @@ The release script follows the complete Developer ID relay race: archive, export
 
 Installation testing also uncovered two tiny strings with enormous consequences. The plugin metadata key is case-sensitive `PlugInKit`, not `PluginKit`, and the executable needs `@loader_path/../Frameworks` so it can load the frameworks packed beside it. With both corrected, the installed component finally appeared in PlugInKit. Apple’s host contract revealed one more relay baton: Motion can use FxPlug directly, while Final Cut Pro needs a published Motion generator template. Issue #131 now owns that template and its installer payload before #79 begins.
 
+Issue 131 supplies that last relay baton. Motion publishes a small `.motn` document that points at the FxPlug UUID—more like a theater playbill naming the performer than another copy of the performer. The installer validates that playbill contains the expected route and timing controls, rejects local media and user-home paths, then replaces only ASMR Walk’s template in the signed-in editor’s Movies folder. This keeps updates predictable without bulldozing somebody’s carefully curated Motion library.
+
+The first field test caught two traps that a compiler never could. A sandboxed importer may confirm that files exist in Movies but cannot open the Motion document for a deep inspection, so runtime health checks use the three expected filenames while the trusted build pipeline performs the XML audit. Motion also does not automatically hand FxPlug controls through to Final Cut Pro: every interactive control must appear in the template’s `publishSettings`. Read-only status labels stay in Motion, while package selection, timing, markers, and map layout cross the bridge into Final Cut Pro.
+
 Schema 2 is deliberately additive. Old schema-1 route-only packages still load, while a missing or damaged map image simply sends the renderer back to its transparent route mode. The plugin caches package geometry and decoded map pixels by package modification state, and its controls move, resize, round, fade, or hide the panel without disturbing route alignment. It is the difference between redrawing a street atlas for every video frame and laminating the map once before walking into the edit suite.
 
 The fallback is now visible in the editor instead of being a quiet magic trick. The plugin validates that the asset is a PNG whose dimensions and projection metadata match the manifest, disables map controls when no usable map exists, and reports whether the package is map-backed, intentionally route-only, or falling back because an asset is missing, corrupt, unsupported, or mismatched. Route-only rendering remains the safety net, but the editor no longer has to guess why it appeared.
@@ -567,6 +622,46 @@ Issue 128 fixes the opposite problem from point reduction: a single map can tech
 
 Schema 3 records each page's filename, Web Mercator rectangle, point indices, and timestamps. The plugin chooses the active page from route time, projects the trail against that page, and keeps decoded pages in its package cache instead of reopening PNGs every frame. A missing page is a torn sheet, not a ruined book: another usable page or the transparent route remains visible. Pairing a video after preparation carries the whole flipbook forward, which closes the same state-handoff trap that the original single-map feature exposed.
 
+### A Remote Window Is Not Your Window
+
+The November 1 Final Cut Pro screenshots showed three symptoms wearing one trench coat: a clipped package chooser, an empty window after dropping a package, and a magenta map squeezed sideways with its position dot wandering elsewhere. The 14:17:52 crash report then caught AppKit asking a dead view-service window for its window ID during a mouse event. Closing `view.window` had pulled the floor out from under the remote UI while leaving the host's window standing. The chooser now asks `FxRemoteWindowAPI_v3.closeRemoteWindow()` to dismiss the real host window, avoids changing the service window's level or ordering, and uses the supplied view bounds with autoresizing instead of anchoring across the remote-view boundary. Reopening also removes any previous chooser content.
+
+The map had two separate handoff mistakes. The renderer assumed every IOSurface used four bytes per pixel; a half-float RGBA surface needs eight. Writing byte colors into that surface is like sending a postcard through a fax machine sideways: both the colors and horizontal position become nonsense. Rendering now handles RGBA half/float explicitly, respects the host's image origin, and supplies premultiplied alpha. Unknown formats fail explicitly instead of being guessed as BGRA. Separately, stripping the cached map bitmap from serialized state accidentally switched route geometry back to full-screen coordinates. The restored bitmap now drives both map and route placement, and the serialized plan keeps the selected map segment's filename so later segments retrieve the matching image.
+
+Validation: the wrapper and embedded plugin build in Xcode; all 37 overlay unit-test cases pass, including byte/half/float output, padded rows, both image origins, alpha, and an encoded/decoded render handoff. The screenshots and crash report identify concrete defects, but the repaired chooser layout, dismissal, and subsequent position changes still require a smoke test in Final Cut Pro with the updated installed bundle. A compiler cannot impersonate a host application's remote window service.
+
+### The Universal Build Catches What This Mac Cannot
+
+Rebuilding the reinstall package exposed a useful difference between “runs on my Mac” and “ships to both Mac architectures.” The new half-float compositor compiled on Apple Silicon, but the Release archive also builds Intel code, where Swift's `Float16` conversion is unavailable. The compositor now converts its finite, nonnegative SDR components with portable IEEE-754 bit arithmetic, including subnormal values and round-to-nearest-even. Tests decode the half-float output independently rather than relying on the same conversion implementation. Keep the universal archive in the release path: it is a second pair of eyes with a different CPU.
+
+### North Was at the Bottom of the Picture
+
+The next owner screenshot made the remaining map bug wonderfully obvious: the labels were upside down while the route geometry followed its normal north-up projection. The PNG loaders applied a vertical Core Graphics transform even though drawing into their bitmap context already preserved PNG scanline order. Removing that transform from both single-map and segmented-map loading aligns the streets with the route. A tiny asymmetric PNG—red on its northern row, blue on its southern row—failed before the change with the colors reversed, then passed afterward. Earlier solid-color fixtures could never catch a flipped image; symmetry can hide a bug in plain sight.
+
+The plugin installation status window and wrapper confirmation window also gained explicit Close buttons with Escape shortcuts using SwiftUI's window dismissal action. Both Mac targets build, and the overlay test run passes. The full signed/notarized installer is rebuilt for owner validation. Light/dark prepared-map variants and a generator appearance selector are tracked separately in GitHub issue #133, milestone Version 1.1.0, after the current fixes are validated.
+
+### The Map Camera Quietly Widened the Frame
+
+Once the image was upright, the owner's next comparison exposed a subtler problem: the trail and streets were still slightly out of step. We were saving the rectangle requested from MapKit as though it were a receipt for the image actually delivered. A live snapshot experiment proved otherwise: a 1,000-by-1,000 Mercator request became a 1,777.78-by-1,000 capture in the 1,280-by-720 output. MapKit had widened the camera frame to fit the image, but the route projection was still using the old ruler.
+
+Map preparation now uses two known Mercator locations and `snapshot.point(for:)` to recover the captured image's bounds, including the image coordinate system's vertical direction. A third independent coordinate in a live snapshot agreed with the reconstructed projection to less than 0.000001 image points. Deterministic regression tests cover adjusted bounds, image scale, both vertical origins, and degenerate mappings. The same preparation path applies to every segment. Existing packages keep their old metadata, so owners must Prepare Map again and export a fresh package after installing the update. A real walk with more than 100 points remains pending the owner's weekend capture; a synthetic projection check cannot replace that field test.
+
+### The Helper Finally Leaves the Dock
+
+The registration wrapper used a SwiftUI `WindowGroup`, whose normal macOS behavior is to keep the app alive after its last window closes. That is useful for a document editor, but surprising for a one-window installation helper. Its sole scene is now a `Window`, so the existing Close button, Escape, and window close control terminate the helper naturally. The embedded FxPlug rendering service remains managed by Final Cut Pro/Motion. The wrapper also reuses the complete ASMR Walk macOS icon set so Finder and the Dock show the app's identity while it is open.
+
+### Closing Means Quitting, This Time Explicitly
+
+Owner feedback showed that a registration helper lingering in the Dock is still a running app, even if its window has disappeared. The helper now has an explicit application delegate that terminates after its last window closes, and its Close button calls application termination directly. It also observes the workspace's importer-termination notification and quits itself. This avoids asking a sandboxed importer to kill another process and leaves the host-managed FxPlug rendering service alone. Three XCUI checks passed: Close button, red window button, and importer termination each leave the helper not running.
+
+The remote package chooser still appeared shifted in the owner's screenshot. Its next correction removes the layer-backed border, draws an inset border in local view coordinates, and starts from an explicit zero-origin frame matching the requested host content size. This targets remote-view compositing offsets; compilation is confirmed, but the actual FCP-hosted position remains an owner smoke-check item rather than a claimed visual pass.
+
+### The 119-Point Clue
+
+The owner confirmed helper shutdown worked, but the chooser still shifted right. Changing child constraints and border drawing had not fixed the real problem. We loaded Apple's actual `FxServiceView.nib` into an AppKit snippet: its root view starts at 222×158 with autoresizing mask 45—flexible margins, not flexible width and height. Resizing the host to 460×220 reproduced a root frame of (119, 31, 222, 158), exactly explaining the screenshot's offset. Our full-size child was living inside a small, centered parent and spilling out of it.
+
+The plugin now gives the supplied parent flexible width/height and fits its frame to the requested content area before adding the drop target. The same resource-backed experiment produces (0, 0, 460, 220) afterward. This is a measured fix to the parent view, not another guess about its children. Final Cut Pro still owns the window and its remote-view lifecycle; no NSWindow mutation is involved. Owner verification of the installed host UI remains the final check.
+
 ## Engineer's Wisdom
 
 - Make unfinished behavior visibly unfinished. A polished button wired to nothing is worse than an honest foundation state.
@@ -577,3 +672,7 @@ Schema 3 records each page's filename, Web Mercator rectangle, point indices, an
 ## If I Were Starting Over...
 
 This is the starting line, so the main retrospective is a guardrail: define the persistence model and recording state machine before building deep history UI. Real data shapes reveal the right interface faster than elaborate mock screens do.
+
+### Final Review Before the PR
+
+The owner confirmed the repaired drop zone and helper lifecycle on November 2. Final validation passed 43 importer tests and 41 overlay/UI cases, plus shell syntax and Motion template XML checks. Review tightened the installer's last ownership command to avoid recursively touching unrelated templates in the same category. The real over-100-point walk remains a weekend field check, and light/dark variants remain issue #133. The distinction matters: a passing short walk is evidence for that path, not a permission slip to declare every long-route transition validated.

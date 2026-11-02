@@ -108,8 +108,8 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
                     space: CGColorSpaceCreateDeviceRGB(),
                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
                   ) else { return false }
-            context.translateBy(x: 0, y: CGFloat(image.height))
-            context.scaleBy(x: 1, y: -1)
+            // CGImage drawing already preserves PNG scanline order in this bitmap.
+            // Keep row zero north-up to match the route projection.
             context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
             return true
         }
@@ -155,8 +155,8 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
                     space: CGColorSpaceCreateDeviceRGB(),
                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
                   ) else { return false }
-            context.translateBy(x: 0, y: CGFloat(image.height))
-            context.scaleBy(x: 1, y: -1)
+            // CGImage drawing already preserves PNG scanline order in this bitmap.
+            // Keep row zero north-up to match the route projection.
             context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
             return true
         }

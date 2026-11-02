@@ -18,9 +18,24 @@ EXPORT_DIRECTORY=${WORK_DIRECTORY}/Exports
 PAYLOAD_DIRECTORY=${WORK_DIRECTORY}/Payload
 EXPORT_OPTIONS=${WORK_DIRECTORY}/ExportOptions.plist
 PACKAGE_PATH=${OUTPUT_DIRECTORY}/ASMR-Walk-Mac-Tools-${VERSION}.pkg
+COMPONENT_PACKAGE=${WORK_DIRECTORY}/ASMR-Walk-Mac-Tools-component.pkg
+INSTALLER_DISTRIBUTION=${WORK_DIRECTORY}/Distribution.xml
+MOTION_TEMPLATE_SOURCE="${PROJECT_DIRECTORY}/Motion Templates/Generators.localized/ASMR Walk/ASMR Walk Route Overlay"
+PACKAGE_SCRIPTS_DIRECTORY=${WORK_DIRECTORY}/PackageScripts
 
-mkdir -p "${ARCHIVE_DIRECTORY}" "${EXPORT_DIRECTORY}" "${PAYLOAD_DIRECTORY}/Applications" "${OUTPUT_DIRECTORY}"
+mkdir -p \
+    "${ARCHIVE_DIRECTORY}" \
+    "${EXPORT_DIRECTORY}" \
+    "${PAYLOAD_DIRECTORY}/Applications" \
+    "${PACKAGE_SCRIPTS_DIRECTORY}" \
+    "${OUTPUT_DIRECTORY}"
 sed "s/__TEAM_ID__/${TEAM_ID}/g" "${SCRIPT_DIRECTORY}/DeveloperIDExportOptions.plist" > "${EXPORT_OPTIONS}"
+
+"${SCRIPT_DIRECTORY}/validate-motion-template.sh" "${MOTION_TEMPLATE_SOURCE}"
+ditto "${SCRIPT_DIRECTORY}/postinstall" "${PACKAGE_SCRIPTS_DIRECTORY}/postinstall"
+ditto "${MOTION_TEMPLATE_SOURCE}" "${PACKAGE_SCRIPTS_DIRECTORY}/ASMR Walk Route Overlay"
+chmod 755 "${PACKAGE_SCRIPTS_DIRECTORY}/postinstall"
+sed "s/__VERSION__/${VERSION}/g" "${SCRIPT_DIRECTORY}/Distribution.xml" > "${INSTALLER_DISTRIBUTION}"
 
 archive_and_export() {
     local scheme_name=$1
@@ -64,6 +79,14 @@ pkgbuild \
     --identifier "com.bald-traveler.ASMRWalk.MacTools" \
     --version "${VERSION}" \
     --ownership recommended \
+    --scripts "${PACKAGE_SCRIPTS_DIRECTORY}" \
+    "${COMPONENT_PACKAGE}"
+
+/bin/rm -f "${PACKAGE_PATH}"
+productbuild \
+    --distribution "${INSTALLER_DISTRIBUTION}" \
+    --resources "${SCRIPT_DIRECTORY}/Resources" \
+    --package-path "${WORK_DIRECTORY}" \
     --sign "${INSTALLER_SIGN_IDENTITY}" \
     "${PACKAGE_PATH}"
 

@@ -148,11 +148,13 @@ The app uses a native static launch screen configured through the target Info se
 
 The `.asmrroute` package format is documented in `ASMR_ROUTE_PACKAGE.md`. Schema 3 packages contain a deterministic `manifest.json`, normalized `route-points.json`, optional preserved `source.gpx`, and either one importer-prepared map PNG or ordered, overlapping map segments for routes over 100 points. Every map stores exact projection bounds and route/timestamp coverage. The FxPlug renderer consumes only these local assets during playback and export; schema 1 route-only and schema 2 single-map packages remain supported.
 
-In the Final Cut Pro or Motion inspector, use **Choose or Replace Route Package…** instead of typing a filesystem path. The effect stores a read-only security-scoped bookmark in the project, shows the selected package title and recovery status, and provides **Clear Route Package**. Package video timing is applied automatically; **Timing Offset (seconds)** is an additive adjustment where positive values advance the route and negative values delay it.
+In the Final Cut Pro or Motion inspector, use **Choose or Replace Route Package…**, then drag one `.asmrroute` package from Finder into the drop zone. The effect stores a read-only security-scoped bookmark in the project, shows the selected package title and recovery status, and provides **Clear Route Package**. Package video timing is applied automatically; **Timing Offset (seconds)** is an additive adjustment where positive values advance the route and negative values delay it.
+
+Packages prepared before the snapshot-projection correction need **Prepare Map** and a fresh export to update their stored map bounds.
 
 The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
 
-The release installer ships the Mac importer and Final Cut Pro/Motion route-overlay wrapper together. Developer ID signing, notarization, installation, registration, and host smoke-test steps are documented in `Installer/README.md`.
+The release installer ships the Mac importer, Final Cut Pro/Motion route-overlay wrapper, and ASMR Walk Motion generator template together. Developer ID signing, notarization, installation, registration, and host smoke-test steps are documented in `Installer/README.md`.
 
 ## Current Limitations
 

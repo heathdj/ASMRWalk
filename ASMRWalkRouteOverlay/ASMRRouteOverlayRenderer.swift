@@ -23,6 +23,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
     let endPosition: Point?
     let style: ASMRRouteOverlayStyle
     let mapBackground: ASMRRouteOverlayBitmap?
+    let mapBackgroundFilename: String?
     let mapStyle: ASMRRouteOverlayMapStyle
 
     init(
@@ -33,6 +34,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         endPosition: Point?,
         style: ASMRRouteOverlayStyle,
         mapBackground: ASMRRouteOverlayBitmap? = nil,
+        mapBackgroundFilename: String? = nil,
         mapStyle: ASMRRouteOverlayMapStyle = .default
     ) {
         self.routePoints = routePoints
@@ -42,6 +44,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         self.endPosition = endPosition
         self.style = style
         self.mapBackground = mapBackground
+        self.mapBackgroundFilename = mapBackgroundFilename
         self.mapStyle = mapStyle
     }
 
@@ -67,6 +70,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             endPosition: endPosition,
             style: style,
             mapBackground: nil,
+            mapBackgroundFilename: mapBackgroundFilename,
             mapStyle: mapStyle
         )
     }
@@ -139,6 +143,7 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
                     ? (activePreparedBackground?.bitmap ?? preparedMapBackground ?? preparedMapBackgrounds.first?.bitmap)
                     : (activePreparedBackground?.bitmap ?? routePackage.decodedMapBackground()))
                 : nil,
+            mapBackgroundFilename: projectionMetadata?.filename,
             mapStyle: mapStyle
         )
     }
@@ -406,6 +411,16 @@ struct ASMRRouteOverlayBitmap: Codable, Equatable, Sendable {
 enum ASMRRouteOverlayPixelFormat: Equatable, Sendable {
     case rgba
     case bgra
+    case rgbaHalf
+    case rgbaFloat
+
+    var bytesPerPixel: Int {
+        switch self {
+        case .rgba, .bgra: 4
+        case .rgbaHalf: 8
+        case .rgbaFloat: 16
+        }
+    }
 }
 
 enum ASMRRouteOverlayRenderer {
@@ -435,9 +450,11 @@ enum ASMRRouteOverlayRenderer {
         height: Int,
         bytesPerRow: Int,
         pixelFormat: ASMRRouteOverlayPixelFormat,
-        mapBackgroundOverride: ASMRRouteOverlayBitmap? = nil
+        mapBackgroundOverride: ASMRRouteOverlayBitmap? = nil,
+        flipVertically: Bool = false,
+        premultiplyAlpha: Bool = false
     ) {
-        guard width > 0, height > 0, bytesPerRow >= width * 4 else { return }
+        guard width > 0, height > 0, bytesPerRow >= width * pixelFormat.bytesPerPixel else { return }
 
         memset(destination, 0, bytesPerRow * height)
         guard !plan.isEmpty else { return }
@@ -446,8 +463,25 @@ enum ASMRRouteOverlayRenderer {
         let writer = PixelWriter { x, y, color in
             guard x >= 0, x < width, y >= 0, y < height else { return }
 
-            let offset = (y * bytesPerRow) + (x * 4)
+            let row = flipVertically ? height - 1 - y : y
+            let offset = (row * bytesPerRow) + (x * pixelFormat.bytesPerPixel)
             switch pixelFormat {
+            case .rgbaHalf, .rgbaFloat:
+                // FxPlug floating-point surfaces contain premultiplied RGBA components.
+                let alpha = Float(color.alpha) / 255
+                let source = [Float(color.red) / 255 * alpha, Float(color.green) / 255 * alpha,
+                              Float(color.blue) / 255 * alpha, alpha]
+                for channel in 0..<4 {
+                    if pixelFormat == .rgbaHalf {
+                        let address = destination.advanced(by: offset + channel * 2)
+                        let previous = decodeHalf(address.load(as: UInt16.self))
+                        address.storeBytes(of: encodeHalf(source[channel] + previous * (1 - alpha)), as: UInt16.self)
+                    } else {
+                        let address = destination.advanced(by: offset + channel * 4)
+                        let previous = address.load(as: Float.self)
+                        address.storeBytes(of: source[channel] + previous * (1 - alpha), as: Float.self)
+                    }
+                }
             case .rgba:
                 blend(color, into: pixelBuffer, offset: offset, redIndex: 0, greenIndex: 1, blueIndex: 2, alphaIndex: 3)
             case .bgra:
@@ -462,6 +496,17 @@ enum ASMRRouteOverlayRenderer {
             mapBackground: mapBackgroundOverride ?? plan.mapBackground,
             pixelWriter: writer
         )
+        if premultiplyAlpha && (pixelFormat == .rgba || pixelFormat == .bgra) {
+            for y in 0..<height {
+                for x in 0..<width {
+                    let offset = y * bytesPerRow + x * 4
+                    let alpha = UInt16(pixelBuffer[offset + 3])
+                    for channel in 0..<3 {
+                        pixelBuffer[offset + channel] = UInt8((UInt16(pixelBuffer[offset + channel]) * alpha + 127) / 255)
+                    }
+                }
+            }
+        }
     }
 
     private static func draw(
@@ -490,8 +535,8 @@ enum ASMRRouteOverlayRenderer {
         if plan.visibleRoutePoints.count > 1 {
             for index in 1..<plan.visibleRoutePoints.count {
                 drawLine(
-                    from: pixelPoint(plan.visibleRoutePoints[index - 1], plan: plan, width: width, height: height, padding: padding),
-                    to: pixelPoint(plan.visibleRoutePoints[index], plan: plan, width: width, height: height, padding: padding),
+                    from: pixelPoint(plan.visibleRoutePoints[index - 1], plan: plan, width: width, height: height, padding: padding, hasMapBackground: mapBackground != nil),
+                    to: pixelPoint(plan.visibleRoutePoints[index], plan: plan, width: width, height: height, padding: padding, hasMapBackground: mapBackground != nil),
                     radius: lineWidth / 2,
                     color: plan.style.routeColor,
                     pixelWriter: pixelWriter
@@ -501,7 +546,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let startPosition = plan.startPosition {
             drawCircle(
-                center: pixelPoint(startPosition, plan: plan, width: width, height: height, padding: padding),
+                center: pixelPoint(startPosition, plan: plan, width: width, height: height, padding: padding, hasMapBackground: mapBackground != nil),
                 radius: markerRadius,
                 color: plan.style.markerColor,
                 pixelWriter: pixelWriter
@@ -510,7 +555,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let endPosition = plan.endPosition {
             drawCircle(
-                center: pixelPoint(endPosition, plan: plan, width: width, height: height, padding: padding),
+                center: pixelPoint(endPosition, plan: plan, width: width, height: height, padding: padding, hasMapBackground: mapBackground != nil),
                 radius: markerRadius,
                 color: plan.style.markerColor,
                 pixelWriter: pixelWriter
@@ -519,7 +564,7 @@ enum ASMRRouteOverlayRenderer {
 
         if let currentPosition = plan.currentPosition {
             drawCircle(
-                center: pixelPoint(currentPosition, plan: plan, width: width, height: height, padding: padding),
+                center: pixelPoint(currentPosition, plan: plan, width: width, height: height, padding: padding, hasMapBackground: mapBackground != nil),
                 radius: dotRadius,
                 color: plan.style.currentPositionColor,
                 pixelWriter: pixelWriter
@@ -532,9 +577,10 @@ enum ASMRRouteOverlayRenderer {
         plan: ASMRRouteOverlayRenderPlan,
         width: Int,
         height: Int,
-        padding: Double
+        padding: Double,
+        hasMapBackground: Bool
     ) -> ASMRRouteOverlayRenderPlan.Point {
-        if plan.mapBackground != nil {
+        if hasMapBackground {
             let panel = plan.mapStyle.pixelRect(outputWidth: width, outputHeight: height)
             return ASMRRouteOverlayRenderPlan.Point(
                 x: panel.originX + (point.x * panel.width),
@@ -666,6 +712,28 @@ enum ASMRRouteOverlayRenderer {
         let projectionDX = point.x - projection.x
         let projectionDY = point.y - projection.y
         return (projectionDX * projectionDX) + (projectionDY * projectionDY)
+    }
+
+    // Swift Float16 is unavailable on Intel macOS. These conversions cover the
+    // finite, nonnegative [0, 1] components produced by this SDR compositor.
+    private static func decodeHalf(_ bits: UInt16) -> Float {
+        let exponent = Int((bits >> 10) & 0x1f)
+        let fraction = UInt32(bits & 0x3ff)
+        if exponent == 0 {
+            return Float(fraction) / 16_777_216
+        }
+        return Float(bitPattern: (UInt32(exponent + 112) << 23) | (fraction << 13))
+    }
+
+    private static func encodeHalf(_ value: Float) -> UInt16 {
+        let clamped = max(0, min(1, value))
+        if clamped < 1 / 16_384 {
+            return UInt16((clamped * 16_777_216).rounded(.toNearestOrEven))
+        }
+        let bits = clamped.bitPattern
+        // Discard 13 fraction bits, rounding ties to the even retained bit.
+        let rounded = bits + 0x0fff + ((bits >> 13) & 1)
+        return UInt16((rounded - 0x3800_0000) >> 13)
     }
 
     private static func blend(

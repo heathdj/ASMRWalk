@@ -7,6 +7,28 @@ import Foundation
 import Testing
 
 struct ASMRRouteOverlayRenderPlanTests {
+    @Test("Map PNG rows stay north-up for both single maps and segments")
+    func mapPNGRowOrientation() throws {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        let metadata = ASMRRoutePackageInput.MapBackground(
+            filename: "map-background.png", pixelWidth: 1, pixelHeight: 2, scale: 1,
+            mapRectOriginX: 0, mapRectOriginY: 0, mapRectWidth: 1, mapRectHeight: 2
+        )
+        manifest.mapBackground = metadata
+        manifest.mapBackgrounds = [metadata]
+        // PNG scanlines explicitly encode a red northern row and a blue southern row.
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEUlEQVR4nGP4z8AARAz//wMAEfgD/XUCLkgAAAAASUVORK5CYII="))
+        let package = ASMRRoutePackageInput(
+            manifest: manifest, routePoints: original.routePoints, mapBackgroundData: png,
+            mapBackgroundDataByFilename: [metadata.filename: png]
+        )
+        let single = try #require(package.decodedMapBackground())
+        let segment = try #require(package.decodedMapBackgrounds().first?.bitmap)
+        #expect(single.rgbaPixels == [255, 0, 0, 255, 0, 0, 255, 255])
+        #expect(segment == single)
+    }
+
     @Test("Map style converts normalized position and size to output pixels", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
     func mapStyleProducesExpectedPixelRect() {
         let style = ASMRRouteOverlayMapStyle(
@@ -605,6 +627,84 @@ struct ASMRRouteOverlayRenderPlanTests {
 }
 
 struct ASMRRouteOverlayRendererTests {
+    @Test("Remote render handoff keeps the route and markers aligned with the map")
+    func remoteRenderHandoffPreservesMapAlignment() throws {
+        let background = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [200, 100, 50, 255])
+        let plan = ASMRRouteOverlayRenderPlan(
+            routePoints: [.init(x: 0.2, y: 0.3), .init(x: 0.8, y: 0.7)],
+            visibleRoutePoints: [.init(x: 0.2, y: 0.3), .init(x: 0.8, y: 0.7)],
+            currentPosition: .init(x: 0.8, y: 0.7),
+            startPosition: .init(x: 0.2, y: 0.3),
+            endPosition: .init(x: 0.8, y: 0.7),
+            style: .default,
+            mapBackground: background,
+            mapBackgroundFilename: "map-background-002.png"
+        )
+        let expected = ASMRRouteOverlayRenderer.bitmap(for: plan, width: 160, height: 90)
+        let transferred = try JSONDecoder().decode(
+            ASMRRouteOverlayRenderPlan.self,
+            from: JSONEncoder().encode(plan.removingMapBackgroundBitmap())
+        )
+        #expect(transferred.mapBackground == nil)
+        #expect(transferred.mapBackgroundFilename == "map-background-002.png")
+        var actual = Array(repeating: UInt8(0), count: 160 * 90 * 4)
+        actual.withUnsafeMutableBytes { bytes in
+            guard let address = bytes.baseAddress else { return }
+            ASMRRouteOverlayRenderer.render(
+                transferred, into: address, width: 160, height: 90, bytesPerRow: 640,
+                pixelFormat: .rgba, mapBackgroundOverride: background
+            )
+        }
+        #expect(actual == expected.rgbaPixels)
+    }
+
+    @Test("Host surfaces preserve color, position, alpha, row stride and image origin",
+          arguments: [ASMRRouteOverlayPixelFormat.rgbaHalf, .rgbaFloat, .rgba, .bgra], [false, true])
+    func hostSurfaceFormats(format: ASMRRouteOverlayPixelFormat, flipped: Bool) throws {
+        let plan = ASMRRouteOverlayRenderPlan(
+            routePoints: [.init(x: 0.5, y: 0.5)], visibleRoutePoints: [],
+            currentPosition: nil, startPosition: nil, endPosition: nil, style: .default,
+            mapBackground: .init(width: 1, height: 1, rgbaPixels: [200, 100, 50, 255]),
+            mapStyle: .init(centerX: 0.75, centerY: 0.25, widthFraction: 0.5,
+                            heightFraction: 0.5, cornerRadiusFraction: 0, opacity: 0.5)
+        )
+        let stride = 8 * format.bytesPerPixel + 16
+        let buffer = UnsafeMutableRawPointer.allocate(byteCount: stride * 8, alignment: 16)
+        defer { buffer.deallocate() }
+        buffer.initializeMemory(as: UInt8.self, repeating: 99, count: stride * 8)
+        ASMRRouteOverlayRenderer.render(
+            plan, into: buffer, width: 8, height: 8, bytesPerRow: stride,
+            pixelFormat: format, flipVertically: flipped, premultiplyAlpha: true
+        )
+        for y in 0..<8 {
+            for x in 0..<8 {
+                let row = flipped ? 7 - y : y
+                let offset = row * stride + x * format.bytesPerPixel
+                let inside = x >= 4 && y < 4
+                let alpha = inside ? Float(128) / 255 : 0
+                let expected: [Float] = [200 / 255 * alpha, 100 / 255 * alpha, 50 / 255 * alpha, alpha]
+                for channel in 0..<4 {
+                    let actual: Float
+                    switch format {
+                    case .rgbaHalf:
+                        let bits = buffer.load(fromByteOffset: offset + channel * 2, as: UInt16.self)
+                        let exponent = Int((bits >> 10) & 31)
+                        let fraction = Float(bits & 1023)
+                        actual = exponent == 0 ? fraction / 16_777_216
+                            : (1 + fraction / 1024) * pow(2, Float(exponent - 15))
+                    case .rgbaFloat:
+                        actual = buffer.load(fromByteOffset: offset + channel * 4, as: Float.self)
+                    case .rgba, .bgra:
+                        let index = format == .bgra && channel < 3 ? 2 - channel : channel
+                        actual = Float(buffer.load(fromByteOffset: offset + index, as: UInt8.self)) / 255
+                    }
+                    #expect(abs(actual - expected[channel]) < 0.003)
+                }
+            }
+            #expect(buffer.load(fromByteOffset: y * stride + stride - 1, as: UInt8.self) == 0)
+        }
+    }
+
     @Test("Map panel composites locally and keeps pixels outside transparent", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
     func mapPanelCompositesWithTransparentOutside() {
         let background = ASMRRouteOverlayBitmap(

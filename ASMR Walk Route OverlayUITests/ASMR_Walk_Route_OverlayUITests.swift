@@ -23,6 +23,32 @@ final class ASMR_Walk_Route_OverlayUITests: XCTestCase {
     }
 
     @MainActor
+    func testCloseButtonTerminatesHelper() {
+        let app = XCUIApplication()
+        app.launch()
+        app.buttons["Close"].click()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 5))
+    }
+
+    @MainActor
+    func testWindowCloseTerminatesHelper() {
+        let app = XCUIApplication()
+        app.launch()
+        app.windows.firstMatch.buttons[XCUIIdentifierCloseWindow].click()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 5))
+    }
+
+    @MainActor
+    func testImporterQuitTerminatesHelper() {
+        let importer = XCUIApplication(bundleIdentifier: "com.bald-traveler.ASMR-Walk-Mac-Importer")
+        importer.launch()
+        let app = XCUIApplication()
+        app.launch()
+        importer.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 5))
+    }
+
+    @MainActor
     func testExample() throws {
         // UI tests must launch the application that they test.
         let app = XCUIApplication()

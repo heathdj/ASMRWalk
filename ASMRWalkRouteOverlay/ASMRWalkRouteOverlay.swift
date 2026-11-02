@@ -8,7 +8,6 @@ import CoreMedia
 import CoreVideo
 import Foundation
 import IOSurface
-import UniformTypeIdentifiers
 
 @objc(ASMRWalkRouteOverlayPlugin)
 final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
@@ -248,12 +247,21 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         let mapBackground: ASMRRouteOverlayBitmap? = state.flatMap { state in
             guard state.showsMapBackground else { return nil }
             guard let url = Self.resolvedPackageURL(from: state.packageSelectionData) else { return nil }
-            return Self.packageCache.cachedPreparedPackage(at: url)?.mapBackground
+            guard let package = Self.packageCache.cachedPreparedPackage(at: url) else { return nil }
+            if let filename = state.renderPlan.mapBackgroundFilename {
+                return package.mapBackgrounds.first { $0.metadata.filename == filename }?.bitmap
+                    ?? package.mapBackground
+            }
+            return package.mapBackground
         }
         let width = IOSurfaceGetWidth(surface)
         let height = IOSurfaceGetHeight(surface)
         let bytesPerRow = IOSurfaceGetBytesPerRow(surface)
-        let pixelFormat = Self.pixelFormat(for: IOSurfaceGetPixelFormat(surface))
+        guard let pixelFormat = Self.pixelFormat(for: IOSurfaceGetPixelFormat(surface)) else {
+            throw NSError(domain: "ASMRWalkRouteOverlay", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Unsupported host pixel format: \(IOSurfaceGetPixelFormat(surface))"
+            ])
+        }
 
         IOSurfaceLock(surface, [], nil)
         defer { IOSurfaceUnlock(surface, [], nil) }
@@ -266,7 +274,9 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             height: height,
             bytesPerRow: bytesPerRow,
             pixelFormat: pixelFormat,
-            mapBackgroundOverride: mapBackground
+            mapBackgroundOverride: mapBackground,
+            flipVertically: destinationImage.imageOrigin == kFxImageOrigin_BOTTOM_LEFT,
+            premultiplyAlpha: true
         )
     }
 
@@ -285,39 +295,76 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
     }
 
     @objc private func chooseRoutePackage() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose an ASMR Route Package"
-        panel.prompt = "Choose"
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [UTType(filenameExtension: "asmrroute") ?? .package]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        do {
-            _ = try Self.withSecurityScopedAccess(to: url) {
-                try Self.packageCache.preparedPackage(at: url)
-            }
-            let bookmark = try url.bookmarkData(
-                options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
-                includingResourceValuesForKeys: [.nameKey],
-                relativeTo: nil
-            )
-            let selection = ASMRRoutePackageSelection(
-                bookmarkData: bookmark,
-                displayName: url.deletingPathExtension().lastPathComponent,
-                lastKnownPath: url.path
-            )
-            setPackageSelectionData(try selection.encoded())
-        } catch {
-            setStatus("Could not open package: \(error.localizedDescription)")
+        guard let remoteWindowAPI = apiManager?.api(for: FxRemoteWindowAPI_v2.self)
+            as? FxRemoteWindowAPI_v2 else {
+            return
         }
-        updatePackageControls(at: .zero)
+
+        remoteWindowAPI.remoteWindow(
+            withMinimumSize: CGSize(width: 460, height: 220),
+            maximumSize: CGSize(width: 460, height: 220)
+        ) { [weak self] parentView, _ in
+            guard let parentView else { return }
+            DispatchQueue.main.async { [weak self] in
+                guard self != nil else { return }
+                // FxServiceView.nib starts at 222x158 with flexible margins (mask 45).
+                // Without resizing this parent, the 460x220 host centers that small
+                // view at (119, 31), and our full-size child spills out to the right.
+                parentView.autoresizingMask = [.width, .height]
+                parentView.frame = NSRect(x: 0, y: 0, width: 460, height: 220)
+                // The host may return the same remote view when the chooser is reopened.
+                parentView.subviews.compactMap { $0 as? ASMRRoutePackageDropView }.forEach { $0.removeFromSuperview() }
+                let chooserView = ASMRRoutePackageDropView(frame: NSRect(x: 0, y: 0, width: 460, height: 220)) { [weak self] url in
+                    guard let self else { return }
+                    try self.selectRoutePackage(at: url)
+                } dismiss: { [weak self] in
+                    // This NSView belongs to a remote view service, not the host's NSWindow.
+                    (self?.apiManager?.api(for: FxRemoteWindowAPI_v3.self) as? FxRemoteWindowAPI_v3)?
+                        .closeRemoteWindow()
+                }
+                chooserView.autoresizingMask = [.width, .height]
+                parentView.addSubview(chooserView)
+            }
+        }
+    }
+
+    private func selectRoutePackage(at url: URL) throws {
+        _ = try Self.withSecurityScopedAccess(to: url) {
+            try Self.packageCache.preparedPackage(at: url)
+        }
+        let bookmark = try url.bookmarkData(
+            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+            includingResourceValuesForKeys: [.nameKey],
+            relativeTo: nil
+        )
+        let selection = ASMRRoutePackageSelection(
+            bookmarkData: bookmark,
+            displayName: url.deletingPathExtension().lastPathComponent,
+            lastKnownPath: url.path
+        )
+        let encodedSelection = try selection.encoded()
+        performCustomParameterAction {
+            setPackageSelectionData(encodedSelection)
+            updatePackageControls(at: .zero)
+        }
     }
 
     @objc private func clearRoutePackage() {
+        // Avoid unnecessary host parameter writes. In particular, Final Cut Pro
+        // may invoke this published button before the hidden selection parameter
+        // has ever been initialized for the generator instance.
+        guard packageSelectionData().isEmpty == false else { return }
         setPackageSelectionData("")
         updatePackageControls(at: .zero)
+    }
+
+    private func performCustomParameterAction(_ action: () -> Void) {
+        guard let actionAPI = apiManager?.api(for: FxCustomParameterActionAPI_v4.self)
+            as? FxCustomParameterActionAPI_v4 else { return }
+
+        actionAPI.startAction(self)
+        defer { actionAPI.endAction(self) }
+        action()
     }
 
     private func setPackageSelectionData(_ value: String) {
@@ -556,15 +603,129 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         }
     }
 
-    private static func pixelFormat(for surfacePixelFormat: UInt32) -> ASMRRouteOverlayPixelFormat {
+    private static func pixelFormat(for surfacePixelFormat: UInt32) -> ASMRRouteOverlayPixelFormat? {
         switch surfacePixelFormat {
         case kCVPixelFormatType_32BGRA:
             .bgra
         case kCVPixelFormatType_32RGBA:
             .rgba
+        case kCVPixelFormatType_64RGBAHalf:
+            .rgbaHalf
+        case kCVPixelFormatType_128RGBAFloat:
+            .rgbaFloat
         default:
-            .bgra
+            nil
         }
+    }
+}
+
+private final class ASMRRoutePackageDropView: NSView {
+    private var borderColor = NSColor.separatorColor {
+        didSet { needsDisplay = true }
+    }
+    private let selectPackage: (URL) throws -> Void
+    private let dismiss: () -> Void
+    private let instructionLabel = NSTextField(labelWithString: "Drop an .asmrroute package here")
+    private let statusLabel = NSTextField(labelWithString: "Drag the package from Finder to choose or replace the route.")
+
+    init(frame frameRect: NSRect, selectPackage: @escaping (URL) throws -> Void, dismiss: @escaping () -> Void) {
+        self.dismiss = dismiss
+        self.selectPackage = selectPackage
+        super.init(frame: frameRect)
+
+        // Keep the drop-target border inset within the local content area.
+        registerForDraggedTypes([.fileURL])
+
+        instructionLabel.alignment = .center
+        instructionLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+        instructionLabel.lineBreakMode = .byWordWrapping
+        instructionLabel.maximumNumberOfLines = 2
+        instructionLabel.translatesAutoresizingMaskIntoConstraints = false
+        statusLabel.alignment = .center
+        statusLabel.textColor = .secondaryLabelColor
+        statusLabel.lineBreakMode = .byWordWrapping
+        statusLabel.maximumNumberOfLines = 2
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(instructionLabel)
+        addSubview(statusLabel)
+        NSLayoutConstraint.activate([
+            instructionLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
+            instructionLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
+            instructionLabel.centerYAnchor.constraint(equalTo: centerYAnchor, constant: -18),
+            statusLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 24),
+            statusLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -24),
+            statusLabel.topAnchor.constraint(equalTo: instructionLabel.bottomAnchor, constant: 12)
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        borderColor.setStroke()
+        let border = NSBezierPath(roundedRect: bounds.insetBy(dx: 12, dy: 12), xRadius: 14, yRadius: 14)
+        border.lineWidth = 2
+        border.stroke()
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        guard droppedPackageURL(from: sender) != nil else {
+            statusLabel.stringValue = "Drop one .asmrroute package."
+            statusLabel.textColor = .systemRed
+            return []
+        }
+        borderColor = .controlAccentColor
+        statusLabel.stringValue = "Release to use this route package."
+        statusLabel.textColor = .controlAccentColor
+        return .copy
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        restorePrompt()
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard let url = droppedPackageURL(from: sender) else { return false }
+        do {
+            try selectPackage(url)
+            instructionLabel.stringValue = "Route package selected"
+            statusLabel.stringValue = url.deletingPathExtension().lastPathComponent
+            statusLabel.textColor = .systemGreen
+            borderColor = .systemGreen
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
+                self?.dismiss()
+            }
+            return true
+        } catch {
+            instructionLabel.stringValue = "Could not use that package"
+            statusLabel.stringValue = error.localizedDescription
+            statusLabel.textColor = .systemRed
+            borderColor = .systemRed
+            return false
+        }
+    }
+
+    private func droppedPackageURL(from draggingInfo: NSDraggingInfo) -> URL? {
+        let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+        guard let urls = draggingInfo.draggingPasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: options
+        ) as? [URL], urls.count == 1 else {
+            return nil
+        }
+        let url = urls[0]
+        return url.pathExtension.lowercased() == "asmrroute" ? url : nil
+    }
+
+    private func restorePrompt() {
+        instructionLabel.stringValue = "Drop an .asmrroute package here"
+        statusLabel.stringValue = "Drag the package from Finder to choose or replace the route."
+        statusLabel.textColor = .secondaryLabelColor
+        borderColor = .separatorColor
     }
 }
 
