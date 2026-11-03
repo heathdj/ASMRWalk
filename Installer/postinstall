@@ -1,0 +1,39 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+SCRIPT_DIRECTORY=${0:A:h}
+SOURCE_TEMPLATE="${SCRIPT_DIRECTORY}/ASMR Walk Route Overlay"
+CONSOLE_USER=$(stat -f "%Su" /dev/console)
+
+if [[ -z "${CONSOLE_USER}" || "${CONSOLE_USER}" == "root" || "${CONSOLE_USER}" == "loginwindow" ]]; then
+    echo "A signed-in macOS user is required to install the Motion template." >&2
+    exit 1
+fi
+
+USER_HOME_DIRECTORY=$(dscl . -read "/Users/${CONSOLE_USER}" NFSHomeDirectory | sed 's/^NFSHomeDirectory: //')
+USER_GROUP=$(id -gn "${CONSOLE_USER}")
+TEMPLATE_CATEGORY_DIRECTORY="${USER_HOME_DIRECTORY}/Movies/Motion Templates.localized/Generators.localized/ASMR Walk"
+TARGET_TEMPLATE="${TEMPLATE_CATEGORY_DIRECTORY}/ASMR Walk Route Overlay"
+STAGED_TEMPLATE="${TEMPLATE_CATEGORY_DIRECTORY}/.ASMR Walk Route Overlay.installing.$$"
+BACKUP_TEMPLATE="${TEMPLATE_CATEGORY_DIRECTORY}/.ASMR Walk Route Overlay.previous.$$"
+
+mkdir -p "${TEMPLATE_CATEGORY_DIRECTORY}"
+ditto "${SOURCE_TEMPLATE}" "${STAGED_TEMPLATE}"
+chown -R "${CONSOLE_USER}:${USER_GROUP}" "${STAGED_TEMPLATE}"
+
+if [[ -e "${TARGET_TEMPLATE}" ]]; then
+    mv "${TARGET_TEMPLATE}" "${BACKUP_TEMPLATE}"
+fi
+
+if ! mv "${STAGED_TEMPLATE}" "${TARGET_TEMPLATE}"; then
+    if [[ -e "${BACKUP_TEMPLATE}" ]]; then
+        mv "${BACKUP_TEMPLATE}" "${TARGET_TEMPLATE}"
+    fi
+    exit 1
+fi
+
+rm -rf "${BACKUP_TEMPLATE}"
+chown "${CONSOLE_USER}:${USER_GROUP}" "${TEMPLATE_CATEGORY_DIRECTORY}"
+
+echo "Installed ASMR Walk Route Overlay Motion template for ${CONSOLE_USER}."

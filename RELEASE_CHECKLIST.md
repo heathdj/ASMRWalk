@@ -157,10 +157,10 @@ Run these on physical devices before submission:
 - [ ] Confirm Watch-created GPS walks appear in the Mac importer after iCloud sync.
 - [ ] Confirm iCloud sign-out or restricted account state explains that GPX import remains available.
 - [ ] Build the Mac tools installer with Developer ID Application and Installer identities, submit it to notarization, staple it, and confirm `pkgutil --check-signature` reports the expected team.
-- [ ] Install the notarized package and run `Installer/verify-installed-tools.sh`; confirm both apps pass Gatekeeper and `com.bald-traveler.ASMRWalkRouteOverlay` is visible to PlugInKit.
-- [ ] In the importer, open **Final Cut Pro Plugin…**, confirm Installed status, and run **Register or Repair Plugin**.
+- [ ] Install the notarized package and run `Installer/verify-installed-tools.sh`; confirm both apps pass Gatekeeper, the Motion template validates, and `com.bald-traveler.ASMRWalkRouteOverlay` is visible to PlugInKit.
+- [ ] In the importer, open **Final Cut Pro Plugin…**, confirm the FxPlug component and generator template are installed, and run **Register or Repair Plugin**.
 - [ ] Quit and reopen Motion, locate **ASMR Walk Route Overlay** in the **ASMR Walk** group, and add it to a new project.
-- [ ] Complete #131, install the ASMR Walk Motion generator template, and confirm its inspector controls appear in Final Cut Pro before beginning issue #124 and #79 validation.
+- [ ] In Final Cut Pro, locate **ASMR Walk Route Overlay** under **Generators > ASMR Walk**, connect it above representative footage, and confirm route-package selection and timing offset appear in the inspector before beginning #79 validation.
 - [ ] Create an `.asmrroute` package from a synced recording in the Mac importer.
 - [ ] Load the generated `.asmrroute` package and confirm manifest metadata, source device, route timing, and route-point count match the source recording.
 - [ ] Confirm GPX import fallback still creates an `.asmrroute` package when synced recordings are unavailable.
@@ -230,3 +230,29 @@ Run these on physical devices before submission:
 - No delete-from-Photos management for video copies saved to the user's Photos library.
 - iCloud sync covers recording metadata and routes, not full video files.
 - Simulator Watch-to-iPhone sync is non-authoritative for release; physical-device/TestFlight validation is tracked in GitHub issue #93.
+
+### November 1 FxPlug regression checks
+
+- [ ] With the updated wrapper/plugin installed, open the package chooser in Final Cut Pro; verify the complete drop target and labels fit its window, including on a Retina display.
+- [ ] Drop a valid `.asmrroute`: the host window closes completely. Reopen, replace the package, and repeat without blank windows or stacked content.
+- [ ] After dropping, change every Map Position and Map Size choice; verify the plugin remains enabled and no view-service crash occurs.
+- [ ] Verify map colors, route/marker alignment, panel position, opacity, and orientation in playback and export; check a segmented package across a segment boundary.
+
+- [ ] Verify map labels are upright and route geometry follows the streets for both single-map and segmented packages.
+- [ ] Verify Close and Escape dismiss both the importer plugin-installation window and the overlay wrapper confirmation window.
+
+- [ ] After the snapshot-projection fix, Prepare Map again and export a fresh `.asmrroute`; verify the route matches streets and endpoints in FCP. Previously exported packages retain their old projection bounds.
+- [ ] Pending owner weekend capture: validate a real walk with more than 100 points across map-image transitions, including route alignment and playback/export consistency.
+
+- [ ] Confirm the overlay helper shows the ASMR Walk icon in Finder/Dock and quits when Close, Escape, or the red window button is used; the FCP generator continues rendering.
+
+- [ ] Confirm the November 2 drop-zone layout fits inside the FCP chooser without horizontal offset or clipping.
+- [ ] With the installed build, quit the importer while the overlay helper is open; confirm the helper exits and FCP rendering remains available. Automated helper Close/red-window/importer-termination checks pass.
+
+### November 2 owner confirmation and final review
+
+- [x] Owner confirmed the corrected FCP drop-zone layout and current overlay behavior look good.
+- [x] Owner confirmed overlay helper shutdown works as requested; automated Close, red-window, and importer-termination UI checks also pass.
+- [x] Final review: 43 importer tests and 41 overlay/UI cases pass; Motion template and shell/XML checks pass.
+- [ ] Real route exceeding 100 points and full playback/export transition matrix remain pending; do not treat the short-route smoke check as completion of #79.
+- Light/dark prepared maps and generator selection remain future work in #133 (Version 1.1.0).

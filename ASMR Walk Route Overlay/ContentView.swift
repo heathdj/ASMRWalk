@@ -5,6 +5,7 @@
 //  Created by David Heath on 9/5/26.
 //
 
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -17,9 +18,16 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Label("FxPlug generator installed", systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
-                Text("Open Motion or Final Cut Pro to use the ASMR Walk generator after this app has been built and launched.")
+                Text("Open Motion or Final Cut Pro to use the ASMR Walk generator.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack {
+                Spacer()
+                Button("Close") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .keyboardShortcut(.cancelAction)
             }
         }
         .frame(minWidth: 420, alignment: .leading)

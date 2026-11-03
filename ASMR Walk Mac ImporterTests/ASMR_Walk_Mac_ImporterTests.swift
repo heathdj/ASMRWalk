@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import MapKit
 import Testing
 import SwiftData
 import UniformTypeIdentifiers
@@ -13,6 +14,40 @@ import UniformTypeIdentifiers
 
 @MainActor
 struct ASMR_Walk_Mac_ImporterTests {
+
+    @Test func snapshotProjectionUsesCapturedBounds() throws {
+        // The requested reference area occupies only part of a wider captured map.
+        let reference = MKMapRect(x: 140, y: 260, width: 100, height: 100)
+        for imageScale in [1.0, 2.0] {
+            for bottomUp in [false, true] {
+                let size = CGSize(width: 800 * imageScale, height: 400 * imageScale)
+                let northY = (bottomUp ? 280.0 : 120.0) * imageScale
+                let southY = (bottomUp ? 80.0 : 320.0) * imageScale
+                let rect = try MapBackgroundPreparer.capturedMapRect(
+                    referenceRect: reference, imageSize: size,
+                    northWest: CGPoint(x: 80 * imageScale, y: northY),
+                    southEast: CGPoint(x: 280 * imageScale, y: southY)
+                )
+                #expect(abs(rect.minX - 100) < 0.000001)
+                #expect(abs(rect.minY - 200) < 0.000001)
+                #expect(abs(rect.width - 400) < 0.000001)
+                #expect(abs(rect.height - 200) < 0.000001)
+                // A third location must land on the same image point after export.
+                #expect(abs((190 - rect.minX) / rect.width - 0.225) < 0.000001)
+                #expect(abs((310 - rect.minY) / rect.height - 0.55) < 0.000001)
+            }
+        }
+    }
+
+    @Test func snapshotProjectionRejectsDegenerateMapping() {
+        #expect(throws: MapBackgroundPreparer.PreparationError.self) {
+            try MapBackgroundPreparer.capturedMapRect(
+                referenceRect: MKMapRect(x: 0, y: 0, width: 100, height: 100),
+                imageSize: CGSize(width: 800, height: 400),
+                northWest: .zero, southEast: .zero
+            )
+        }
+    }
 
     @Test func cloudSyncUsesASMRWalkContainer() {
         #expect(CloudSyncConfiguration.containerIdentifier == "iCloud.com.bald-traveler.ASMRWalk")
@@ -778,6 +813,7 @@ private struct StubMapBackgroundPreparer: MapBackgroundPreparing {
     }
 }
 
+@MainActor
 struct FxPlugInstallationServiceTests {
     @Test("Missing wrapper reports not installed", .bug("https://github.com/heathdj/ASMRWalk/issues/99"))
     func missingWrapperReportsNotInstalled() throws {
@@ -829,6 +865,56 @@ struct FxPlugInstallationServiceTests {
         ).inspect()
 
         #expect(inspection.state == .invalidPluginIdentifier("example.invalid"))
+    }
+
+    @Test("Missing Motion template reports incomplete installation")
+    func missingMotionTemplateReportsIncompleteInstallation() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        let motionTemplatesDirectory = try temporaryDirectory()
+        try makePluginBundle(
+            in: applicationsDirectory,
+            identifier: FxPlugInstallationService.expectedPluginIdentifier
+        )
+
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory,
+            motionTemplatesDirectory: motionTemplatesDirectory
+        ).inspect()
+
+        #expect(inspection.state == .ready)
+        #expect(inspection.motionTemplateState == .notInstalled)
+        #expect(inspection.isComplete == false)
+    }
+
+    @Test("Motion template referencing the route overlay reports complete installation")
+    func expectedMotionTemplateReportsCompleteInstallation() throws {
+        let applicationsDirectory = try temporaryDirectory()
+        let motionTemplatesDirectory = try temporaryDirectory()
+        try makePluginBundle(
+            in: applicationsDirectory,
+            identifier: FxPlugInstallationService.expectedPluginIdentifier
+        )
+        let templateDirectory = motionTemplatesDirectory.appending(
+            path: FxPlugInstallationService.motionTemplateRelativePath,
+            directoryHint: .isDirectory
+        )
+        try FileManager.default.createDirectory(at: templateDirectory, withIntermediateDirectories: true)
+        let templateDocument = "<scenenode pluginUUID=\"\(FxPlugInstallationService.expectedPluginUUID)\"/>"
+        try templateDocument.write(
+            to: templateDirectory.appending(path: FxPlugInstallationService.motionTemplateDocumentName),
+            atomically: true,
+            encoding: .utf8
+        )
+        try Data().write(to: templateDirectory.appending(path: "large.png"))
+        try Data().write(to: templateDirectory.appending(path: "small.png"))
+
+        let inspection = FxPlugInstallationService(
+            applicationsDirectory: applicationsDirectory,
+            motionTemplatesDirectory: motionTemplatesDirectory
+        ).inspect()
+
+        #expect(inspection.motionTemplateState == .ready)
+        #expect(inspection.isComplete)
     }
 
     private func temporaryDirectory() throws -> URL {

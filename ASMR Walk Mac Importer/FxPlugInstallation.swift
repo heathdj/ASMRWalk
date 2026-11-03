@@ -15,20 +15,43 @@ struct FxPlugInstallationInspection: Equatable, Sendable {
         case ready
     }
 
+    enum MotionTemplateState: Equatable, Sendable {
+        case notInstalled
+        case invalid
+        case ready
+    }
+
     let state: State
+    let motionTemplateState: MotionTemplateState
     let wrapperURL: URL
     let pluginURL: URL
+    let motionTemplateURL: URL
+
+    var isComplete: Bool {
+        state == .ready && motionTemplateState == .ready
+    }
 }
 
 struct FxPlugInstallationService: Sendable {
     static let wrapperApplicationName = "ASMR Walk Route Overlay.app"
     static let pluginBundleName = "ASMRWalkRouteOverlay.pluginkit"
     static let expectedPluginIdentifier = "com.bald-traveler.ASMRWalkRouteOverlay"
+    static let expectedPluginUUID = "D3A901A9-B749-4B9D-AF3D-F28509A457DF"
+    static let motionTemplateRelativePath = "Generators.localized/ASMR Walk/ASMR Walk Route Overlay"
+    static let motionTemplateDocumentName = "ASMR Walk Route Overlay.motn"
 
     let applicationsDirectory: URL
+    let motionTemplatesDirectory: URL
 
-    init(applicationsDirectory: URL = URL(filePath: "/Applications", directoryHint: .isDirectory)) {
+    init(
+        applicationsDirectory: URL = URL(filePath: "/Applications", directoryHint: .isDirectory),
+        motionTemplatesDirectory: URL? = nil
+    ) {
         self.applicationsDirectory = applicationsDirectory
+        let moviesDirectory = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.homeDirectoryForCurrentUser.appending(path: "Movies", directoryHint: .isDirectory)
+        self.motionTemplatesDirectory = motionTemplatesDirectory
+            ?? moviesDirectory.appending(path: "Motion Templates.localized", directoryHint: .isDirectory)
     }
 
     func inspect() -> FxPlugInstallationInspection {
@@ -40,14 +63,21 @@ struct FxPlugInstallationService: Sendable {
             path: "Contents/PlugIns/\(Self.pluginBundleName)",
             directoryHint: .isDirectory
         )
+        let motionTemplateURL = motionTemplatesDirectory.appending(
+            path: Self.motionTemplateRelativePath,
+            directoryHint: .isDirectory
+        )
+        let motionTemplateState = inspectMotionTemplate(at: motionTemplateURL)
 
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: wrapperURL.path, isDirectory: &isDirectory),
               isDirectory.boolValue else {
             return FxPlugInstallationInspection(
                 state: .notInstalled,
+                motionTemplateState: motionTemplateState,
                 wrapperURL: wrapperURL,
-                pluginURL: pluginURL
+                pluginURL: pluginURL,
+                motionTemplateURL: motionTemplateURL
             )
         }
 
@@ -55,8 +85,10 @@ struct FxPlugInstallationService: Sendable {
               isDirectory.boolValue else {
             return FxPlugInstallationInspection(
                 state: .incomplete,
+                motionTemplateState: motionTemplateState,
                 wrapperURL: wrapperURL,
-                pluginURL: pluginURL
+                pluginURL: pluginURL,
+                motionTemplateURL: motionTemplateURL
             )
         }
 
@@ -64,16 +96,41 @@ struct FxPlugInstallationService: Sendable {
         guard identifier == Self.expectedPluginIdentifier else {
             return FxPlugInstallationInspection(
                 state: .invalidPluginIdentifier(identifier),
+                motionTemplateState: motionTemplateState,
                 wrapperURL: wrapperURL,
-                pluginURL: pluginURL
+                pluginURL: pluginURL,
+                motionTemplateURL: motionTemplateURL
             )
         }
 
         return FxPlugInstallationInspection(
             state: .ready,
+            motionTemplateState: motionTemplateState,
             wrapperURL: wrapperURL,
-            pluginURL: pluginURL
+            pluginURL: pluginURL,
+            motionTemplateURL: motionTemplateURL
         )
+    }
+
+    private func inspectMotionTemplate(at templateURL: URL) -> FxPlugInstallationInspection.MotionTemplateState {
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: templateURL.path, isDirectory: &isDirectory),
+              isDirectory.boolValue else {
+            return .notInstalled
+        }
+
+        let requiredFiles = [
+            Self.motionTemplateDocumentName,
+            "large.png",
+            "small.png"
+        ]
+        guard requiredFiles.allSatisfy({
+            FileManager.default.fileExists(atPath: templateURL.appending(path: $0).path)
+        }) else {
+            return .invalid
+        }
+
+        return .ready
     }
 
     @MainActor
@@ -110,6 +167,7 @@ enum FxPlugInstallationError: LocalizedError {
 }
 
 struct FxPlugInstallationView: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var inspection = FxPlugInstallationService().inspect()
     @State private var isRegistering = false
     @State private var registrationMessage: String?
@@ -118,8 +176,8 @@ struct FxPlugInstallationView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            FxPlugInstallationHeader(state: inspection.state)
-            FxPlugInstallationDetails(state: inspection.state)
+            FxPlugInstallationHeader(isComplete: inspection.isComplete)
+            FxPlugInstallationDetails(inspection: inspection)
 
             if let registrationMessage {
                 Text(registrationMessage)
@@ -149,6 +207,10 @@ struct FxPlugInstallationView: View {
         }
         .buttonStyle(.borderedProminent)
         .disabled(inspection.state != .ready || isRegistering)
+        Button("Close") {
+            dismiss()
+        }
+        .keyboardShortcut(.cancelAction)
     }
 
     private func refresh() {
@@ -173,7 +235,7 @@ struct FxPlugInstallationView: View {
 }
 
 private struct FxPlugInstallationHeader: View {
-    let state: FxPlugInstallationInspection.State
+    let isComplete: Bool
 
     var body: some View {
         Label(title, systemImage: systemImage)
@@ -183,38 +245,49 @@ private struct FxPlugInstallationHeader: View {
     }
 
     private var title: LocalizedStringResource {
-        switch state {
-        case .ready:
+        if isComplete {
             "Final Cut Pro plugin is installed"
-        case .notInstalled:
-            "Final Cut Pro plugin is not installed"
-        case .incomplete, .invalidPluginIdentifier:
+        } else {
             "Final Cut Pro plugin needs repair"
         }
     }
 
     private var systemImage: String {
-        state == .ready ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+        isComplete ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
     }
 
     private var color: Color {
-        state == .ready ? .green : .orange
+        isComplete ? .green : .orange
     }
 }
 
 private struct FxPlugInstallationDetails: View {
-    let state: FxPlugInstallationInspection.State
+    let inspection: FxPlugInstallationInspection
 
     var body: some View {
-        switch state {
+        switch inspection.state {
         case .ready:
-            Text("The signed route-overlay wrapper and its embedded FxPlug component are present in Applications. Register or repair the plugin, then reopen Final Cut Pro or Motion.")
+            Label("Signed FxPlug component installed", systemImage: "checkmark.circle")
         case .notInstalled:
-            Text("Run the ASMR Walk Mac Tools installer. It installs both the importer and route-overlay plugin wrapper in Applications.")
+            Label("FxPlug component is not installed", systemImage: "xmark.circle")
         case .incomplete:
-            Text("The route-overlay app is present, but its embedded plugin is missing. Run the installer again to repair both components.")
-        case let .invalidPluginIdentifier(identifier):
-            Text("The embedded plugin has an unexpected identifier: \(identifier ?? "missing"). Run the installer again before opening Final Cut Pro or Motion.")
+            Label("FxPlug component is incomplete", systemImage: "exclamationmark.triangle")
+        case .invalidPluginIdentifier:
+            Label("FxPlug component has an unexpected identifier", systemImage: "exclamationmark.triangle")
+        }
+
+        switch inspection.motionTemplateState {
+        case .ready:
+            Label("Final Cut Pro generator template installed", systemImage: "checkmark.circle")
+        case .notInstalled:
+            Label("Final Cut Pro generator template is not installed", systemImage: "xmark.circle")
+        case .invalid:
+            Label("Final Cut Pro generator template needs repair", systemImage: "exclamationmark.triangle")
+        }
+
+        if !inspection.isComplete {
+            Text("Run the ASMR Walk Mac Tools installer again to repair only the ASMR Walk-owned components, then reopen Final Cut Pro and Motion.")
+                .foregroundStyle(.secondary)
         }
     }
 }

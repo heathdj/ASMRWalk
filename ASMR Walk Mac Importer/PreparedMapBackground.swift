@@ -114,16 +114,30 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
             throw PreparationError.imageEncodingFailed
         }
 
+        // MapKit can adjust the requested rectangle to fit the snapshot. Recover
+        // the actual north-up Mercator bounds from its coordinate-to-image mapping.
+        let referenceRect = MKMapRect(
+            x: mapRect.minX + mapRect.width * 0.25,
+            y: mapRect.minY + mapRect.height * 0.25,
+            width: mapRect.width * 0.5, height: mapRect.height * 0.5
+        )
+        let capturedRect = try Self.capturedMapRect(
+            referenceRect: referenceRect,
+            imageSize: snapshot.image.size,
+            northWest: snapshot.point(for: MKMapPoint(x: referenceRect.minX, y: referenceRect.minY).coordinate),
+            southEast: snapshot.point(for: MKMapPoint(x: referenceRect.maxX, y: referenceRect.maxY).coordinate)
+        )
+
         return PreparedMapBackground(
             metadata: ASMRRoutePackage.MapBackground(
                 filename: filename,
                 pixelWidth: bitmap.pixelsWide,
                 pixelHeight: bitmap.pixelsHigh,
                 scale: Double(bitmap.pixelsWide) / Self.outputSize.width,
-                mapRectOriginX: mapRect.origin.x,
-                mapRectOriginY: mapRect.origin.y,
-                mapRectWidth: mapRect.size.width,
-                mapRectHeight: mapRect.size.height,
+                mapRectOriginX: capturedRect.origin.x,
+                mapRectOriginY: capturedRect.origin.y,
+                mapRectWidth: capturedRect.size.width,
+                mapRectHeight: capturedRect.size.height,
                 firstRoutePointIndex: pointRange?.lowerBound,
                 lastRoutePointIndex: pointRange?.upperBound,
                 startTimestamp: points.first?.timestamp,
@@ -131,6 +145,42 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
             ),
             imageData: pngData
         )
+    }
+
+    static func capturedMapRect(
+        referenceRect: MKMapRect,
+        imageSize: CGSize,
+        northWest: CGPoint,
+        southEast: CGPoint
+    ) throws -> MKMapRect {
+        let horizontalSpan = southEast.x - northWest.x
+        let verticalSpan = southEast.y - northWest.y
+        guard imageSize.width.isFinite, imageSize.height.isFinite,
+              imageSize.width > 0, imageSize.height > 0,
+              northWest.x.isFinite, northWest.y.isFinite,
+              horizontalSpan.isFinite, verticalSpan.isFinite,
+              horizontalSpan > 0, abs(verticalSpan) > 0,
+              referenceRect.width.isFinite, referenceRect.height.isFinite,
+              referenceRect.width > 0, referenceRect.height > 0 else {
+            throw PreparationError.invalidProjection
+        }
+        let unitsPerX = referenceRect.width / horizontalSpan
+        let unitsPerY = referenceRect.height / abs(verticalSpan)
+        // NSImage and other image APIs may expose opposite vertical origins.
+        // Infer the direction from the known north/south coordinates.
+        let topY = verticalSpan > 0 ? northWest.y : imageSize.height - northWest.y
+        let rect = MKMapRect(
+            x: referenceRect.minX - northWest.x * unitsPerX,
+            y: referenceRect.minY - topY * unitsPerY,
+            width: imageSize.width * unitsPerX,
+            height: imageSize.height * unitsPerY
+        )
+        guard rect.origin.x.isFinite, rect.origin.y.isFinite,
+              rect.width.isFinite, rect.height.isFinite,
+              rect.width > 0, rect.height > 0 else {
+            throw PreparationError.invalidProjection
+        }
+        return rect
     }
 
     static func mapRect(for points: [RoutePreview.RoutePoint]) -> MKMapRect {
@@ -160,6 +210,7 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
         case emptyRoute
         case snapshotUnavailable
         case imageEncodingFailed
+        case invalidProjection
 
         var errorDescription: String? {
             switch self {
@@ -167,6 +218,8 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
                 "Load a route before preparing a map background."
             case .snapshotUnavailable:
                 "MapKit did not return a map image. Route-only export is still available."
+            case .invalidProjection:
+                "MapKit returned an unusable map projection. Prepare the map again."
             case .imageEncodingFailed:
                 "The prepared map could not be encoded as a PNG. Route-only export is still available."
             }
