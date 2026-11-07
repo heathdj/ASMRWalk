@@ -283,3 +283,5 @@ Run these on physical devices before submission:
 - [x] Xcode build, 28 unit checks, and four UI tests passed.
 
 The scenario list above remains a release regression checklist; specific accessory models and per-scenario results were not supplied. The owner confirmation applies to #125 and does not complete the separate #93 or #109 release gates.
+
+- [ ] PR #136 QA regression: background Video Walk with a ready, non-recording preview; confirm microphone use ends and other audio apps recover. Foreground it and confirm preview/microphone selection resume. Repeat while recording and confirm the take saves before microphone use ends.

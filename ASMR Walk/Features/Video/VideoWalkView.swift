@@ -238,7 +238,14 @@ struct VideoWalkView: View {
             } else if RecordingLifecyclePolicy.shouldStopVideoWalkWhenSceneDeactivates(
                 isRecordingVideoWalk: isRecordingVideoWalk
             ) {
-                stopVideoWalk(confirmShortRecording: false)
+                stopVideoWalk(stopSessionWhenFinished: true, confirmShortRecording: false)
+            } else if camera.isRecording == false,
+                      camera.isReady || scenePhase == .background {
+                // Do not cancel first-time permission preparation for a transient
+                // inactive scene; an actual background transition still stops it.
+                // Preview also owns an active audio session. Release it when the
+                // scene deactivates; the active-scene path prepares it again.
+                camera.stopSession()
             }
         }
         .onChange(of: stopRequestID, initial: true) {

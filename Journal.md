@@ -698,3 +698,7 @@ The microphone pill opens a native, scrolling SwiftUI picker. Selection locks du
 Initial validation passed 24 routing/coordinator cases and four UI checks covering selection, recording lock, and privacy recovery. These simulated microphones can prove our decisions, not what a real accessory sounds like. The release checklist keeps physical built-in, Bluetooth, USB receiver, and disconnect recordings explicitly pending.
 
 Final automated validation passed 28 unit checks and four UI tests. The owner subsequently completed on-device manual testing and confirmed microphone selection works as desired, authorizing the commit and PR. Specific accessory models and individual scenario results were not recorded, so the detailed checklist remains available for release regression testing.
+
+### QA Follow-up: An Idle Preview Still Holds the Studio Key
+
+PR #136 review caught a lifecycle gap: we released the manually managed audio session when leaving Video Walk, but not when its idle preview entered the background. A preview is still a microphone client even when no movie is being written. Scene deactivation now stops a non-recording preview; an active take uses the existing save flow with session shutdown requested afterward. Returning to the active scene uses the existing authorized-preview preparation path. The recording guard keeps shutdown from cutting off a file that is still finishing.
