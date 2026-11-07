@@ -4,13 +4,30 @@ Use this as the source draft for App Store Connect text for version 1.1.0. Keep 
 
 Public privacy policy URL: https://bald-traveler.com/asmr-walk-privacy-policy/
 
-## Short Description
+## Subtitle
+
+GPS routes and video walks
+
+## Promotional Text
+
+Record walks on iPhone or Apple Watch, choose your Video Walk microphone, and keep route memories together with private iCloud sync.
+
+## What’s New in This Version
+
+- Record GPS-only walks on Apple Watch and sync routes to iPhone through your private iCloud account.
+- Choose the iPhone microphone or a supported connected Bluetooth or USB microphone before a Video Walk. See the active input and notices when an accessory disconnects.
+- Add external-camera timing notes to Watch routes for use with separately recorded footage.
+- Improved Video Walk audio-session cleanup when leaving the preview or putting the app in the background.
+
+## Short Description (reference only; not an App Store Connect field)
 
 ASMR Walk is a walking journal for iPhone and Apple Watch with GPS routes, optional iPhone video walks, iCloud-synced route history, and GPX route exports.
 
 ## Description
 
 ASMR Walk helps you capture quiet walking memories. Record a GPS Walk on iPhone for a simple route journal, record a Video Walk on iPhone when you want camera and microphone audio alongside the route, or use the Apple Watch companion app to record a GPS-only walk from your wrist.
+
+Before a Video Walk, choose Automatic, the iPhone microphone, or a supported connected Bluetooth or USB microphone. The app shows the active input and locks microphone selection during recording. Available inputs depend on your connected hardware.
 
 Saved walk metadata and routes can sync through your private iCloud account. Watch recordings appear in iPhone History after sync with an Apple Watch source label. Video walks are stored in ASMR Walk on the device where they were recorded for playback with the saved route, and you can save a copy to Photos from the History detail screen. Full video files do not sync to other devices through ASMR Walk.
 
@@ -26,20 +43,35 @@ Version 1.1.0 requires iOS 26.0 or later for the iPhone app and includes a GPS-o
 
 walking, GPS, route, GPX, video walk, Apple Watch, walking journal, map, iCloud
 
-## Review Notes
+## App Review Notes — paste into App Review Information > Notes
 
-- Background location is used only for GPS Walk recordings.
-- Background GPS requires the user to enable Background GPS Recording in Settings and grant Always location permission.
-- Video Walk recordings stop when the app leaves the foreground.
-- The Apple Watch companion app records GPS-only walks. It does not record video or HealthKit workouts in version 1.1.0.
-- Watch recordings sync route metadata and points through the user's private iCloud database and appear in iPhone History after sync.
-- Watch-to-iPhone sync is being validated on physical Watch/iPhone hardware before App Store submission because Simulator sync was not reliable during development.
-- External-camera timing fields are notes for separately captured footage; ASMR Walk does not import or sync the external video file.
-- Finished video walks are stored locally in ASMR Walk by default.
-- Route data and recording metadata sync through the user's private iCloud database.
-- Full video files do not sync to other devices through ASMR Walk.
-- Users can save a copy of a video walk to Photos from the History detail screen.
-- Deleting an ASMR Walk recording removes the app-managed local video but does not delete user-saved Photos copies.
-- ASMR Walk uses Apple MapKit after saving a walk to generate route thumbnails and suggest editable place-based titles and descriptions.
-- ASMR Walk does not use developer-operated accounts, analytics, advertising, or backend upload code in version 1.1.0.
-- The Settings screen includes a Privacy Policy link.
+No ASMR Walk account or demo credentials are required. Core recording can be reviewed without an external microphone. Private iCloud sync requires devices signed into the same Apple Account with iCloud available.
+
+Microphone selection (new in 1.1.0):
+1. Use a physical iPhone. Open Video Walk and tap Start Video Walk to grant camera, microphone, and location permissions when requested. If this begins the first recording, stop it using the active recording banner; save or discard the short sample to return to the ready preview.
+2. Tap the microphone pill on the ready preview. Confirm Automatic and iPhone Microphone are available. Select iPhone Microphone and verify the displayed active input.
+3. Optionally connect a supported Bluetooth microphone or USB audio receiver. Open the picker, select its system-provided name, and check the active input. A wireless receiver attached through USB-C appears as USB audio. High-quality Bluetooth availability depends on the hardware and region; standard Bluetooth microphone routing is supported as fallback.
+4. Record at least 10 seconds while speaking, stop using the active recording banner, then play the saved Video Walk from History to check the audio. Microphone selection is disabled during recording. Repeat with Automatic or an available external input.
+5. Disconnect a selected external input. The app updates the effective input and displays a fallback notice. If a requested input cannot become active, an error prevents silently starting with the wrong microphone. Reconnect and select it again after stopping. Preferences apply to the current app session.
+6. With a ready preview and no recording underway, put the app in the background: camera/microphone use ends. Return to Video Walk: the authorized preview becomes available again. Background an active Video Walk: recording stops and saves before capture shuts down. Video recording is foreground-only.
+
+Other review paths:
+- On Apple Watch, start and stop a GPS-only walk and allow location access. With the paired iPhone and Watch signed into the same Apple Account, allow private iCloud sync; the recording appears in iPhone History with its Watch source. Watch recording does not use the camera, microphone, or HealthKit workouts.
+- External-camera timing fields on Watch routes store timing notes only; they do not import or sync external footage.
+- Optional background location applies only to iPhone GPS Walk. Enable Background GPS Recording in Settings and grant Always location permission before testing a GPS Walk with the screen locked.
+- New Video Walk movies stay in app-managed local storage. In History detail, Save Video to Photos explicitly exports a copy. Deleting a recording removes its app-managed files but leaves any saved Photos copy. Full videos do not sync through ASMR Walk; metadata and routes may sync privately through iCloud.
+- MapKit generates route thumbnails and editable place suggestions after saving. ASMR Walk has no developer-operated accounts, analytics, ads, tracking, or backend uploads. Settings includes the Privacy Policy link.
+
+The Mac importer and Final Cut Pro/Motion overlay are distributed separately in a Mac installer; neither is required to review the iPhone/Watch app.
+
+## Owner Submission Steps — do not paste into Review Notes
+
+1. Complete the outstanding physical-device and release checks in `RELEASE_CHECKLIST.md`, including the PR #136 idle-preview audio regression. Owner microphone testing passed, but that does not complete the Watch gates (#93 and #109) or Mac host validation (#79).
+2. Create/select iOS version **1.1.0** in App Store Connect. Upload a matching archive with a new build number and the Watch companion included; select the processed build. The Git tag is `release-1.1.0`, not the App Store version number.
+3. Paste Subtitle, Promotional Text (optional), Description, Keywords, and What’s New into the corresponding fields. Copy only each section’s content. Preserve and verify the existing support URL; use the public privacy policy URL above. Publish the updated `PRIVACY_POLICY.md` to that URL before submission.
+4. Paste App Review Notes into App Review Information > Notes. Leave Sign-in required unchecked. Verify the review contact name, email, and reachable phone number in App Store Connect; these are owner-provided account details, not demo credentials.
+5. Supply current iPhone and Apple Watch screenshots. Verify age rating, export compliance, privacy answers, and any accessibility claims against the actual archive and completed testing. Microphone selection adds no developer collection; private iCloud route sync and user-directed exports remain as described in the privacy policy.
+6. Select the desired release option (manual release allows coordination with the separate Mac installer), then submit when all applicable gates are complete. A pushed Git tag does not mean Apple has approved or published the version.
+7. When creating the GitHub 1.1.0 release from `release-1.1.0`, attach the verified, signed/notarized `ASMR-Walk-Mac-Tools-1.1.0.pkg` as a release asset. The installer is not an App Store Connect build upload. Confirm the artifact matches the intended Mac source; rebuild if Mac code changed after it was produced.
+
+Apple reference: [Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information/).

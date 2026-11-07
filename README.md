@@ -183,3 +183,7 @@ In the Mac importer, **Prepare Map** and **Prepare Segmented Maps** create both 
 Once the camera preview is ready, tap the microphone pill to choose **Automatic**, **iPhone Microphone**, or a connected Bluetooth/USB input. The picker shows the requested selection and the microphone iOS is actually using. Selection is locked during recording; disconnected inputs fall back to Automatic with a visible notice. Preferences last for the current app session rather than becoming a permanent Settings default.
 
 Wireless receivers connected over USB-C appear as USB inputs, regardless of their brand. High-quality Bluetooth recording is requested where supported, with ordinary Bluetooth microphone routing as fallback. Verify actual audio on your iPhone and accessories before relying on a route for a walk; simulator tests cover routing logic and UI, not microphone hardware.
+
+### Preparing the 1.1.0 submission
+
+[App Store copy and reviewer notes](APP_STORE_COPY.md) contains the paste-ready version text, microphone testing steps, and owner submission checklist. Complete the remaining hardware gates in [the release checklist](RELEASE_CHECKLIST.md) before submission. The `release-1.1.0` Git tag identifies the release automation commit; App Store publication and the separate GitHub Mac installer release still require their release steps.
