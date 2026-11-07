@@ -708,3 +708,7 @@ PR #136 review caught a lifecycle gap: we released the manually managed audio se
 The submission notes now give Apple a route through microphone selection: grant permissions, return to the ready preview, choose an input, record and listen, then check disconnect and background behavior. A permission prompt is the front door, not the microphone picker itself, so the instructions cover that first-run detour. The privacy policy now also names preview microphone use; the microphone can be busy before a movie starts.
 
 The release tag is `release-1.1.0` for CI/CD. Think of it as a luggage label, not a boarding pass: Watch hardware checks, the audio lifecycle regression, and long-route FCP validation still need their own evidence. App Store text covers the iPhone/Watch build, while the signed Mac installer will travel as a separate GitHub release attachment. This documentation pass does not certify those remaining checks or publish either release.
+
+### Two Tickets Must Show the Same Version
+
+TestFlight rejected the 1.1.0 upload with ITMS-90379 because the embedded Watch app still advertised 1.0. The iPhone version does not automatically update its companion target: each has its own marketing-version settings. Both Watch Debug and Release configurations now use 1.1.0, matching the iPhone. The release checklist now calls for checking the actual archived bundle versions together, so a successful compile cannot hide this packaging mismatch. The retry tag is `release-1.1.0a`; the app version remains 1.1.0.

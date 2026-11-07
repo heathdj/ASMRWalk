@@ -13,7 +13,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 ## Required Target Settings
 
 - [ ] Bundle identifier is final.
-- [ ] Version is `1.1.0`.
+- [ ] Version is `1.1.0` in both iPhone and Watch Debug/Release configurations. Confirm `CFBundleShortVersionString` matches in the archived iPhone app and its embedded Watch app before upload.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.
