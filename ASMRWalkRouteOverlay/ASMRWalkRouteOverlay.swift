@@ -107,6 +107,14 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         )
 
         parameterAPI.addPopupMenu(
+            withName: "Map Appearance",
+            parameterID: ASMRWalkRouteOverlayParameterID.mapAppearance,
+            defaultValue: 0,
+            menuEntries: ["Light", "Dark"],
+            parameterFlags: FxParameterFlags(kFxParameterFlag_NOT_ANIMATABLE)
+        )
+
+        parameterAPI.addPopupMenu(
             withName: "Map Position",
             parameterID: ASMRWalkRouteOverlayParameterID.mapPosition,
             defaultValue: 1,
@@ -194,7 +202,10 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             showCurrentPosition: showCurrentPosition,
             showStartEndMarkers: showStartEndMarkers,
             showMapBackground: showMapBackground,
-            mapStyle: mapStyle
+            mapStyle: mapStyle,
+            mapAppearance: ASMRRouteMapAppearance(rawValue: intParameter(
+                ASMRWalkRouteOverlayParameterID.mapAppearance, defaultValue: 0, at: renderTime
+            )) ?? .light
         )
 
         let state = ASMRWalkRouteOverlayState(
@@ -249,8 +260,7 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             guard let url = Self.resolvedPackageURL(from: state.packageSelectionData) else { return nil }
             guard let package = Self.packageCache.cachedPreparedPackage(at: url) else { return nil }
             if let filename = state.renderPlan.mapBackgroundFilename {
-                return package.mapBackgrounds.first { $0.metadata.filename == filename }?.bitmap
-                    ?? package.mapBackground
+                return package.bitmap(filename: filename)
             }
             return package.mapBackground
         }
@@ -434,6 +444,11 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
             toParameter: ASMRWalkRouteOverlayParameterID.showMapBackground
         )
 
+        settingAPI.setParameterFlags(
+            FxParameterFlags(toggleFlags),
+            toParameter: ASMRWalkRouteOverlayParameterID.mapAppearance
+        )
+
         let controlFlags = FxParameterFlags(mapAvailable ? kFxParameterFlag_DEFAULT : kFxParameterFlag_DISABLED)
         for parameterID in [
             ASMRWalkRouteOverlayParameterID.mapPosition,
@@ -567,7 +582,8 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
         showCurrentPosition: Bool,
         showStartEndMarkers: Bool,
         showMapBackground: Bool,
-        mapStyle: ASMRRouteOverlayMapStyle
+        mapStyle: ASMRRouteOverlayMapStyle,
+        mapAppearance: ASMRRouteMapAppearance
     ) -> ASMRRouteOverlayRenderPlan {
         guard let packageURL else { return .empty }
 
@@ -596,7 +612,9 @@ final class ASMRWalkRouteOverlayPlugin: NSObject, FxTileableEffect {
                 mapStyle: mapStyle,
                 preparedMapBackground: preparedPackage.mapBackground,
                 preparedMapBackgrounds: preparedPackage.mapBackgrounds,
-                usesPreparedMapBackground: true
+                usesPreparedMapBackground: true,
+                mapAppearance: mapAppearance,
+                preparedSingleMapBackground: preparedPackage.singleMapBackground
             )
         } catch {
             return .empty
@@ -753,4 +771,5 @@ private enum ASMRWalkRouteOverlayParameterID {
     static let packageStatus: UInt32 = 13
     static let timingOffset: UInt32 = 14
     static let timingStatus: UInt32 = 15
+    static let mapAppearance: UInt32 = 16
 }

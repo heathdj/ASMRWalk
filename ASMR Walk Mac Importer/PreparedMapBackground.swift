@@ -9,6 +9,15 @@ import MapKit
 struct PreparedMapBackground: Equatable, Sendable {
     let metadata: ASMRRoutePackage.MapBackground
     let imageData: Data
+    var darkImageData: Data? = nil
+
+    var assets: [String: Data] {
+        var result = [metadata.filename: imageData]
+        if let filename = metadata.darkFilename, let darkImageData {
+            result[filename] = darkImageData
+        }
+        return result
+    }
 
     var image: NSImage? {
         NSImage(data: imageData)
@@ -88,6 +97,34 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
             throw PreparationError.emptyRoute
         }
 
+        let light = try await prepareSnapshot(points: points, filename: filename, pointRange: pointRange, appearance: .aqua)
+        let darkFilename = String(filename.dropLast(4)) + "-dark.png"
+        let dark = try await prepareSnapshot(points: points, filename: darkFilename, pointRange: pointRange, appearance: .darkAqua)
+        guard Self.projectionsMatch(light.metadata, dark.metadata) else {
+            throw PreparationError.invalidProjection
+        }
+        var metadata = light.metadata
+        metadata.darkFilename = darkFilename
+        return PreparedMapBackground(metadata: metadata, imageData: light.imageData, darkImageData: dark.imageData)
+    }
+
+    // Reject mismatched snapshots instead of letting an appearance change move the route.
+    static func projectionsMatch(_ light: ASMRRoutePackage.MapBackground, _ dark: ASMRRoutePackage.MapBackground) -> Bool {
+        guard light.pixelWidth == dark.pixelWidth, light.pixelHeight == dark.pixelHeight,
+              light.scale == dark.scale else { return false }
+        let tolerance = min(light.mapRectWidth / Double(max(1, light.pixelWidth)),
+                            light.mapRectHeight / Double(max(1, light.pixelHeight))) * 0.001
+        return zip([light.mapRectOriginX, light.mapRectOriginY, light.mapRectWidth, light.mapRectHeight],
+                   [dark.mapRectOriginX, dark.mapRectOriginY, dark.mapRectWidth, dark.mapRectHeight])
+            .allSatisfy { abs($0 - $1) <= tolerance }
+    }
+
+    private func prepareSnapshot(
+        points: [RoutePreview.RoutePoint],
+        filename: String,
+        pointRange: ClosedRange<Int>?,
+        appearance: NSAppearance.Name
+    ) async throws -> PreparedMapBackground {
         let mapRect = Self.mapRect(for: points)
         let options = MKMapSnapshotter.Options()
         options.mapRect = mapRect
@@ -95,7 +132,7 @@ struct MapBackgroundPreparer: MapBackgroundPreparing {
         options.mapType = .standard
         options.showsBuildings = true
         options.pointOfInterestFilter = .includingAll
-        options.appearance = NSAppearance(named: .aqua)
+        options.appearance = NSAppearance(named: appearance)
 
         let snapshotter = MKMapSnapshotter(options: options)
         let snapshot = try await withCheckedThrowingContinuation { continuation in

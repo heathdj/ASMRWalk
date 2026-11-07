@@ -90,7 +90,9 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
         mapStyle: ASMRRouteOverlayMapStyle = .default,
         preparedMapBackground: ASMRRouteOverlayBitmap? = nil,
         preparedMapBackgrounds: [ASMRRoutePackageInput.DecodedMapBackground] = [],
-        usesPreparedMapBackground: Bool = false
+        usesPreparedMapBackground: Bool = false,
+        mapAppearance: ASMRRouteMapAppearance = .light,
+        preparedSingleMapBackground: ASMRRoutePackageInput.DecodedMapBackground? = nil
     ) -> ASMRRouteOverlayRenderPlan {
         let routeStart = routePackage.manifest.routeStartedAt
         let rawRouteDuration = max(
@@ -110,7 +112,9 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             routeStart: routeStart,
             elapsedSeconds: elapsedSeconds
         )
-        let projectionMetadata = activePreparedBackground?.metadata
+        let selectedBackground = activePreparedBackground
+            ?? (usesPreparedMapBackground ? preparedSingleMapBackground : routePackage.decodedSingleMapBackground())
+        let projectionMetadata = selectedBackground?.metadata
             ?? routePackage.manifest.mapBackground
         let timedPoints = simplified(
             normalizedTimedPoints(from: routePackage, mapBackground: projectionMetadata),
@@ -139,11 +143,9 @@ struct ASMRRouteOverlayRenderPlan: Codable, Equatable, Sendable {
             endPosition: showStartEndMarkers ? timedPoints.last?.point : nil,
             style: style,
             mapBackground: showMapBackground
-                ? (usesPreparedMapBackground
-                    ? (activePreparedBackground?.bitmap ?? preparedMapBackground ?? preparedMapBackgrounds.first?.bitmap)
-                    : (activePreparedBackground?.bitmap ?? routePackage.decodedMapBackground()))
+                ? (selectedBackground?.bitmap(for: mapAppearance) ?? preparedMapBackground)
                 : nil,
-            mapBackgroundFilename: projectionMetadata?.filename,
+            mapBackgroundFilename: selectedBackground?.filename(for: mapAppearance) ?? projectionMetadata?.filename,
             mapStyle: mapStyle
         )
     }

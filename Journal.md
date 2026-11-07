@@ -676,3 +676,13 @@ This is the starting line, so the main retrospective is a guardrail: define the 
 ### Final Review Before the PR
 
 The owner confirmed the repaired drop zone and helper lifecycle on November 2. Final validation passed 43 importer tests and 41 overlay/UI cases, plus shell syntax and Motion template XML checks. Review tightened the installer's last ownership command to avoid recursively touching unrelated templates in the same category. The real over-100-point walk remains a weekend field check, and light/dark variants remain issue #133. The distinction matters: a passing short walk is evidence for that path, not a permission slip to declare every long-route transition validated.
+
+### Two Paint Jobs, One Street Grid — Issue #133
+
+Light and Dark maps are like two paint jobs on the same house: the windows must stay put. The importer now asks MapKit for both appearances explicitly, calibrates each snapshot's actual bounds, and refuses to bundle a pair if their projections differ by more than a thousandth of a pixel. Both images share one metadata object, so changing colors cannot quietly change the route's ruler.
+
+We kept schema 3 and added an optional `darkFilename`. Existing packages remain readable, and an absent or damaged dark image falls back to the light image for the same segment. The selected filename crosses the FxPlug render-state boundary, which matters because FCP prepares state and draws frames in separate steps. Decoded pixels stay cached; frame rendering still needs no MapKit or network access.
+
+The first validation pass passed 46 importer cases and 44 overlay cases. A live MapKit run created distinct pairs for a single map and a synthetic 101-point route with two segments. That proves preparation and projection agreement, not the owner's real-world FCP export: persistence, playback/export, and a longer recorded walk remain explicit field checks.
+
+The final pass also exercised both appearances across segment boundaries and kept the appearance control non-animatable when its enabled state changes. Mac and iPhone builds passed. The universal 1.1.0 installer was rebuilt, signed, accepted by Apple's notary service, stapled, and accepted by Gatekeeper as Notarized Developer ID. It remains a local owner-test artifact; no release was published.

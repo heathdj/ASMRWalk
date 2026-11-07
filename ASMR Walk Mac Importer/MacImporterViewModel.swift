@@ -113,7 +113,7 @@ final class MacImporterViewModel {
             preparedMapBackgrounds = []
             packageURL = nil
             statusTitle = "Map Background Ready"
-            statusMessage = "The next package will include a local map image. Final Cut Pro rendering will not contact MapKit."
+            statusMessage = "The next package will include Light and Dark maps. Choose Map Appearance in Final Cut Pro."
             statusSystemImage = "map.fill"
         } catch {
             preparedMapBackground = nil
@@ -136,7 +136,7 @@ final class MacImporterViewModel {
             preparedMapBackground = nil
             packageURL = nil
             statusTitle = "Segmented Maps Ready"
-            statusMessage = "\(preparedMapBackgrounds.count) local map images will be included for deterministic offline rendering."
+            statusMessage = "\(preparedMapBackgrounds.count) map segments, each with Light and Dark images, will be included for offline rendering."
             statusSystemImage = "map.fill"
         } catch {
             preparedMapBackgrounds = []

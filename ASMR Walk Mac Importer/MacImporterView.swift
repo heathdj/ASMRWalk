@@ -194,7 +194,7 @@ struct MacImporterView: View {
                 }
                 .accessibilityLabel("Prepared map segment previews")
 
-                Text("\(viewModel.preparedMapBackgrounds.count) PNG map segments will be stored inside the route package.")
+                Text("\(viewModel.preparedMapBackgrounds.count) map segments will be stored with both Light and Dark images.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else if let background = viewModel.preparedMapBackground, let image = background.image {
@@ -205,11 +205,11 @@ struct MacImporterView: View {
                     .clipShape(.rect(cornerRadius: 8))
                     .accessibilityLabel("Prepared map background preview")
 
-                Text("This PNG will be stored inside the route package for deterministic offline rendering.")
+                Text("Light and Dark maps will be stored in the package. Choose Map Appearance in Final Cut Pro.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
-                Text("Prepare a static MapKit image for the plugin, or export the existing transparent route-only overlay.")
+                Text("Prepare Light and Dark maps for the plugin, or export the transparent route-only overlay.")
                     .foregroundStyle(.secondary)
             }
 

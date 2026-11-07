@@ -28,6 +28,7 @@ REQUIRED_PUBLISHED_TARGETS=(
     '<target object="10012" channel="./2/1/2" name="Show Current Position"/>'
     '<target object="10012" channel="./2/1/3" name="Show Start and End Markers"/>'
     '<target object="10012" channel="./2/1/5" name="Map Background"/>'
+    '<target object="10012" channel="./2/1/16" name="Map Appearance"/>'
     '<target object="10012" channel="./2/1/6" name="Map Position"/>'
     '<target object="10012" channel="./2/1/7" name="Map Size"/>'
     '<target object="10012" channel="./2/1/8" name="Map Corners"/>'
