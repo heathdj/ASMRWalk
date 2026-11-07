@@ -266,3 +266,20 @@ Run these on physical devices before submission:
 - [ ] Save/reopen the FCP project with Dark selected and export a short clip; verify the choice persists and matches playback.
 - [ ] Check an older single-map package and a package missing one dark segment; confirm the existing/same-segment light image remains usable.
 - [ ] Check a real walk over 100 points in both appearances, including segment transitions and HD/4K export (owner field validation remains pending).
+
+### Issue #125 — Video Walk microphone inputs
+
+- [ ] On a physical iPhone, open the ready Video Walk preview and tap the microphone pill; confirm Automatic and iPhone Microphone are present.
+- [ ] Connect a USB-C receiver microphone and a supported Bluetooth microphone; confirm system names and input types appear without restarting the app or repeating permission prompts.
+- [ ] Select each input, record a short take, and listen to the saved video to verify the intended microphone supplied the audio. Test Automatic too.
+- [ ] Confirm the picker is disabled during a take. Disconnect the selected peripheral before recording and during a take; confirm the effective input/fallback notice updates and the saved movie remains playable.
+- [ ] Reconnect a microphone; confirm the list updates and the user can explicitly reselect it after stopping.
+- [ ] Verify that failed selections explain the error, and recording cannot silently begin while the requested and effective inputs differ.
+- [ ] Check VoiceOver labels/selection, large Dynamic Type, denied/restricted permissions, and returning from Settings.
+- [ ] Switch tabs, background/foreground, and rapidly reopen Video Walk; confirm microphone access ends after preview shutdown and restarts correctly.
+- [ ] Where hardware and region support it, check Bluetooth high-quality recording; unsupported routes must remain usable through HFP. This optional capability is not a release requirement.
+
+- [x] Owner completed on-device manual testing and confirmed the feature works as desired before authorizing the commit and PR.
+- [x] Xcode build, 28 unit checks, and four UI tests passed.
+
+The scenario list above remains a release regression checklist; specific accessory models and per-scenario results were not supplied. The owner confirmation applies to #125 and does not complete the separate #93 or #109 release gates.

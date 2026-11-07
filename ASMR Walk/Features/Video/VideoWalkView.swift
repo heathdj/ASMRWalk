@@ -178,6 +178,7 @@ struct VideoWalkView: View {
     let coordinator: RecordingCoordinator
     let stopRequestID: UUID?
     let showActiveRecording: () -> Void
+    @State private var isShowingMicrophonePicker = false
     @State private var isStopping = false
     @State private var isShowingShortRecordingConfirmation = false
     @State private var shouldStopSessionAfterShortConfirmation = false
@@ -245,6 +246,9 @@ struct VideoWalkView: View {
                 return
             }
             stopVideoWalk()
+        }
+        .sheet(isPresented: $isShowingMicrophonePicker) {
+            VideoMicrophonePicker(camera: camera)
         }
         .confirmationDialog("Save Short Video Walk?", isPresented: $isShowingShortRecordingConfirmation) {
             Button("Save Video Walk") {
@@ -373,10 +377,24 @@ struct VideoWalkView: View {
                     isCharging: dockKitAccessory.isCharging
                 )
             }
-            MicLevelIndicator(
-                level: camera.audioLevel,
-                inputName: camera.audioInputName
-            )
+            Button {
+                isShowingMicrophonePicker = true
+            } label: {
+                MicLevelIndicator(level: camera.audioLevel, inputName: camera.audioInputName)
+            }
+            .buttonStyle(.plain)
+            .disabled(camera.canSelectAudioInput == false || isRecordingVideoWalk || isStopping)
+            .accessibilityLabel("Microphone input")
+            .accessibilityValue(camera.audioInputName ?? "No microphone available")
+            .accessibilityHint("Choose the microphone before recording.")
+            .accessibilityIdentifier("videoWalk.microphoneButton")
+            if let message = camera.audioInputs.message {
+                Text(message)
+                    .font(.caption)
+                    .padding(8)
+                    .background(.black.opacity(0.7), in: .rect(cornerRadius: 8))
+                    .foregroundStyle(.white)
+            }
         }
     }
 
@@ -502,7 +520,7 @@ struct VideoWalkView: View {
     }
 
     private var isRecordingButtonDisabled: Bool {
-        isStopping || (isBlockedByWalk == false && privacyIssue != nil)
+        isStopping || camera.isPreparing || (isBlockedByWalk == false && privacyIssue != nil)
     }
 
     private var privacyIssue: VideoWalkPrivacyIssue? {

@@ -13,7 +13,7 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - History tab for saved walk recordings.
 - GPS-only walk recording with a live MapKit route overlay.
 - Optional background GPS recording for GPS-only walks, gated by a Settings toggle and Always location permission.
-- Video walk recording with camera preview, microphone audio, landscape-first UI, and live route overlay.
+- Video walk recording with camera preview, selectable built-in/Bluetooth/USB microphone input, landscape-first UI, and live route overlay.
 - Apple Watch GPS-only recording with live elapsed time, distance, route-point count, GPS status, save, and discard controls.
 - Saved video walk playback with a synchronized route-progress map overlay.
 - SwiftData persistence with private iCloud sync for recording metadata and route points.
@@ -177,3 +177,9 @@ These are future ideas, not shipped 1.1.0 features:
 ### Light and Dark overlay maps
 
 In the Mac importer, **Prepare Map** and **Prepare Segmented Maps** create both appearances. Export a fresh `.asmrroute`, then choose **Light** or **Dark** under **Map Appearance** in the FCP generator. Older packages continue to work using their existing image for either selection; prepare them again to add Dark. Install the updated Mac tools together and add a fresh generator instance if an existing timeline does not expose the new control.
+
+### Choosing a Video Walk microphone
+
+Once the camera preview is ready, tap the microphone pill to choose **Automatic**, **iPhone Microphone**, or a connected Bluetooth/USB input. The picker shows the requested selection and the microphone iOS is actually using. Selection is locked during recording; disconnected inputs fall back to Automatic with a visible notice. Preferences last for the current app session rather than becoming a permanent Settings default.
+
+Wireless receivers connected over USB-C appear as USB inputs, regardless of their brand. High-quality Bluetooth recording is requested where supported, with ordinary Bluetooth microphone routing as fallback. Verify actual audio on your iPhone and accessories before relying on a route for a walk; simulator tests cover routing logic and UI, not microphone hardware.
