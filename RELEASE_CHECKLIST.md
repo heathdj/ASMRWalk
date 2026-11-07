@@ -2,10 +2,18 @@
 
 Use this before uploading `1.1.0` to App Store Connect.
 
+## 1.1.0 Submission Handoff
+
+- [ ] Copy the 1.1.0 metadata and Apple reviewer microphone testing notes from `APP_STORE_COPY.md` into App Store Connect.
+- [ ] Publish the updated privacy policy, including authorized Video Walk preview microphone use, at the public policy URL.
+- [ ] Record physical-device evidence for Watch gates #93 and #109 and the PR #136 background-preview audio regression; retain #79 Mac host/long-route checks as separate release gates.
+- [ ] Select the processed 1.1.0 archive with the intended build number and Watch companion; verify screenshots and review contact details.
+- [ ] After Mac validation, attach the verified signed/notarized installer to the GitHub release based on `release-1.1.0`. A tag push alone does not complete release validation or App Store submission.
+
 ## Required Target Settings
 
 - [ ] Bundle identifier is final.
-- [ ] Version is `1.1.0`.
+- [ ] Version is `1.1.0` in both iPhone and Watch Debug/Release configurations. Confirm `CFBundleShortVersionString` matches in the archived iPhone app and its embedded Watch app before upload.
 - [ ] Build number is incremented for every upload.
 - [ ] Generated launch screen is enabled.
 - [ ] App icon is configured.

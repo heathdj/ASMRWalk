@@ -1,6 +1,6 @@
 # ASMR Walk Privacy Policy
 
-Last updated: August 30, 2026
+Last updated: November 7, 2026
 
 ASMR Walk is designed as a private walking journal. The app records walking routes, optional video walks on your iPhone, and GPS-only walks from the Apple Watch companion app. ASMR Walk does not run a developer-operated account system, analytics service, advertising network, or backend server.
 
@@ -30,7 +30,7 @@ After a recording is saved, ASMR Walk may use Apple's MapKit services to generat
 
 ## Camera And Microphone
 
-ASMR Walk uses the camera and microphone only for iPhone Video Walk recording. Video capture happens on your device. Apple Watch recordings do not use the camera or microphone.
+ASMR Walk uses the camera and microphone for the iPhone Video Walk preview and recording after you grant permission. You can select the built-in microphone or a supported connected Bluetooth or USB input before recording. Camera and microphone use ends when the preview shuts down; an active Video Walk stops and saves when the app leaves the foreground. Video capture happens on your device, and microphone selection does not upload audio to a developer-operated service. Apple Watch recordings do not use the camera or microphone.
 
 ## Photos
 
