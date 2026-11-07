@@ -67,9 +67,10 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
             try mapBackgroundData.write(to: packageURL.appending(path: mapBackground.filename), options: .atomic)
         }
 
-        for mapBackground in manifest.mapBackgrounds ?? [] {
-            guard let data = mapBackgroundDataByFilename[mapBackground.filename] else { continue }
-            try data.write(to: packageURL.appending(path: mapBackground.filename), options: .atomic)
+        let backgrounds = [manifest.mapBackground].compactMap { $0 } + (manifest.mapBackgrounds ?? [])
+        for filename in Set(backgrounds.flatMap(\.assetFilenames)) {
+            guard let data = mapBackgroundDataByFilename[filename] else { continue }
+            try data.write(to: packageURL.appending(path: filename), options: .atomic)
         }
     }
 
@@ -98,12 +99,11 @@ nonisolated struct ASMRRoutePackage: Equatable, Sendable {
         let mapBackgroundData = manifest.mapBackground.flatMap {
             try? Data(contentsOf: packageURL.appending(path: $0.filename))
         }
-        let mapBackgroundDataByFilename = Dictionary(
-            uniqueKeysWithValues: (manifest.mapBackgrounds ?? []).compactMap { background in
-                let url = packageURL.appending(path: background.filename)
-                return (try? Data(contentsOf: url)).map { (background.filename, $0) }
-            }
-        )
+        let backgrounds = [manifest.mapBackground].compactMap { $0 } + (manifest.mapBackgrounds ?? [])
+        let filenames = Set(backgrounds.flatMap(\.assetFilenames))
+        let mapBackgroundDataByFilename = Dictionary(uniqueKeysWithValues: filenames.compactMap { filename in
+            (try? Data(contentsOf: packageURL.appending(path: filename))).map { (filename, $0) }
+        })
 
         guard routePoints.count == manifest.routePointCount else {
             throw PackageError.routePointCountMismatch(
@@ -185,6 +185,12 @@ extension ASMRRoutePackage {
         var lastRoutePointIndex: Int? = nil
         var startTimestamp: Date? = nil
         var endTimestamp: Date? = nil
+        // Both appearances share the projection and segment timing above.
+        var darkFilename: String? = nil
+
+        var assetFilenames: [String] {
+            [filename] + [darkFilename].compactMap { $0 }
+        }
     }
 
     nonisolated struct RoutePoint: Codable, Equatable, Sendable {

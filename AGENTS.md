@@ -29,6 +29,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - The FxPlug route overlay defaults to stretching route progress across the host effect duration, offers GPX timestamp timing as an alternative, and caps prepared render geometry at 2,048 deterministically sampled points.
 - The Version 1.1 Mac installer ships both the importer and the route-overlay wrapper in `/Applications`; the importer validates and launches the wrapper for registration but never mutates its signed embedded `.pluginkit`.
 - The installer deploys the ASMR Walk Motion generator into the signed-in user’s `Movies/Motion Templates.localized/Generators.localized` hierarchy, replacing only the ASMR Walk-owned template and preserving unrelated templates.
+- Prepared maps include explicit light/dark PNG pairs using optional `darkFilename` metadata. Both appearances share one calibrated projection and segment timing; FxPlug parameter 16 selects appearance with same-segment fallback for legacy or missing variants.
 - `.asmrroute` schema 3 supports ordered prepared map segments for routes over 100 points; segments contain at most 100 points with five-point overlap, exact projection/timing ranges, deterministic filenames, and schema 1/2 compatibility.
 - App appearance is controlled by `AppTheme` in `@AppStorage`, defaulting to system appearance.
 - Startup should go directly from the native static launch screen to `ContentView`; do not reintroduce an artificial SwiftUI splash delay.

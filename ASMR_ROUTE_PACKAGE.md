@@ -9,8 +9,10 @@ Example Walk.asmrroute/
   manifest.json
   route-points.json
   source.gpx        optional
-  map-background.png optional legacy single map
-  map-background-001.png optional first segmented map
+  map-background.png optional light single map
+  map-background-dark.png optional dark single map
+  map-background-001.png optional first light segmented map
+  map-background-001-dark.png optional first dark segmented map
   map-background-002.png optional additional segmented maps
 ```
 
@@ -50,6 +52,14 @@ Schema 2 may include `map-background.png` plus a `mapBackground` manifest object
 The Mac importer generates this asset only after an explicit **Prepare Map** action. FxPlug reads and caches the local PNG, projects route coordinates against the stored rectangle, and never contacts MapKit, Photos, CloudKit, or the network during timeline rendering or export. The renderer requires a PNG matching the manifest dimensions and valid positive scale/map bounds. Missing, corrupt, unsupported, or mismatched images fall back to the transparent route-only renderer, disable the map controls, and surface the reason through the plugin's Map Status field.
 
 For routes over 100 points, schema 3 also offers **Prepare Segmented Maps**. Segments contain at most 100 points with a deterministic five-point overlap and use ordered names such as `map-background-001.png`. Every `mapBackgrounds` entry includes the same pixel and Web Mercator metadata as a single map plus inclusive route-point indices and start/end timestamps. FxPlug selects the segment from route time, keeps decoded images cached, and falls back to another usable segment or the transparent route when an asset is unavailable.
+
+### Light and Dark appearances (Version 1.1.0)
+
+New preparations create explicit Light (`aqua`) and Dark (`darkAqua`) snapshots regardless of macOS appearance. Each single map or segment may add an optional `darkFilename` alongside its existing `filename` (Light). Both images share the object's dimensions, scale, Web Mercator bounds, point range, and timestamps. Preparation checks the captured projections agree within 0.001 pixel before exporting the pair. This additive schema-3 field preserves older readers and packages.
+
+The generator's **Map Appearance** menu defaults to **Light** and offers **Dark**. The selected local asset filename travels with the render plan, so playback and export use the same cached image. Appearance does not alter route geometry, timing, panel size, position, corners, or opacity. Missing, corrupt, unsupported, or dimension-mismatched variants fall back to the usable image for that same segment; packages with only the original map use it for either choice. If neither image is usable, existing segment/route-only fallback applies.
+
+To add Dark to an older package, prepare its maps again in the updated importer and export a fresh package. The installer updates the importer, FxPlug wrapper, and Motion generator together. Existing timeline instances may need to be replaced to expose the newly published control.
 
 ## `route-points.json`
 

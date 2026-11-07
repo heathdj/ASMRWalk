@@ -173,3 +173,7 @@ These are future ideas, not shipped 1.1.0 features:
 - HealthKit workout integration.
 - Burned-in video map overlay export.
 - Shared route/model package for future iPhone, Watch, Mac importer, and Final Cut Pro plugin reuse.
+
+### Light and Dark overlay maps
+
+In the Mac importer, **Prepare Map** and **Prepare Segmented Maps** create both appearances. Export a fresh `.asmrroute`, then choose **Light** or **Dark** under **Map Appearance** in the FCP generator. Older packages continue to work using their existing image for either selection; prepare them again to add Dark. Install the updated Mac tools together and add a fresh generator instance if an existing timeline does not expose the new control.

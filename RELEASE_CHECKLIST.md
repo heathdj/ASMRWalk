@@ -255,4 +255,14 @@ Run these on physical devices before submission:
 - [x] Owner confirmed overlay helper shutdown works as requested; automated Close, red-window, and importer-termination UI checks also pass.
 - [x] Final review: 43 importer tests and 41 overlay/UI cases pass; Motion template and shell/XML checks pass.
 - [ ] Real route exceeding 100 points and full playback/export transition matrix remain pending; do not treat the short-route smoke check as completion of #79.
-- Light/dark prepared maps and generator selection remain future work in #133 (Version 1.1.0).
+
+### Issue #133 — Light and Dark maps
+
+- [x] Importer and overlay unit coverage verifies paired asset round trips, appearance selection, geometry preservation, north-up decoding, cache invalidation, and legacy/missing/corrupt fallback.
+- [x] Live MapKit preparation produced distinct Light/Dark PNGs with matching captured projections for a single map and both segments of a synthetic 101-point route.
+- [x] Rebuilt universal 1.1.0 installer; Developer ID signing, Apple notarization, stapling, and Gatekeeper assessment passed.
+- [ ] Install the rebuilt package, prepare fresh maps, and confirm the generator exposes Map Appearance with Light/Dark choices.
+- [ ] Switch appearances in FCP; verify streets, route, markers, corners, position, size, opacity, and timing remain aligned.
+- [ ] Save/reopen the FCP project with Dark selected and export a short clip; verify the choice persists and matches playback.
+- [ ] Check an older single-map package and a package missing one dark segment; confirm the existing/same-segment light image remains usable.
+- [ ] Check a real walk over 100 points in both appearances, including segment transitions and HD/4K export (owner field validation remains pending).

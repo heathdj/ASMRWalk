@@ -59,12 +59,11 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
         let mapBackgroundData = manifest.mapBackground.flatMap {
             try? Data(contentsOf: packageURL.appending(path: $0.filename))
         }
-        let mapBackgroundDataByFilename = Dictionary(
-            uniqueKeysWithValues: (manifest.mapBackgrounds ?? []).compactMap { background in
-                let url = packageURL.appending(path: background.filename)
-                return (try? Data(contentsOf: url)).map { (background.filename, $0) }
-            }
-        )
+        let backgrounds = [manifest.mapBackground].compactMap { $0 } + (manifest.mapBackgrounds ?? [])
+        let filenames = Set(backgrounds.flatMap(\.assetFilenames))
+        let mapBackgroundDataByFilename = Dictionary(uniqueKeysWithValues: filenames.compactMap { filename in
+            (try? Data(contentsOf: packageURL.appending(path: filename))).map { (filename, $0) }
+        })
 
         return ASMRRoutePackageInput(
             manifest: manifest,
@@ -81,49 +80,27 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
     }
 
     func decodedMapBackground() -> ASMRRouteOverlayBitmap? {
-        guard let metadata = manifest.mapBackground,
-              metadata.pixelWidth > 0,
-              metadata.pixelHeight > 0,
-              metadata.scale > 0,
-              metadata.mapRectWidth > 0,
-              metadata.mapRectHeight > 0,
-              let mapBackgroundData,
-              let source = CGImageSourceCreateWithData(mapBackgroundData as CFData, nil),
-              CGImageSourceGetType(source) as String? == UTType.png.identifier,
-              let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
-              image.width == metadata.pixelWidth,
-              image.height == metadata.pixelHeight else {
-            return nil
-        }
+        decodedSingleMapBackground()?.bitmap
+    }
 
-        var bitmap = ASMRRouteOverlayBitmap(width: image.width, height: image.height)
-        let rendered = bitmap.rgbaPixels.withUnsafeMutableBytes { bytes -> Bool in
-            guard let baseAddress = bytes.baseAddress,
-                  let context = CGContext(
-                    data: baseAddress,
-                    width: image.width,
-                    height: image.height,
-                    bitsPerComponent: 8,
-                    bytesPerRow: image.width * 4,
-                    space: CGColorSpaceCreateDeviceRGB(),
-                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-                  ) else { return false }
-            // CGImage drawing already preserves PNG scanline order in this bitmap.
-            // Keep row zero north-up to match the route projection.
-            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
-            return true
-        }
-        return rendered ? bitmap : nil
+    func decodedSingleMapBackground() -> DecodedMapBackground? {
+        guard let metadata = manifest.mapBackground else { return nil }
+        return decodedBackground(metadata: metadata, lightData: mapBackgroundData)
     }
 
     func decodedMapBackgrounds() -> [DecodedMapBackground] {
         (manifest.mapBackgrounds ?? []).compactMap { metadata in
-            guard let data = mapBackgroundDataByFilename[metadata.filename],
-                  let bitmap = Self.decodeMapBackground(data: data, metadata: metadata) else {
-                return nil
-            }
-            return DecodedMapBackground(metadata: metadata, bitmap: bitmap)
+            decodedBackground(metadata: metadata, lightData: mapBackgroundDataByFilename[metadata.filename])
         }
+    }
+
+    private func decodedBackground(metadata: MapBackground, lightData: Data?) -> DecodedMapBackground? {
+        let light = lightData.flatMap { Self.decodeMapBackground(data: $0, metadata: metadata) }
+        let dark = metadata.darkFilename.flatMap { mapBackgroundDataByFilename[$0] }
+            .flatMap { Self.decodeMapBackground(data: $0, metadata: metadata) }
+        guard let bitmap = light ?? dark else { return nil }
+        return DecodedMapBackground(metadata: metadata, bitmap: bitmap, darkBitmap: dark,
+                                    lightUsesDarkFallback: light == nil)
     }
 
     private static func decodeMapBackground(
@@ -178,7 +155,25 @@ struct ASMRRoutePackageInput: Equatable, Sendable {
     struct DecodedMapBackground: Equatable, Sendable {
         let metadata: MapBackground
         let bitmap: ASMRRouteOverlayBitmap
+        var darkBitmap: ASMRRouteOverlayBitmap? = nil
+        var lightUsesDarkFallback = false
+
+        func bitmap(for appearance: ASMRRouteMapAppearance) -> ASMRRouteOverlayBitmap {
+            appearance == .dark ? darkBitmap ?? bitmap : bitmap
+        }
+
+        func filename(for appearance: ASMRRouteMapAppearance) -> String {
+            if (appearance == .dark && darkBitmap != nil) || lightUsesDarkFallback {
+                return metadata.darkFilename ?? metadata.filename
+            }
+            return metadata.filename
+        }
     }
+}
+
+enum ASMRRouteMapAppearance: Int, Codable, CaseIterable, Sendable {
+    case light
+    case dark
 }
 
 enum ASMRRouteMapAvailability: Equatable, Sendable {
@@ -217,6 +212,16 @@ final class ASMRRouteOverlayPackageCache: @unchecked Sendable {
         let routePackage: ASMRRoutePackageInput
         let mapBackground: ASMRRouteOverlayBitmap?
         let mapBackgrounds: [ASMRRoutePackageInput.DecodedMapBackground]
+        var singleMapBackground: ASMRRoutePackageInput.DecodedMapBackground? = nil
+
+        func bitmap(filename: String) -> ASMRRouteOverlayBitmap? {
+            let backgrounds = [singleMapBackground].compactMap { $0 } + mapBackgrounds
+            for background in backgrounds {
+                if background.filename(for: .light) == filename { return background.bitmap }
+                if background.metadata.darkFilename == filename { return background.darkBitmap }
+            }
+            return nil
+        }
 
         var mapAvailability: ASMRRouteMapAvailability {
             if let expectedSegments = routePackage.manifest.mapBackgrounds,
@@ -260,10 +265,12 @@ final class ASMRRouteOverlayPackageCache: @unchecked Sendable {
             }
 
             let package = try ASMRRoutePackageInput.load(from: canonicalURL)
+            let singleMapBackground = package.decodedSingleMapBackground()
             let preparedPackage = PreparedPackage(
                 routePackage: package,
-                mapBackground: package.decodedMapBackground(),
-                mapBackgrounds: package.decodedMapBackgrounds()
+                mapBackground: singleMapBackground?.bitmap,
+                mapBackgrounds: package.decodedMapBackgrounds(),
+                singleMapBackground: singleMapBackground
             )
             entries[canonicalURL] = Entry(
                 modificationState: state,
@@ -285,9 +292,9 @@ final class ASMRRouteOverlayPackageCache: @unchecked Sendable {
             manifest: modificationDate(for: manifestURL),
             routePoints: modificationDate(for: packageURL.appending(path: manifest.routePointsFile)),
             mapBackgrounds: Dictionary(
-                uniqueKeysWithValues: ([manifest.mapBackground].compactMap { $0 } + (manifest.mapBackgrounds ?? []))
-                    .map { background in
-                        (background.filename, modificationDate(for: packageURL.appending(path: background.filename)))
+                uniqueKeysWithValues: Set(([manifest.mapBackground].compactMap { $0 } + (manifest.mapBackgrounds ?? []))
+                    .flatMap(\.assetFilenames)).map { filename in
+                        (filename, modificationDate(for: packageURL.appending(path: filename)))
                     }
             )
         )
@@ -335,6 +342,12 @@ extension ASMRRoutePackageInput {
         var lastRoutePointIndex: Int? = nil
         var startTimestamp: Date? = nil
         var endTimestamp: Date? = nil
+        // Both appearances share the projection and segment timing above.
+        var darkFilename: String? = nil
+
+        var assetFilenames: [String] {
+            [filename] + [darkFilename].compactMap { $0 }
+        }
     }
 
     struct RoutePoint: Codable, Equatable, Sendable {

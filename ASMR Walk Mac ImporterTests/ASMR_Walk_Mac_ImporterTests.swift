@@ -167,6 +167,39 @@ struct ASMR_Walk_Mac_ImporterTests {
         #expect(background.metadata.filename.contains("/") == false)
     }
 
+    @Test("Both appearances survive package export and reload", arguments: [false, true])
+    func appearancePackageRoundTrip(segmented: Bool) throws {
+        let preview = RoutePreview(package: makeRoutePackage(), sourceDescription: "Route")
+        let light = makePreparedMapBackground()
+        var metadata = light.metadata
+        metadata.darkFilename = "map-background-dark.png"
+        let background = PreparedMapBackground(metadata: metadata, imageData: light.imageData, darkImageData: Data([9, 8, 7]))
+        let package = preview.exportPackage(videoReference: nil,
+                                            mapBackground: segmented ? nil : background,
+                                            mapBackgrounds: segmented ? [background] : [])
+        let url = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        try package.write(to: url)
+        let loaded = try ASMRRoutePackage.load(from: url)
+        #expect(loaded.manifest == package.manifest)
+        #expect(loaded.mapBackgroundDataByFilename["map-background-dark.png"] == background.darkImageData)
+        #expect(loaded.mapBackgroundDataByFilename[metadata.filename] == light.imageData)
+    }
+
+    @Test("Appearance preparation rejects shifted or resized projections")
+    func appearanceProjectionAgreement() {
+        let light = makePreparedMapBackground().metadata
+        var dark = light
+        dark.darkFilename = "dark.png"
+        #expect(MapBackgroundPreparer.projectionsMatch(light, dark))
+        let shifted = ASMRRoutePackage.MapBackground(
+            filename: "dark.png", pixelWidth: light.pixelWidth, pixelHeight: light.pixelHeight,
+            scale: light.scale, mapRectOriginX: light.mapRectOriginX + 1,
+            mapRectOriginY: light.mapRectOriginY, mapRectWidth: light.mapRectWidth, mapRectHeight: light.mapRectHeight
+        )
+        #expect(!MapBackgroundPreparer.projectionsMatch(light, shifted))
+    }
+
     @Test("Long routes are split deterministically with five-point overlap", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
     func segmentedMapRanges() {
         #expect(MapBackgroundPreparer.segmentRanges(pointCount: 100) == [0...99])

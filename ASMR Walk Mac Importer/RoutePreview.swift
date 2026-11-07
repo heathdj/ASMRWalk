@@ -77,7 +77,8 @@ struct RoutePreview: Equatable, Identifiable {
             sourceGPX: originalPackage.sourceGPX,
             mapBackgroundData: mapBackground?.imageData,
             mapBackgroundDataByFilename: Dictionary(
-                uniqueKeysWithValues: mapBackgrounds.map { ($0.metadata.filename, $0.imageData) }
+                ([mapBackground].compactMap { $0 } + mapBackgrounds).flatMap { $0.assets },
+                uniquingKeysWith: { first, _ in first }
             )
         )
     }

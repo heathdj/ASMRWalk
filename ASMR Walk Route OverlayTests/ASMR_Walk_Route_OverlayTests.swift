@@ -7,6 +7,108 @@ import Foundation
 import Testing
 
 struct ASMRRouteOverlayRenderPlanTests {
+    @Test("Appearance changes only map pixels and preserves geometry and state handoff", arguments: [false, true])
+    func appearanceSelection(segmented: Bool) throws {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        let metadata = ASMRRoutePackageInput.MapBackground(
+            filename: "light.png", pixelWidth: 1, pixelHeight: 2, scale: 1,
+            mapRectOriginX: 0, mapRectOriginY: 0, mapRectWidth: 268_435_456, mapRectHeight: 268_435_456,
+            startTimestamp: manifest.routeStartedAt, endTimestamp: manifest.routeEndedAt,
+            darkFilename: "dark.png"
+        )
+        manifest.mapBackground = segmented ? nil : metadata
+        manifest.mapBackgrounds = segmented ? [metadata] : nil
+        let light = ASMRRouteOverlayBitmap(width: 1, height: 2, rgbaPixels: [255, 0, 0, 255, 0, 0, 255, 255])
+        let dark = ASMRRouteOverlayBitmap(width: 1, height: 2, rgbaPixels: [0, 255, 0, 255, 255, 255, 0, 255])
+        let background = ASMRRoutePackageInput.DecodedMapBackground(metadata: metadata, bitmap: light, darkBitmap: dark)
+        let package = ASMRRoutePackageInput(manifest: manifest, routePoints: original.routePoints)
+        let cached = ASMRRouteOverlayPackageCache.PreparedPackage(
+            routePackage: package, mapBackground: segmented ? nil : light,
+            mapBackgrounds: segmented ? [background] : [], singleMapBackground: segmented ? nil : background
+        )
+        func plan(_ appearance: ASMRRouteMapAppearance) -> ASMRRouteOverlayRenderPlan {
+            .make(from: package, renderTimeSeconds: 5,
+                  preparedMapBackgrounds: cached.mapBackgrounds, usesPreparedMapBackground: true,
+                  mapAppearance: appearance, preparedSingleMapBackground: cached.singleMapBackground)
+        }
+        let lightPlan = plan(.light)
+        let darkPlan = plan(.dark)
+        #expect(lightPlan.mapBackground == light)
+        #expect(darkPlan.mapBackground == dark)
+        #expect(darkPlan.routePoints == lightPlan.routePoints)
+        #expect(darkPlan.visibleRoutePoints == lightPlan.visibleRoutePoints)
+        #expect(darkPlan.currentPosition == lightPlan.currentPosition)
+        #expect(darkPlan.startPosition == lightPlan.startPosition)
+        #expect(darkPlan.endPosition == lightPlan.endPosition)
+        #expect(darkPlan.mapStyle == lightPlan.mapStyle)
+        for plan in [lightPlan, darkPlan] {
+            let transferred = try JSONDecoder().decode(ASMRRouteOverlayRenderPlan.self,
+                                                       from: JSONEncoder().encode(plan.removingMapBackgroundBitmap()))
+            let filename = try #require(transferred.mapBackgroundFilename)
+            #expect(cached.bitmap(filename: filename) == plan.mapBackground)
+        }
+    }
+
+    @Test("Missing, corrupt, or legacy dark images fall back to the same segment", arguments: [1, 2, 3])
+    func appearanceFallback(schema: Int) throws {
+        let original = makeRoutePackage()
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        var json = try #require(JSONSerialization.jsonObject(with: encoder.encode(original.manifest)) as? [String: Any])
+        json["schemaVersion"] = schema
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var manifest = try decoder.decode(ASMRRoutePackageInput.Manifest.self, from: JSONSerialization.data(withJSONObject: json))
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZgbYnAAAAEUlEQVR4nGP4z8AARAz//wMAEfgD/XUCLkgAAAAASUVORK5CYII="))
+        for darkData in [nil, Data("corrupt".utf8), png] as [Data?] {
+            let metadata = ASMRRoutePackageInput.MapBackground(
+                filename: "light.png", pixelWidth: 1, pixelHeight: 2, scale: 1,
+                mapRectOriginX: 0, mapRectOriginY: 0, mapRectWidth: 268_435_456, mapRectHeight: 268_435_456,
+                darkFilename: schema == 3 ? "dark.png" : nil
+            )
+            manifest.mapBackground = metadata
+            manifest.mapBackgrounds = [metadata]
+            var assets = ["light.png": png]
+            assets["dark.png"] = darkData
+            let package = ASMRRoutePackageInput(manifest: manifest, routePoints: original.routePoints,
+                                                mapBackgroundData: png, mapBackgroundDataByFilename: assets)
+            for background in [try #require(package.decodedSingleMapBackground()), try #require(package.decodedMapBackgrounds().first)] {
+                #expect(background.bitmap(for: .dark).rgbaPixels == [255, 0, 0, 255, 0, 0, 255, 255])
+                #expect(background.filename(for: .dark) == (schema == 3 && darkData == png ? "dark.png" : "light.png"))
+            }
+        }
+    }
+
+    @Test("Dark-only asset changes invalidate the prepared cache")
+    func darkAssetCacheInvalidation() throws {
+        let original = makeRoutePackage()
+        var manifest = original.manifest
+        manifest.mapBackground = .init(filename: "light.png", pixelWidth: 1, pixelHeight: 1, scale: 1,
+                                       mapRectOriginX: 0, mapRectOriginY: 0, mapRectWidth: 1, mapRectHeight: 1,
+                                       darkFilename: "dark.png")
+        let url = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(manifest).write(to: url.appending(path: "manifest.json"))
+        try encoder.encode(original.routePoints).write(to: url.appending(path: manifest.routePointsFile))
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="))
+        try png.write(to: url.appending(path: "light.png"))
+        let cache = ASMRRouteOverlayPackageCache()
+        let missing = try cache.preparedPackage(at: url)
+        #expect(missing.singleMapBackground?.filename(for: .dark) == "light.png")
+        try png.write(to: url.appending(path: "dark.png"))
+        let complete = try cache.preparedPackage(at: url)
+        #expect(cache.loadCount == 2)
+        #expect(complete.singleMapBackground?.filename(for: .dark) == "dark.png")
+        try FileManager.default.removeItem(at: url.appending(path: "dark.png"))
+        let removed = try cache.preparedPackage(at: url)
+        #expect(cache.loadCount == 3)
+        #expect(removed.singleMapBackground?.filename(for: .dark) == "light.png")
+    }
+
     @Test("Map PNG rows stay north-up for both single maps and segments")
     func mapPNGRowOrientation() throws {
         let original = makeRoutePackage()
@@ -136,12 +238,13 @@ struct ASMRRouteOverlayRenderPlanTests {
         #expect(makeRoutePackage().mapAvailability == .routeOnly)
     }
 
-    @Test("Segment selection follows route timestamps at boundaries", .bug("https://github.com/heathdj/ASMRWalk/issues/128"))
-    func segmentedMapSelection() {
+    @Test("Segment selection follows route timestamps at boundaries", .bug("https://github.com/heathdj/ASMRWalk/issues/128"), arguments: ASMRRouteMapAppearance.allCases)
+    func segmentedMapSelection(appearance: ASMRRouteMapAppearance) {
         let package = makeRoutePackage()
         let start = package.manifest.routeStartedAt
         let firstBitmap = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [1, 2, 3, 255])
         let secondBitmap = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [4, 5, 6, 255])
+        let darkBitmap = ASMRRouteOverlayBitmap(width: 1, height: 1, rgbaPixels: [7, 8, 9, 255])
         let worldWidth = 268_435_456.0
         let backgrounds = [
             ASMRRoutePackageInput.DecodedMapBackground(
@@ -157,9 +260,11 @@ struct ASMRRouteOverlayRenderPlanTests {
                     firstRoutePointIndex: 0,
                     lastRoutePointIndex: 1,
                     startTimestamp: start,
-                    endTimestamp: start.addingTimeInterval(10)
+                    endTimestamp: start.addingTimeInterval(10),
+                    darkFilename: "map-background-001-dark.png"
                 ),
-                bitmap: firstBitmap
+                bitmap: firstBitmap,
+                darkBitmap: darkBitmap
             ),
             ASMRRoutePackageInput.DecodedMapBackground(
                 metadata: .init(
@@ -184,24 +289,28 @@ struct ASMRRouteOverlayRenderPlanTests {
             from: package,
             renderTimeSeconds: 9.9,
             preparedMapBackgrounds: backgrounds,
-            usesPreparedMapBackground: true
+            usesPreparedMapBackground: true,
+            mapAppearance: appearance
         )
         let boundaryPlan = ASMRRouteOverlayRenderPlan.make(
             from: package,
             renderTimeSeconds: 10,
             preparedMapBackgrounds: backgrounds,
-            usesPreparedMapBackground: true
+            usesPreparedMapBackground: true,
+            mapAppearance: appearance
         )
         let finalPlan = ASMRRouteOverlayRenderPlan.make(
             from: package,
             renderTimeSeconds: 20,
             preparedMapBackgrounds: backgrounds,
-            usesPreparedMapBackground: true
+            usesPreparedMapBackground: true,
+            mapAppearance: appearance
         )
 
-        #expect(firstPlan.mapBackground == firstBitmap)
-        #expect(boundaryPlan.mapBackground == firstBitmap)
+        #expect(firstPlan.mapBackground == (appearance == .dark ? darkBitmap : firstBitmap))
+        #expect(boundaryPlan.mapBackground == (appearance == .dark ? darkBitmap : firstBitmap))
         #expect(finalPlan.mapBackground == secondBitmap)
+        #expect(finalPlan.mapBackgroundFilename == "map-background-002.png")
     }
 
     @Test("Corrupt map data falls back to the route-only plan", .bug("https://github.com/heathdj/ASMRWalk/issues/123"))
