@@ -686,3 +686,19 @@ We kept schema 3 and added an optional `darkFilename`. Existing packages remain 
 The first validation pass passed 46 importer cases and 44 overlay cases. A live MapKit run created distinct pairs for a single map and a synthetic 101-point route with two segments. That proves preparation and projection agreement, not the owner's real-world FCP export: persistence, playback/export, and a longer recorded walk remain explicit field checks.
 
 The final pass also exercised both appearances across segment boundaries and kept the appearance control non-animatable when its enabled state changes. Mac and iPhone builds passed. The universal 1.1.0 installer was rebuilt, signed, accepted by Apple's notary service, stapled, and accepted by Gatekeeper as Notarized Developer ID. It remains a local owner-test artifact; no release was published.
+
+### Who Has the Microphone? — Issue #125
+
+A microphone preference is a request, not a receipt. AVAudioSession can accept a preferred-input call before the effective route has caught up, so the new picker displays both the selection and the input actually in use. Recording checks the latter before opening a movie file. That keeps a USB receiver selection from quietly becoming an iPhone-microphone take.
+
+The routing controller uses an injected audio-session adapter, which lets tests unplug a pretend USB receiver, reject a preference, or delay a route change without touching hardware. Capture-session automatic audio configuration is disabled so it cannot override our choice. High-quality Bluetooth needs the default audio-session mode, so we request it there with HFP fallback. Bluetooth and USB are port types, not brand guesses: a wireless receiver plugged into USB-C is still USB audio.
+
+The microphone pill opens a native, scrolling SwiftUI picker. Selection locks during a take; unavoidable physical disconnects update the displayed effective input and show a notice without rebuilding the capture graph while the movie is being written. Preview shutdown waits for any pending capture start, then releases the audio session; a new preview waits for that shutdown. Think of it as handing over one studio key, rather than letting two crews race to lock and unlock the door.
+
+Initial validation passed 24 routing/coordinator cases and four UI checks covering selection, recording lock, and privacy recovery. These simulated microphones can prove our decisions, not what a real accessory sounds like. The release checklist keeps physical built-in, Bluetooth, USB receiver, and disconnect recordings explicitly pending.
+
+Final automated validation passed 28 unit checks and four UI tests. The owner subsequently completed on-device manual testing and confirmed microphone selection works as desired, authorizing the commit and PR. Specific accessory models and individual scenario results were not recorded, so the detailed checklist remains available for release regression testing.
+
+### QA Follow-up: An Idle Preview Still Holds the Studio Key
+
+PR #136 review caught a lifecycle gap: we released the manually managed audio session when leaving Video Walk, but not when its idle preview entered the background. A preview is still a microphone client even when no movie is being written. Scene deactivation now stops a non-recording preview; an active take uses the existing save flow with session shutdown requested afterward. Returning to the active scene uses the existing authorized-preview preparation path. The recording guard keeps shutdown from cutting off a file that is still finishing.

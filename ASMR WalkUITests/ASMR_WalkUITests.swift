@@ -115,6 +115,39 @@ final class ASMR_WalkUITests: XCTestCase {
     }
 
     @MainActor
+    func testMicrophonePickerSelectsUSBAndAutomatic() {
+        launchReturningUser(environment: ["ASMR_WALK_UI_TEST_MICROPHONES": "1"])
+        openTab("Video Walk")
+        let microphone = app.buttons["videoWalk.microphoneButton"]
+        XCTAssertTrue(microphone.waitForExistence(timeout: 5))
+        microphone.tap()
+        let usb = app.buttons["videoWalk.microphone.usb"]
+        XCTAssertTrue(usb.waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["videoWalk.microphone.builtIn"].exists)
+        XCTAssertTrue(app.buttons["videoWalk.microphone.bluetooth"].exists)
+        usb.tap()
+        XCTAssertEqual(usb.value as? String, "Selected")
+        app.buttons["Done"].tap()
+        XCTAssertEqual(microphone.value as? String, "USB Receiver")
+        microphone.tap()
+        app.buttons["videoWalk.microphone.automatic"].tap()
+        app.buttons["Done"].tap()
+        XCTAssertEqual(microphone.value as? String, "iPhone Microphone")
+    }
+
+    @MainActor
+    func testMicrophonePickerIsDisabledDuringRecording() {
+        launchReturningUser(environment: [
+            "ASMR_WALK_UI_TEST_MICROPHONES": "1",
+            "ASMR_WALK_UI_TEST_MICROPHONE_RECORDING": "1"
+        ])
+        openTab("Video Walk")
+        let microphone = app.buttons["videoWalk.microphoneButton"]
+        XCTAssertTrue(microphone.waitForExistence(timeout: 5))
+        XCTAssertFalse(microphone.isEnabled)
+    }
+
+    @MainActor
     func testVideoWalkPermissionDeniedShowsSettingsRecovery() {
         launchWithEnvironment(["ASMR_WALK_UI_TEST_VIDEO_PRIVACY_ISSUE": "cameraDenied"])
 
