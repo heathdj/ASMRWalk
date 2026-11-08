@@ -4,6 +4,8 @@ Use this as the source draft for App Store Connect text for version 1.1.0. Keep 
 
 Public privacy policy URL: https://bald-traveler.com/asmr-walk-privacy-policy/
 
+Public support URL: https://bald-traveler.com/asmr-walk-support-page/
+
 ## Subtitle
 
 GPS routes and video walks
@@ -66,12 +68,12 @@ The Mac importer and Final Cut Pro/Motion overlay are distributed separately in 
 
 ## Owner Submission Steps — do not paste into Review Notes
 
-1. Complete the outstanding physical-device and release checks in `RELEASE_CHECKLIST.md`, including the PR #136 idle-preview audio regression. Owner microphone testing passed, but that does not complete the Watch gates (#93 and #109) or Mac host validation (#79).
-2. Create/select iOS version **1.1.0** in App Store Connect. Upload a matching archive with a new build number and the Watch companion included; select the processed build. The Git tag is `release-1.1.0`, not the App Store version number.
-3. Paste Subtitle, Promotional Text (optional), Description, Keywords, and What’s New into the corresponding fields. Copy only each section’s content. Preserve and verify the existing support URL; use the public privacy policy URL above. Publish the updated `PRIVACY_POLICY.md` to that URL before submission.
+1. Owner manual device testing was confirmed complete on November 8, 2026. Issues #93, #109, and #79 are closed. See `RELEASE_CHECKLIST.md` for validation evidence, reusable regression scenarios, and remaining archive/submission administration.
+2. Create/select iOS version **1.1.0** in App Store Connect. Upload a matching archive with a new build number and the Watch companion included; select the processed build. The latest iPhone/Watch candidate tag is `release-1.1.0b`; select the processed build produced from that commit and verify its actual build number. The App Store version remains `1.1.0`.
+3. Paste Subtitle, Promotional Text (optional), Description, Keywords, and What’s New into the corresponding fields. Copy only each section’s content. Use the exact public support and privacy URLs above. Both live pages were verified against `SUPPORT_PAGE.md` and `PRIVACY_POLICY.md` on November 8, 2026.
 4. Paste App Review Notes into App Review Information > Notes. Leave Sign-in required unchecked. Verify the review contact name, email, and reachable phone number in App Store Connect; these are owner-provided account details, not demo credentials.
 5. Supply current iPhone and Apple Watch screenshots. Verify age rating, export compliance, privacy answers, and any accessibility claims against the actual archive and completed testing. Microphone selection adds no developer collection; private iCloud route sync and user-directed exports remain as described in the privacy policy.
 6. Select the desired release option (manual release allows coordination with the separate Mac installer), then submit when all applicable gates are complete. A pushed Git tag does not mean Apple has approved or published the version.
-7. When creating the GitHub 1.1.0 release from `release-1.1.0`, attach the verified, signed/notarized `ASMR-Walk-Mac-Tools-1.1.0.pkg` as a release asset. The installer is not an App Store Connect build upload. Confirm the artifact matches the intended Mac source; rebuild if Mac code changed after it was produced.
+7. The separate Mac installer is already attached to the GitHub `release-1.1.0` release: [Download Mac Tools 1.1.0](https://github.com/heathdj/ASMRWalk/releases/download/release-1.1.0/ASMR-Walk-Mac-Tools-1.1.0.pkg). It is not an App Store Connect upload. The iPhone/Watch retry tag `release-1.1.0b` does not change this download URL; rebuild the installer only if its Mac sources change.
 
 Apple reference: [Platform version information](https://developer.apple.com/help/app-store-connect/reference/app-information/platform-version-information/).

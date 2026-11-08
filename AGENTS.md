@@ -18,8 +18,8 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - `RecordingCoordinator` is owned at the app tab shell and shares one `WalkRecorder` between GPS Walk and Video Walk so the app never runs two route recordings at once.
 - `WalkRecordingPersistence` is a SwiftData `@ModelActor`; recording checkpoints, final saves, and deletes should stay there instead of using the SwiftUI `modelContext` on the main actor.
 - Route checkpoints should append only newly accepted points while updating recording metadata; do not rewrite unchanged `LocationPoint` rows on every checkpoint.
-- Core Location will be isolated behind a recording service so views do not manage location callbacks directly.
-- AVFoundation video capture will remain separate from GPS tracking; both outputs will be linked by one walk recording.
+- Core Location is isolated behind a recording service so views do not manage location callbacks directly.
+- AVFoundation video capture remains separate from GPS tracking; both outputs are linked by one walk recording.
 - `VideoCaptureService` owns AVFoundation camera and microphone capture while `WalkRecorder` owns GPS persistence; `VideoWalkView` coordinates them.
 - `VideoAudioInputController` owns transient microphone preferences through an injected `VideoAudioSessionRouting` adapter. Configure and activate the shared audio session before choosing inputs, disable automatic capture-session audio configuration, and verify the effective route before recording. Never rebuild the capture audio graph during an active take.
 - `DockKitAccessoryService` owns DockKit accessory state and event streams for Video Walk; camera shutter toggles recording, camera zoom adjusts `VideoCaptureService`, and other accessory events intentionally no-op for now.
@@ -29,7 +29,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - Route thumbnails are app-managed local image files generated after final save and persisted as `thumbnailURL`.
 - Deleting a recording removes app metadata, routes, app-managed thumbnails, and app-managed local video files; any user-exported Photos copy remains in Photos.
 - `WalkRecorder` also owns live heading updates for map-facing indicators while recording or previewing location.
-- Version 1 will render map overlays in the app instead of burning them into exported video.
+- The iPhone app previews map overlays without burning them into exported video; the separate Mac overlay supports Final Cut Pro/Motion rendering.
 - The FxPlug route overlay defaults to stretching route progress across the host effect duration, offers GPX timestamp timing as an alternative, and caps prepared render geometry at 2,048 deterministically sampled points.
 - The Version 1.1 Mac installer ships both the importer and the route-overlay wrapper in `/Applications`; the importer validates and launches the wrapper for registration but never mutates its signed embedded `.pluginkit`.
 - The installer deploys the ASMR Walk Motion generator into the signed-in user’s `Movies/Motion Templates.localized/Generators.localized` hierarchy, replacing only the ASMR Walk-owned template and preserving unrelated templates.
@@ -40,7 +40,7 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 - The History empty-state recording button routes to the user's `StartRecordingDestination` setting, defaulting to GPS Walk.
 - Background GPS recording is opt-in, GPS-only, and requires Always location authorization plus the `location` background mode; all enablement decisions should flow through `BackgroundRecordingPolicy`.
 - Active recordings are surfaced by the app shell with a persistent bottom banner so live metrics and stop controls remain visible when the user switches tabs.
-- Version 1 is intentionally iPhone-only; do not re-enable iPad as a targeted device family without a full adaptive-layout and App Store asset pass.
+- The iOS app targets iPhone, with a separate Watch companion in 1.1.0; do not enable iPad without a full adaptive-layout and App Store asset pass.
 - Version 1 remains developer-backend-free with no developer-operated accounts, analytics, advertising, or storage; iCloud sync uses the user's private CloudKit database, and App Privacy answers should distinguish user iCloud sync from developer-operated collection.
 - Finished recordings may receive best-effort generated place metadata after the final save; lookup failures must not block saving, and generated metadata must not overwrite user-edited titles or descriptions.
 - Finished recordings may receive best-effort route thumbnails after the final save; thumbnail generation failures must not block saving.

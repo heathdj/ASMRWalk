@@ -1,6 +1,6 @@
 # ASMR Route Package
 
-`.asmrroute` is the ASMR Walk handoff package for the Mac importer and the future Final Cut Pro/Motion renderer. It is a directory package with deterministic JSON metadata and route data. The renderer should be able to load it without reaching back into iCloud, Photos, or an iPhone sandbox during timeline playback or export.
+`.asmrroute` is the ASMR Walk handoff package for the Mac importer and the Final Cut Pro/Motion renderer. It is a directory package with deterministic JSON metadata and route data. The renderer should be able to load it without reaching back into iCloud, Photos, or an iPhone sandbox during timeline playback or export.
 
 ## Version 3 Layout
 

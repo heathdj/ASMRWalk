@@ -728,3 +728,9 @@ Apple’s file delegate has a sharp edge: its temporary file vanishes when the c
 The display issue needed a setting, not a workout session. The owner confirmed Return to Clock → ASMR Walk → Custom → After 1 hour fixes wrist-raise visibility. The support draft now includes those steps, the transfer retry controls, and the distinction between “received by iPhone” and “synced to Mac.” Real paired-device delivery and upgrade recovery remain release gates; Apple does not deliver WatchConnectivity files in Simulator.
 
 The final automated pass covered 18 iPhone transfer/persistence cases and 11 Watch recording/recovery cases, with both build paths passing. The recovery check also verifies that acknowledged walks are skipped and this launch’s live take is excluded. The remaining proof belongs to real paired devices: upgrade without deleting the app, recover a stuck walk, then confirm the iPhone-to-Mac iCloud leg separately.
+
+### November 8, 2026 — The departure board matches the plane
+
+The owner confirmed device testing is complete, and Watch gates #93/#109 plus Mac host gate #79 are closed. A final code review found no new blocking issue; the current Xcode build passed, with the earlier 18 iPhone and 11 Watch checks covering transfer storage and recovery. We retain the detailed regression recipes without inventing device models or individual test observations.
+
+The last cleanup was documentation drift: old instructions still asked for targets that already existed and tests already accepted. Submission copy now distinguishes the `release-1.1.0b` iPhone/Watch candidate from the published `release-1.1.0` Mac installer. Both live website pages match their Markdown sources, including Watch visibility, direct transfer, and the Mac download. Lesson: a release checklist is a departure board, not a time capsule. Keep historical lessons, but clearly separate accepted testing from archive verification and App Store administration still to do.

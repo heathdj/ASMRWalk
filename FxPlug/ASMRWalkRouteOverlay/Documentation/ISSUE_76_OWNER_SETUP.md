@@ -1,4 +1,6 @@
-# Issue #76 Owner Setup: FxPlug Generator Target
+# Issue #76 Historical Setup: FxPlug Generator Target
+
+These targets are already configured. Do not recreate them for installation or submission. Use [the current installer instructions](../../../Installer/README.md) and [support instructions](../../../SUPPORT_PAGE.md). The setup below is retained as engineering history, not an outstanding owner task.
 
 Issue #76 creates the bring-up path for the ASMR Walk Route Overlay FxPlug generator. The checked-in scaffold under `FxPlug/ASMRWalkRouteOverlay` documents the desired shape, and the active Xcode target now uses the target-local files under `ASMRWalkRouteOverlay`.
 
@@ -55,4 +57,4 @@ Use the same Apple development team as the Mac importer unless signing policy re
 
 ## Scope Boundary
 
-This issue is complete when the target builds and the generator is discoverable. Real route drawing from `.asmrroute` packages belongs to #77, timing/performance refinements belong to #78, and full FCP/Motion release validation belongs to #79.
+The original scaffold scope is complete. Route rendering (#77), timing/performance (#78), and FCP/Motion release validation (#79) are also complete; #79 records owner manual verification. See the current release checklist for future regression scenarios.

@@ -2,13 +2,19 @@
 
 Use this before uploading `1.1.0` to App Store Connect.
 
+## Validation status — November 8, 2026
+
+The owner confirmed manual testing on devices is complete. Watch issues [#93](https://github.com/heathdj/ASMRWalk/issues/93) and [#109](https://github.com/heathdj/ASMRWalk/issues/109) are closed; Mac host issue [#79](https://github.com/heathdj/ASMRWalk/issues/79) is closed with owner manual verification. Final code review found no new blocking issues, and the current Xcode build passed. The prior transfer validation passed 18 iPhone and 11 Watch tests.
+
+Unchecked scenario boxes below remain reusable regression recipes, not a claim that owner acceptance is outstanding. Device models, accessory models, and individual scenario results were not supplied; do not infer those details. Archive verification and App Store Connect administration must still be completed for the selected upload. The iPhone/Watch candidate tag is `release-1.1.0b`; the published Mac installer remains on `release-1.1.0`.
+
 ## 1.1.0 Submission Handoff
 
 - [ ] Copy the 1.1.0 metadata and Apple reviewer microphone testing notes from `APP_STORE_COPY.md` into App Store Connect.
-- [ ] Publish the updated privacy policy, including authorized Video Walk preview microphone use, at the public policy URL.
-- [ ] Record physical-device evidence for Watch gates #93 and #109 and the PR #136 background-preview audio regression; retain #79 Mac host/long-route checks as separate release gates.
+- [x] Live privacy and support pages match the repository copy, verified November 8, including Watch transfer/visibility guidance and the Mac installer download.
+- [x] Record owner completion of device testing; #93, #109, and #79 are closed. Keep the detailed regression scenarios below for future changes.
 - [ ] Select the processed 1.1.0 archive with the intended build number and Watch companion; verify screenshots and review contact details.
-- [ ] After Mac validation, attach the verified signed/notarized installer to the GitHub release based on `release-1.1.0`. A tag push alone does not complete release validation or App Store submission.
+- [x] Verify `ASMR-Walk-Mac-Tools-1.1.0.pkg` is attached to the GitHub `release-1.1.0` release and linked from live support. This does not constitute App Store submission.
 
 ## Required Target Settings
 
@@ -68,7 +74,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Confirm documentation and App Store copy do not imply HealthKit workout recording.
 - [ ] Confirm documentation and App Store copy explain Watch-to-iPhone delivery uses WatchConnectivity; the iPhone then syncs through the user's private iCloud database.
 - [ ] Confirm documentation and App Store copy explain external-camera timing stores metadata only and does not import or sync external video files.
-- [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
+- [ ] Confirm About sheet shows app name, version, build, and `support@bald-traveler.com`.
 
 ## Device Validation
 
@@ -141,7 +147,7 @@ Run these on physical devices before submission:
 
 ### Apple Watch Physical Device Gate
 
-- [ ] Confirm GitHub issue #93 is closed before submitting version 1.1.0 to App Store Connect.
+- [x] Confirm GitHub issue #93 is closed before submitting version 1.1.0 to App Store Connect.
 - [ ] Install the iPhone app and Apple Watch app on paired physical devices.
 - [ ] Confirm the iPhone and Apple Watch are signed into the expected iCloud account and iCloud sync is available.
 - [ ] Grant location permission to ASMR Walk on Apple Watch.
@@ -197,7 +203,7 @@ Run these on physical devices before submission:
 
 ## App Store Connect
 
-- [ ] Publish `PRIVACY_POLICY.md` at a public, stable URL.
+- [x] Publish `PRIVACY_POLICY.md` at a public, stable URL; live content verified November 8, 2026.
 - [ ] Enter the public privacy-policy URL in App Store Connect.
 - [ ] Complete App Privacy answers from actual off-device collection, not simply from protected APIs used on device.
 - [ ] Confirm ASMR Walk does not collect data on developer-operated servers in version 1.1.0.
@@ -262,7 +268,7 @@ Run these on physical devices before submission:
 - [x] Owner confirmed the corrected FCP drop-zone layout and current overlay behavior look good.
 - [x] Owner confirmed overlay helper shutdown works as requested; automated Close, red-window, and importer-termination UI checks also pass.
 - [x] Final review: 43 importer tests and 41 overlay/UI cases pass; Motion template and shell/XML checks pass.
-- [ ] Real route exceeding 100 points and full playback/export transition matrix remain pending; do not treat the short-route smoke check as completion of #79.
+- [ ] Regression recipe: exercise a real route exceeding 100 points and full playback/export transition matrix. The earlier short-route smoke check alone was insufficient; subsequent owner acceptance is recorded in closed #79.
 
 ### Issue #133 — Light and Dark maps
 
@@ -273,7 +279,7 @@ Run these on physical devices before submission:
 - [ ] Switch appearances in FCP; verify streets, route, markers, corners, position, size, opacity, and timing remain aligned.
 - [ ] Save/reopen the FCP project with Dark selected and export a short clip; verify the choice persists and matches playback.
 - [ ] Check an older single-map package and a package missing one dark segment; confirm the existing/same-segment light image remains usable.
-- [ ] Check a real walk over 100 points in both appearances, including segment transitions and HD/4K export (owner field validation remains pending).
+- [ ] Check a real walk over 100 points in both appearances, including segment transitions and HD/4K export (retain this scenario for future regression testing; #79 is now closed with owner verification).
 
 ### Issue #125 — Video Walk microphone inputs
 
@@ -290,7 +296,7 @@ Run these on physical devices before submission:
 - [x] Owner completed on-device manual testing and confirmed the feature works as desired before authorizing the commit and PR.
 - [x] Xcode build, 28 unit checks, and four UI tests passed.
 
-The scenario list above remains a release regression checklist; specific accessory models and per-scenario results were not supplied. The owner confirmation applies to #125 and does not complete the separate #93 or #109 release gates.
+The scenario list above remains a release regression checklist; specific accessory models and per-scenario results were not supplied. That earlier confirmation applied to #125. The subsequent November 8 owner acceptance and closure of #93/#109 are recorded at the top of this checklist.
 
 - [ ] PR #136 QA regression: background Video Walk with a ready, non-recording preview; confirm microphone use ends and other audio apps recover. Foreground it and confirm preview/microphone selection resume. Repeat while recording and confirm the take saves before microphone use ends.
 
