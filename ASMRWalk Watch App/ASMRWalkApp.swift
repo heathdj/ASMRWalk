@@ -14,9 +14,26 @@ struct ASMRWalk_Watch_AppApp: App {
 
     init() {
         modelContainer = WatchModelContainerFactory.makeModelContainer(
-            cloudSyncEnabled: Self.isRunningUnitTests == false,
+            cloudSyncEnabled: false,
             isStoredInMemoryOnly: Self.isRunningUnitTests
         )
+        if Self.isRunningUnitTests == false {
+            let connectivity = WatchRouteConnectivity.shared
+            connectivity.start()
+            let persistence = WatchRecordingPersistence(modelContainer: modelContainer)
+            let launchedAt = Date.now
+            Task {
+                do {
+                    // Recover saved walks/checkpoints from previous launches, including
+                    // pre-upgrade walks that never reached iCloud. Never queue a live take.
+                    let receivedIDs = try WatchTransferFiles.standard.acknowledgedIDs()
+                    let routes = try await persistence.routesSaved(before: launchedAt, excluding: receivedIDs)
+                    connectivity.recover(routes)
+                } catch {
+                    connectivity.reportRecoveryError(error.localizedDescription)
+                }
+            }
+        }
     }
 
     var body: some Scene {
@@ -24,6 +41,9 @@ struct ASMRWalk_Watch_AppApp: App {
             ContentView()
         }
         .modelContainer(modelContainer)
+        .backgroundTask(.watchConnectivity) {
+            await WatchRouteConnectivity.shared.finishBackgroundDelivery()
+        }
     }
 
     private static var isRunningUnitTests: Bool {

@@ -7,22 +7,49 @@
 
 import SwiftUI
 import SwiftData
+import CoreData
 
 @main
 struct ASMR_WalkApp: App {
     @UIApplicationDelegateAdaptor(AppOrientationDelegate.self) private var appOrientationDelegate
+    @Environment(\.scenePhase) private var scenePhase
     private let modelContainer: ModelContainer
+    private let watchPersistence: WalkRecordingPersistence
 
     init() {
         UITestLaunchConfiguration.apply()
         modelContainer = Self.makeModelContainer()
+        let persistence = WalkRecordingPersistence(modelContainer: modelContainer)
+        watchPersistence = persistence
+        if UITestLaunchConfiguration.usesInMemoryModelContainer == false {
+            WatchRouteConnectivity.shared.start { route in
+                try await persistence.importWatchRoute(route)
+            }
+        }
     }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .task {
+                    guard UITestLaunchConfiguration.usesInMemoryModelContainer == false else { return }
+                    WatchRouteConnectivity.shared.resume()
+                    let persistence = watchPersistence
+                    try? await persistence.reconcileWatchDuplicates()
+                    // SwiftData exposes no CloudKit-import completion stream. This
+                    // notification repairs late legacy Watch arrivals after import.
+                    for await _ in NotificationCenter.default.notifications(named: NSPersistentCloudKitContainer.eventChangedNotification) {
+                        try? await persistence.reconcileWatchDuplicates()
+                        WatchRouteConnectivity.shared.resume()
+                    }
+                }
         }
         .modelContainer(modelContainer)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, UITestLaunchConfiguration.usesInMemoryModelContainer == false {
+                WatchRouteConnectivity.shared.resume()
+            }
+        }
     }
 
     private static func makeModelContainer() -> ModelContainer {

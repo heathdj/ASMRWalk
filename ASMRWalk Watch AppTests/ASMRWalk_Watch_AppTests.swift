@@ -102,7 +102,7 @@ struct ASMRWalk_Watch_AppTests {
         #expect(recorder.isRecording == false)
     }
 
-    @Test("Watch recorder shows sync-pending state after saving")
+    @Test("Watch recorder reports local save without inventing a CloudKit status")
     func watchRecorderShowsSyncPendingAfterSaving() async throws {
         let container = try makeTestContainer()
         let locationClient = FakeWatchLocationClient(authorizationStatus: .authorizedWhenInUse)
@@ -114,7 +114,68 @@ struct ASMRWalk_Watch_AppTests {
         #expect(recorder.isRecording == false)
         #expect(recorder.lastCompletedAt != nil)
         #expect(recorder.statusTitle == "Saved")
-        #expect(recorder.statusDetail.contains("Waiting for iCloud sync"))
+        #expect(recorder.statusDetail.contains("Saved on this Watch"))
+    }
+
+    @Test("Only a completed save is handed to the iPhone transfer queue")
+    func completedSaveQueuesTransfer() async throws {
+        let container = try makeTestContainer()
+        var sent: [WatchRouteTransfer] = []
+        let recorder = WatchRecorder(
+            locationClient: FakeWatchLocationClient(authorizationStatus: .authorizedWhenInUse),
+            requiresLocationUsageDescription: false,
+            sendSavedRoute: { sent.append($0) }
+        )
+        await recorder.start(in: container.mainContext)
+        #expect(sent.isEmpty)
+        await recorder.stopAndSave()
+        let recording = try #require(try fetchOnlyRecording(in: container))
+        #expect(sent.count == 1)
+        #expect(sent.first?.id == recording.id)
+        await recorder.start(in: container.mainContext)
+        await recorder.discard()
+        #expect(sent.count == 1)
+    }
+
+    @Test("Transfer failure does not restart or discard a saved Watch walk")
+    func transferFailureKeepsSavedWalk() async throws {
+        let container = try makeTestContainer()
+        let recorder = WatchRecorder(
+            locationClient: FakeWatchLocationClient(authorizationStatus: .authorizedWhenInUse),
+            requiresLocationUsageDescription: false,
+            sendSavedRoute: { _ in throw CocoaError(.fileWriteOutOfSpace) }
+        )
+        await recorder.start(in: container.mainContext)
+        await recorder.stopAndSave()
+        #expect(recorder.phase == .ready)
+        #expect(recorder.lastCompletedAt != nil)
+        #expect(try fetchRecordingCount(in: container) == 1)
+    }
+
+    @Test("Recovery includes old local Watch walks but excludes this launch's live takes")
+    func recoversEarlierWalks() async throws {
+        let container = try makeTestContainer()
+        let cutoff = Date(timeIntervalSince1970: 2_000)
+        let old = WalkRecording(title: "Waiting walk", createdAt: Date(timeIntervalSince1970: 1_000))
+        let live = WalkRecording(title: "New take", createdAt: Date(timeIntervalSince1970: 3_000))
+        let phone = WalkRecording(title: "Phone", createdAt: Date(timeIntervalSince1970: 1_000), recordingSource: .iPhone)
+        container.mainContext.insert(old)
+        container.mainContext.insert(live)
+        container.mainContext.insert(phone)
+        try container.mainContext.save()
+        let routes = try await WatchRecordingPersistence(modelContainer: container).routesSaved(before: cutoff)
+        #expect(routes.map(\.id) == [old.id])
+        let acknowledged = try await WatchRecordingPersistence(modelContainer: container)
+            .routesSaved(before: cutoff, excluding: [old.id])
+        #expect(acknowledged.isEmpty)
+    }
+
+    @Test("Local-only Watch configuration retains the existing default store location")
+    func configurationKeepsStoreURL() {
+        let schema = WatchModelContainerFactory.schema
+        let old = ModelConfiguration(schema: schema, cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier))
+        let local = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
+        #expect(old.url == local.url)
     }
 
     private func makeLocation(
@@ -136,7 +197,7 @@ struct ASMRWalk_Watch_AppTests {
 }
 
 private func makeTestContainer() throws -> ModelContainer {
-    let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+    let configuration = ModelConfiguration(isStoredInMemoryOnly: true, cloudKitDatabase: .none)
     return try ModelContainer(
         for: WalkRecording.self,
         LocationPoint.self,

@@ -10,7 +10,9 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var recorder = WatchRecorder()
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var recorder = WatchRecorder(sendSavedRoute: { try WatchRouteConnectivity.shared.enqueue($0) })
+    @State private var connectivity = WatchRouteConnectivity.shared
 
     var body: some View {
         ScrollView {
@@ -20,13 +22,24 @@ struct ContentView: View {
                 metricsGrid
                 gpsStatus
                 secondaryRecordingControl
+                Text(connectivity.status)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Retry Transfer") { connectivity.resume() }
+                    .font(.caption)
+                    .disabled(recorder.phase != .ready)
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
         }
         .accessibilityElement(children: .contain)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { connectivity.resume() }
+        }
         .task {
             recorder.refreshAuthorizationStatus()
+            connectivity.resume()
         }
     }
 

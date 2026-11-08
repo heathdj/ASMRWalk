@@ -7,6 +7,9 @@ ASMR Walk is an iPhone walking journal. It records GPS routes, optionally pairs 
 ## Architecture Decisions
 
 - SwiftUI owns the interface and top-level tab navigation.
+- Watch recordings persist locally and use durable WatchConnectivity file transfers to the paired iPhone. The iPhone alone publishes new Watch walks through private CloudKit; do not re-enable Watch mirroring without addressing duplicate CloudKit identities.
+- Transfer acknowledgments are sent only after iPhone persistence succeeds. Local receipts prevent retries from undoing edits/deletions; retain incoming files synchronously before returning from the WatchConnectivity delegate. Legacy UUID duplicates are reconciled using the same iPhone persistence actor.
+- WatchConnectivity file delivery requires paired hardware. Keep upgrade/recovery and background delivery checks in the release checklist; a simulator build cannot certify transfer delivery.
 - SwiftData persists walk metadata and route points with private CloudKit sync enabled through `iCloud.com.bald-traveler.ASMRWalk`.
 - `WalkRecording` is the SwiftData root model and owns `LocationPoint` children with a cascade delete rule.
 - Sample recordings are created through `SampleData` and only inserted into in-memory preview/test containers.
