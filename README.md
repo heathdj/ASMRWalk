@@ -27,8 +27,8 @@ iCloud library sync is not gated by a StoreKit subscription in this implementati
 - Route export through the iOS share sheet.
 - Google Maps walking-route URL export.
 - GPX file export for higher-fidelity route sharing, including recording descriptions when present.
-- `.asmrroute` package contract for future Mac importer and Final Cut Pro/Motion route overlay workflows.
-- GPX-to-`.asmrroute` importer core and macOS importer shell source for the planned Mac utility.
+- `.asmrroute` package contract for Mac importer and Final Cut Pro/Motion route overlay workflows.
+- Mac importer with GPX import, synced library access, and prepared map packages for the overlay.
 - Video files remain local to the device where they were recorded unless the user saves a copy to Photos.
 
 ## Tech Stack
@@ -104,7 +104,7 @@ Apple Watch recordings are GPS-only route recordings. They transfer directly to 
 
 ## Privacy
 
-ASMR Walk does not include developer-operated accounts, analytics, advertising, or backend upload code. Route data and recording metadata may sync through the user's private iCloud database. Video files stay on the recording device unless the user saves video to Photos or explicitly exports or shares a route. After saving, ASMR Walk may ask Apple's MapKit services for map imagery and a place name so it can generate a route thumbnail and suggest a useful title and description.
+ASMR Walk does not include developer-operated accounts, analytics, advertising, or backend upload code. Route data and recording metadata may sync through the user's private iCloud database. Video files stay on the recording device unless the user saves a copy to Photos. Route exports share route data, not video files. After saving, ASMR Walk may ask Apple's MapKit services for map imagery and a place name so it can generate a route thumbnail and suggest a useful title and description.
 
 See `PRIVACY_POLICY.md` for the public privacy-policy source. Before App Store submission, publish that policy at a stable URL and enter the URL in App Store Connect.
 
@@ -121,7 +121,7 @@ Background GPS recording requires the `location` background mode, the Background
 
 iCloud sync requires the CloudKit entitlement, the `iCloud.com.bald-traveler.ASMRWalk` container, and the `remote-notification` background mode. Sync uses the user's private iCloud database and may be temporarily unavailable when the device is signed out of iCloud or iCloud is restricted.
 
-WatchConnectivity file delivery requires paired physical devices; Simulator cannot validate that transport. Complete the physical-device validation tracked in GitHub issue #93 before submitting version 1.1.0 to the App Store.
+WatchConnectivity file delivery requires paired physical devices; Simulator cannot validate that transport. Owner manual testing was confirmed complete on November 8, 2026; issues #93 and #109 are closed. Repeat hardware validation after transport changes.
 
 ## Testing
 
@@ -152,7 +152,7 @@ In the Final Cut Pro or Motion inspector, use **Choose or Replace Route Packageâ
 
 Packages prepared before the snapshot-projection correction need **Prepare Map** and a fresh export to update their stored map bounds.
 
-The GPX importer core and initial macOS SwiftUI shell live under `ASMR Walk Mac Importer`. The macOS target requires owner setup in Xcode; see `MAC_IMPORTER_OWNER_INSTRUCTIONS.md`.
+The Mac importer lives under `ASMR Walk Mac Importer`, with its target already configured in Xcode. See `MAC_IMPORTER_OWNER_INSTRUCTIONS.md` for installation and maintenance guidance.
 
 The release installer ships the Mac importer, Final Cut Pro/Motion route-overlay wrapper, and ASMR Walk Motion generator template together. Developer ID signing, notarization, installation, registration, and host smoke-test steps are documented in `Installer/README.md`.
 
@@ -163,7 +163,7 @@ The release installer ships the Mac importer, Final Cut Pro/Motion route-overlay
 - Video Walk does not continue recording in the background.
 - iCloud sync does not sync full video files; videos remain on the recording device unless the user saves or shares a copy.
 - Apple Watch recordings are GPS-only and do not record video or HealthKit workouts.
-- Watch-to-iPhone sync needs physical-device/TestFlight validation before App Store submission because Simulator does not deliver WatchConnectivity files.
+- Watch-to-iPhone transport requires physical-device validation because Simulator does not deliver WatchConnectivity files. Owner testing for 1.1.0 is complete; retain the release checklist for regression testing.
 - iPad and HealthKit are not part of version 1.1.0.
 
 ## Roadmap
@@ -186,9 +186,9 @@ Wireless receivers connected over USB-C appear as USB inputs, regardless of thei
 
 ### Preparing the 1.1.0 submission
 
-[App Store copy and reviewer notes](APP_STORE_COPY.md) contains the paste-ready version text, microphone testing steps, and owner submission checklist. Complete the remaining hardware gates in [the release checklist](RELEASE_CHECKLIST.md) before submission. The `release-1.1.0` Git tag identifies the release automation commit; App Store publication and the separate GitHub Mac installer release still require their release steps.
+[App Store copy and reviewer notes](APP_STORE_COPY.md) contains the paste-ready version text, microphone testing steps, and owner submission checklist. Owner device testing is complete; [the release checklist](RELEASE_CHECKLIST.md) distinguishes that acceptance from remaining App Store administration. The latest iPhone/Watch candidate is tagged `release-1.1.0b`; the separately published Mac installer remains on `release-1.1.0`. App Store approval and publication are still separate steps.
 
-Website publishing copy: [Support page](SUPPORT_PAGE.md) includes the Mac installer download and setup instructions; [Privacy policy](PRIVACY_POLICY.md) covers iPhone, Watch, and the separate Mac tools. Publish these documents to the corresponding website pages when updating 1.1.0 support.
+Website publishing copy: [Support page](SUPPORT_PAGE.md) includes the Mac installer download and setup instructions; [Privacy policy](PRIVACY_POLICY.md) covers iPhone, Watch, and the separate Mac tools. Both live pages were verified against these documents on November 8, 2026: [Support](https://bald-traveler.com/asmr-walk-support-page/) and [Privacy](https://bald-traveler.com/asmr-walk-privacy-policy/).
 
 ### Watch transfer recovery
 

@@ -1,39 +1,17 @@
 # Mac Importer Owner Instructions
 
-Issue #73 adds source files for the first Mac-side importer workflow. The project still needs owner action in Xcode because creating targets and changing project membership requires editing the project file.
+The importer and overlay targets are already configured in the Xcode project. The original issue #73 target-creation steps have been superseded by the shipped 1.1.0 Mac tools.
 
-## Target Setup
+## Install and use
 
-1. In Xcode, add a new macOS App target named `ASMR Walk Mac Importer`.
-2. Use SwiftUI for the interface and Swift for the language.
-3. Add these files to the new target:
-   - `ASMR Walk Mac Importer/ASMRWalkMacImporterApp.swift`
-   - `ASMR Walk Mac Importer/MacImporterView.swift`
-   - `ASMR Walk Mac Importer/MacImporterViewModel.swift`
-   - `ASMR Walk/Features/History/ASMRRoutePackage.swift`
-   - `ASMR Walk/Features/History/ASMRGPXRouteImporter.swift`
-   - `ASMR Walk/Models/RecordingMode.swift`
-   - `ASMR Walk/Models/WalkRecordingSource.swift`
-4. Leave `ASMRRoutePackage+WalkRouteExport.swift`, `WalkRouteExport.swift`, `WalkRecording.swift`, and `LocationPoint.swift` in the iPhone target for now. Those files adapt live app records into packages, but the Mac GPX importer does not need SwiftData model access for this issue.
+Download [Mac Tools 1.1.0](https://github.com/heathdj/ASMRWalk/releases/download/release-1.1.0/ASMR-Walk-Mac-Tools-1.1.0.pkg). Follow [the support page](SUPPORT_PAGE.md) for installation, plugin registration/repair, GPX or synced-library import, prepared maps, and Final Cut Pro use.
 
-## Capabilities
+## Maintain and rebuild
 
-For the first GPX-to-package workflow:
+Follow [Installer/README.md](Installer/README.md) for the signed/notarized package build and installation layout. Build the existing targets; do not create duplicate targets. The importer uses private CloudKit container `iCloud.com.bald-traveler.ASMRWalk`, Push Notifications, and sandbox user-selected file read/write access. Preserve its existing entitlements and signing configuration.
 
-- Enable App Sandbox.
-- Allow user-selected file read access.
-- Allow user-selected file read/write access for the output package folder.
+Keep the wrapper's embedded plugin signed and intact. Registration launches the wrapper; it must not modify its signed plugin. The installer replaces only ASMR Walk-owned Motion templates.
 
-CloudKit and Photos capabilities are intentionally not required for this issue. Those belong to the later #60 and #74 child issues.
+## Verify changes
 
-## Manual Verification
-
-1. Export a GPX route from the iPhone app.
-2. Launch the Mac importer.
-3. Choose the exported `.gpx` file.
-4. Choose an output folder.
-5. Confirm a `.asmrroute` package is created with:
-   - `manifest.json`
-   - `route-points.json`
-   - `source.gpx`
-6. Confirm the package loads with `ASMRRoutePackage.load(from:)`.
+Use [the release checklist](RELEASE_CHECKLIST.md) for import, appearance, long-route segment transitions, registration, and host playback/export regression scenarios. Owner 1.1.0 manual acceptance is recorded in closed issue #79. Future Mac changes require rebuilding and validating the installer; iPhone/Watch-only retry tags do not change the existing Mac download.
