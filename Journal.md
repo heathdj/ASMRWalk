@@ -712,3 +712,19 @@ The release tag is `release-1.1.0` for CI/CD. Think of it as a luggage label, no
 ### Two Tickets Must Show the Same Version
 
 TestFlight rejected the 1.1.0 upload with ITMS-90379 because the embedded Watch app still advertised 1.0. The iPhone version does not automatically update its companion target: each has its own marketing-version settings. Both Watch Debug and Release configurations now use 1.1.0, matching the iPhone. The release checklist now calls for checking the actual archived bundle versions together, so a successful compile cannot hide this packaging mismatch. The retry tag is `release-1.1.0a`; the app version remains 1.1.0.
+
+### The Website Had an Older Map
+
+The live support page still described 1.0.1, and the privacy page said routes stayed on-device unless exported. That stopped being a complete picture once private iCloud sync arrived. The replacement support copy now follows the whole trip: Watch/iPhone recording, microphone choice, Mac import, map preparation, and the FCP generator. It links directly to the published 1.1.0 installer. Privacy copy now also explains exported route packages and Mac map preparation, while preserving the contact address already published on the website. These are publishing drafts in the repository; editing them does not update WordPress.
+
+### A Delivery Receipt, Not a Wish — Issue #109
+
+“Waiting for iCloud sync” turned out to be a painted sign: the Watch displayed it after every save without observing whether anything had uploaded. The container names matched, but source inspection cannot tell us whether a TestFlight account has a production schema or a device-specific mirroring error. We must not call that diagnosis complete.
+
+The new route is a relay: Watch saves locally, WatchConnectivity carries a file to its paired iPhone, and the iPhone puts the recording into the existing private-iCloud library. The Watch’s old store stays at the same URL, with direct mirroring disabled to avoid two writers creating separate CloudKit records for one logical walk. Older local recordings and interrupted checkpoints are recovered on launch. An iPhone receipt is sent only after a durable save, and both ends keep receipts so replaying a transfer cannot resurrect a walk the owner deleted.
+
+Apple’s file delegate has a sharp edge: its temporary file vanishes when the callback returns. We move it into a durable inbox synchronously before any actor hop. Failed imports stay there for retry. Legacy cloud records can still arrive late, so iPhone reconciliation preserves the fullest route and edited metadata. Import and reconciliation share one persistence actor to avoid racing each other.
+
+The display issue needed a setting, not a workout session. The owner confirmed Return to Clock → ASMR Walk → Custom → After 1 hour fixes wrist-raise visibility. The support draft now includes those steps, the transfer retry controls, and the distinction between “received by iPhone” and “synced to Mac.” Real paired-device delivery and upgrade recovery remain release gates; Apple does not deliver WatchConnectivity files in Simulator.
+
+The final automated pass covered 18 iPhone transfer/persistence cases and 11 Watch recording/recovery cases, with both build paths passing. The recovery check also verifies that acknowledged walks are skipped and this launch’s live take is excluded. The remaining proof belongs to real paired devices: upgrade without deleting the app, recover a stuck walk, then confirm the iPhone-to-Mac iCloud leg separately.

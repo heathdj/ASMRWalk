@@ -176,19 +176,19 @@ enum WatchModelContainerFactory {
     static let schema = Schema([WalkRecording.self, LocationPoint.self])
 
     static func makeModelContainer(
-        cloudSyncEnabled: Bool = true,
+        cloudSyncEnabled: Bool = false,
         isStoredInMemoryOnly: Bool = false
     ) -> ModelContainer {
         let configuration: ModelConfiguration
         if isStoredInMemoryOnly {
-            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true, cloudKitDatabase: .none)
         } else if cloudSyncEnabled {
             configuration = ModelConfiguration(
                 schema: schema,
                 cloudKitDatabase: .private(CloudSyncConfiguration.containerIdentifier)
             )
         } else {
-            configuration = ModelConfiguration(schema: schema)
+            configuration = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
         }
 
         do {

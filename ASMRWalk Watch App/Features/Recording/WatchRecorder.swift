@@ -78,6 +78,7 @@ final class WatchRecorder {
     private(set) var pointCount = 0
     private(set) var lastCompletedAt: Date?
 
+    private let sendSavedRoute: (WatchRouteTransfer) throws -> Void
     private let locationClient: any WatchLocationClient
     private let requiresLocationUsageDescription: Bool
     private var session: WatchRecordingSession?
@@ -89,9 +90,11 @@ final class WatchRecorder {
 
     init(
         locationClient: (any WatchLocationClient)? = nil,
-        requiresLocationUsageDescription: Bool = true
+        requiresLocationUsageDescription: Bool = true,
+        sendSavedRoute: @escaping (WatchRouteTransfer) throws -> Void = { _ in }
     ) {
         let locationClient = locationClient ?? CoreWatchLocationClient()
+        self.sendSavedRoute = sendSavedRoute
         self.locationClient = locationClient
         self.requiresLocationUsageDescription = requiresLocationUsageDescription
         authorizationStatus = locationClient.authorizationStatus
@@ -134,7 +137,7 @@ final class WatchRecorder {
             return "Enable location access in Settings to record Watch walks."
         default:
             if let lastCompletedAt, phase == .ready {
-                return "Saved \(lastCompletedAt.formatted(date: .omitted, time: .shortened)). Waiting for iCloud sync."
+                return "Saved \(lastCompletedAt.formatted(date: .omitted, time: .shortened)). Saved on this Watch."
             }
             if let latestAccuracyMeters {
                 return "GPS accuracy: \(Int(latestAccuracyMeters.rounded())) m"
@@ -207,6 +210,9 @@ final class WatchRecorder {
         do {
             if let persistence, let snapshot = session?.snapshot {
                 try await persistence.save(snapshot)
+                // A transport failure must never restart a successfully saved walk.
+                do { try sendSavedRoute(snapshot.transfer) }
+                catch { WatchRouteConnectivity.shared.reportRecoveryError(error.localizedDescription) }
             }
             reset()
             lastCompletedAt = .now

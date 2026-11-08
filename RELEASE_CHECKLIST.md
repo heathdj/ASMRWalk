@@ -26,7 +26,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Mac importer app sandbox user-selected file access is `read/write` for GPX import and package export.
 - [ ] Supported iPhone orientations include portrait and landscape. The app locks Video Walk to landscape-right at runtime.
 - [ ] iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
-- [ ] Watch app iCloud capability is enabled with CloudKit container `iCloud.com.bald-traveler.ASMRWalk`.
+- [ ] Watch uses its existing local store with direct CloudKit mirroring disabled; iPhone receives routes through WatchConnectivity and remains the CloudKit writer.
 - [ ] Confirm iCloud library sync is not StoreKit-gated in this release; if product direction changes to Pro/subscription, add entitlement gating before release.
 - [ ] Background Modes includes both Location updates and Remote notifications.
 - [ ] Watch app has a location usage description for GPS-only Watch recording.
@@ -66,7 +66,7 @@ Use this before uploading `1.1.0` to App Store Connect.
 - [ ] Confirm documentation and App Store copy do not imply background video recording.
 - [ ] Confirm documentation and App Store copy describe the Apple Watch app as GPS-only.
 - [ ] Confirm documentation and App Store copy do not imply HealthKit workout recording.
-- [ ] Confirm documentation and App Store copy explain Watch-to-iPhone sync uses the user's private iCloud database.
+- [ ] Confirm documentation and App Store copy explain Watch-to-iPhone delivery uses WatchConnectivity; the iPhone then syncs through the user's private iCloud database.
 - [ ] Confirm documentation and App Store copy explain external-camera timing stores metadata only and does not import or sync external video files.
 - [ ] Confirm About sheet shows app name, version, build, and `heathdj@me.com`.
 
@@ -148,7 +148,7 @@ Run these on physical devices before submission:
 - [ ] Start a GPS-only walk from Apple Watch and confirm elapsed time, distance, route-point count, and GPS status update during the walk.
 - [ ] Stop and save the Watch walk.
 - [ ] Confirm the Watch shows the saved/sync-pending state after save.
-- [ ] Confirm the saved Watch recording appears in iPhone History after iCloud sync.
+- [ ] Confirm the saved Watch recording appears in iPhone History after direct transfer, then reaches the Mac through iCloud.
 - [ ] Confirm the iPhone History row and detail screen identify the recording as Apple Watch sourced.
 - [ ] Confirm synced Watch route points draw correctly on iPhone and summary distance/duration are preserved.
 - [ ] Confirm a local route thumbnail is generated or regenerated on iPhone for the synced Watch recording.
@@ -214,7 +214,7 @@ Run these on physical devices before submission:
 - [ ] Confirm App Store copy says version 1.1.0 includes a GPS-only Apple Watch companion app.
 - [ ] Include review notes that background location is GPS Walk only, requires the user to enable Background GPS Recording in Settings, and requires Always location permission.
 - [ ] Include review notes that the Apple Watch app records GPS-only walks, does not record video, and does not create HealthKit workouts.
-- [ ] Include review notes that Watch recordings sync through the user's private iCloud database and appear in iPhone History after sync.
+- [ ] Include review notes for direct Watch-to-iPhone transfers and subsequent private iCloud sync to other devices.
 - [ ] Include review notes that external-camera fields are timing notes for user-managed footage and ASMR Walk does not import or sync those external video files.
 - [ ] Include screenshots for History, Walk, Video Walk, Recording Detail, and Settings.
 - [ ] Mention that route data is stored locally.
@@ -293,3 +293,16 @@ Run these on physical devices before submission:
 The scenario list above remains a release regression checklist; specific accessory models and per-scenario results were not supplied. The owner confirmation applies to #125 and does not complete the separate #93 or #109 release gates.
 
 - [ ] PR #136 QA regression: background Video Walk with a ready, non-recording preview; confirm microphone use ends and other audio apps recover. Foreground it and confirm preview/microphone selection resume. Repeat while recording and confirm the take saves before microphone use ends.
+
+### Issue #109 — Direct Watch transfer and display behavior
+
+- [x] Owner confirmed **Return to Clock > ASMR Walk > Custom > After 1 hour** fixes the requested wrist-raise visibility behavior; instructions added to `SUPPORT_PAGE.md`. No HealthKit session is required for that setting.
+- [ ] Upgrade both paired apps without uninstalling; reopen them and verify previously stuck Watch recordings transfer with complete route geometry and one History entry each.
+- [ ] Record a new Watch walk with the phone unavailable, stop/save, then reconnect. Verify delivery and **Saved walks received by iPhone** only after successful import.
+- [ ] Close/reopen both apps before acknowledgment and retry; verify one recording, intact points/timing, and no loss of edited titles, descriptions, or external-camera metadata.
+- [ ] Delete an acknowledged recording on iPhone and retry/relaunch Watch; verify it is not recreated by a replay.
+- [ ] Launch directly from the Watch Home Screen (without an attached debugger), lower the wrist, and verify background delivery/acknowledgment completes without a watchdog termination.
+- [ ] Verify the received iPhone recording subsequently reaches Mac through private iCloud. If it does not, check production CloudKit schema deployment and archived entitlements/account status separately from WatchConnectivity.
+- [ ] Confirm a physical-device archive uses matching iPhone/Watch versions and test both apps from the same new build. Simulator tests do not prove the WatchConnectivity transport.
+
+- [x] Automated validation: iPhone/embedded Watch and standalone Watch builds passed; 18 iPhone transfer/persistence tests and 11 Watch recording/recovery tests passed. These validate storage and queue behavior, not radio delivery or production CloudKit.

@@ -58,6 +58,17 @@ struct SettingsView: View {
                     Text("GPS Walk only. When enabled, GPS-only walks can continue while the app is backgrounded or the screen is locked. Always location permission is required. Video Walks stop when the app leaves the foreground.")
                 }
 
+                Section("Apple Watch Transfers") {
+                    Text(WatchRouteConnectivity.shared.status)
+                        .font(.callout)
+                    Button("Retry Watch Import") {
+                        WatchRouteConnectivity.shared.resume()
+                    }
+                    Text("Keep both apps installed. If a saved walk is waiting, open ASMR Walk on the Watch and tap Retry Transfer. iCloud sync to the Mac happens after the iPhone receives it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("Guide") {
                     Button("Show Onboarding Again", systemImage: "sparkles") {
                         hasCompletedOnboarding = false

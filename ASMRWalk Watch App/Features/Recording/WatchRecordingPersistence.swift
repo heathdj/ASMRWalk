@@ -94,3 +94,33 @@ actor WatchRecordingPersistence {
         }
     }
 }
+
+
+extension WatchRecordingPersistence {
+    func routesSaved(before date: Date, excluding receivedIDs: Set<UUID> = []) throws -> [WatchRouteTransfer] {
+        let source = WalkRecordingSource.appleWatch.rawValue
+        let descriptor = FetchDescriptor<WalkRecording>(predicate: #Predicate {
+            $0.createdAt < date && $0.recordingSource == source
+        })
+        return try modelContext.fetch(descriptor).filter { receivedIDs.contains($0.id) == false }.map { recording in
+            WatchRouteTransfer(id: recording.id, title: recording.title, createdAt: recording.createdAt,
+                duration: recording.duration, distanceMeters: recording.distanceMeters,
+                captureDeviceName: recording.captureDeviceName, routeStartedAt: recording.routeStartedAt,
+                routeEndedAt: recording.routeEndedAt, points: recording.pointsInTimeOrder.map {
+                    .init(timestamp: $0.timestamp, latitude: $0.latitude, longitude: $0.longitude,
+                          altitude: $0.altitude, horizontalAccuracy: $0.horizontalAccuracy, speed: $0.speed)
+                })
+        }
+    }
+}
+
+extension WalkRecordingSnapshot {
+    var transfer: WatchRouteTransfer {
+        WatchRouteTransfer(id: id, title: title, createdAt: createdAt, duration: duration,
+            distanceMeters: distanceMeters, captureDeviceName: captureDeviceName,
+            routeStartedAt: routeStartedAt, routeEndedAt: routeEndedAt, points: points.map {
+                .init(timestamp: $0.timestamp, latitude: $0.latitude, longitude: $0.longitude,
+                      altitude: $0.altitude, horizontalAccuracy: $0.horizontalAccuracy, speed: $0.speed)
+            })
+    }
+}

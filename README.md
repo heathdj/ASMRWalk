@@ -64,7 +64,7 @@ ASMR Walk/
 - iOS 26 iPhone simulator or physical iPhone.
 - watchOS simulator or physical Apple Watch for the companion app.
 - A physical iPhone is recommended for final GPS, camera, and microphone validation.
-- A paired physical Apple Watch and iPhone are required to validate Watch GPS recording and Watch-to-iPhone iCloud sync before App Store submission.
+- A paired physical Apple Watch and iPhone are required to validate Watch GPS recording and Watch-to-iPhone direct transfers and subsequent iCloud sync before App Store submission.
 - An iCloud account and CloudKit-capable provisioning are required to validate sync across devices.
 - iPad support is out of scope until the app receives a full adaptive-layout pass.
 
@@ -81,7 +81,7 @@ Before running recording features, confirm the app target includes these generat
 - `Background Modes`: Location updates and Remote notifications
 - `iCloud`: CloudKit with container `iCloud.com.bald-traveler.ASMRWalk`
 
-The Watch app target should use the same CloudKit container and include a Watch location usage description. Watch recording asks for location access when the user starts a Watch walk.
+The Watch app uses a local SwiftData store and WatchConnectivity to send saved walks to its paired iPhone. The iPhone publishes received walks through the existing private CloudKit container. The Watch target must include a location usage description. Watch recording asks for location access when the user starts a Watch walk.
 
 Expected privacy strings:
 
@@ -100,7 +100,7 @@ See `RELEASE_CHECKLIST.md` before uploading to App Store Connect.
 
 Finished video walks are kept in ASMR Walk's app-managed storage for playback. iCloud sync carries the recording details and route, not the `.mov` file. From a video walk's History detail screen, the user can save a copy to Photos. Deleting an ASMR Walk recording removes the route, app metadata, and app-managed video file on that device, but it does not delete any Photos copy the user saved.
 
-Apple Watch recordings are GPS-only route recordings. They sync through private iCloud as recording metadata and route points, then appear in iPhone History with an Apple Watch source label. Watch recordings do not include video. If the walk used a separate external camera, the iPhone detail screen can store the external clip label and start time so GPX export carries alignment metadata without importing or syncing the video file.
+Apple Watch recordings are GPS-only route recordings. They transfer directly to the paired iPhone using WatchConnectivity and appear in History with an Apple Watch source label. The iPhone then syncs their metadata and route points through private iCloud to other devices, including the Mac importer. Watch recordings do not include video. If the walk used a separate external camera, the iPhone detail screen can store the external clip label and start time so GPX export carries alignment metadata without importing or syncing the video file.
 
 ## Privacy
 
@@ -121,7 +121,7 @@ Background GPS recording requires the `location` background mode, the Background
 
 iCloud sync requires the CloudKit entitlement, the `iCloud.com.bald-traveler.ASMRWalk` container, and the `remote-notification` background mode. Sync uses the user's private iCloud database and may be temporarily unavailable when the device is signed out of iCloud or iCloud is restricted.
 
-Watch-to-iPhone sync can be unreliable in Simulator and is treated as non-authoritative for release validation. Complete the physical-device validation tracked in GitHub issue #93 before submitting version 1.1.0 to the App Store.
+WatchConnectivity file delivery requires paired physical devices; Simulator cannot validate that transport. Complete the physical-device validation tracked in GitHub issue #93 before submitting version 1.1.0 to the App Store.
 
 ## Testing
 
@@ -163,7 +163,7 @@ The release installer ships the Mac importer, Final Cut Pro/Motion route-overlay
 - Video Walk does not continue recording in the background.
 - iCloud sync does not sync full video files; videos remain on the recording device unless the user saves or shares a copy.
 - Apple Watch recordings are GPS-only and do not record video or HealthKit workouts.
-- Watch-to-iPhone sync needs physical-device/TestFlight validation before App Store submission because Simulator sync has not been reliable.
+- Watch-to-iPhone sync needs physical-device/TestFlight validation before App Store submission because Simulator does not deliver WatchConnectivity files.
 - iPad and HealthKit are not part of version 1.1.0.
 
 ## Roadmap
@@ -187,3 +187,11 @@ Wireless receivers connected over USB-C appear as USB inputs, regardless of thei
 ### Preparing the 1.1.0 submission
 
 [App Store copy and reviewer notes](APP_STORE_COPY.md) contains the paste-ready version text, microphone testing steps, and owner submission checklist. Complete the remaining hardware gates in [the release checklist](RELEASE_CHECKLIST.md) before submission. The `release-1.1.0` Git tag identifies the release automation commit; App Store publication and the separate GitHub Mac installer release still require their release steps.
+
+Website publishing copy: [Support page](SUPPORT_PAGE.md) includes the Mac installer download and setup instructions; [Privacy policy](PRIVACY_POLICY.md) covers iPhone, Watch, and the separate Mac tools. Publish these documents to the corresponding website pages when updating 1.1.0 support.
+
+### Watch transfer recovery
+
+Saved Watch walks use durable local files and remain queued until the iPhone acknowledges a successful SwiftData save. **Retry Transfer** on Watch retries queued sends; **Settings > Apple Watch Transfers** on iPhone shows import status and retries retained inbox files. Startup also recovers older local Watch walks/checkpoints. Stable recording UUIDs and durable receipts prevent duplicate delivery from undoing iPhone edits or deletions. Legacy CloudKit duplicates are reconciled on iPhone; new Watch recordings have one CloudKit writer, the iPhone. The existing Watch store location is retained when disabling direct CloudKit mirroring.
+
+The Watch retains its local copy after confirmation. Acknowledgments mean received by iPhone, not uploaded to iCloud or visible on Mac. Test upgrades without uninstalling either app so previously stuck recordings remain available. To keep the Watch screen available on wrist raise, set **Settings > General > Return to Clock > ASMR Walk > Custom > After 1 hour**.

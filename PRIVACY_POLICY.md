@@ -1,6 +1,6 @@
 # ASMR Walk Privacy Policy
 
-Last updated: November 7, 2026
+Last updated: November 8, 2026
 
 ASMR Walk is designed as a private walking journal. The app records walking routes, optional video walks on your iPhone, and GPS-only walks from the Apple Watch companion app. ASMR Walk does not run a developer-operated account system, analytics service, advertising network, or backend server.
 
@@ -10,9 +10,15 @@ ASMR Walk stores walk titles, editable walk descriptions, dates, durations, dist
 
 Route points can include latitude, longitude, timestamp, altitude when available, horizontal accuracy, and speed when available.
 
+## Apple Watch Transfers
+
+The Watch app saves GPS recordings locally and sends saved route coordinates and recording metadata directly to its paired iPhone using Apple’s WatchConnectivity framework. Pending transfers remain on the Watch until the iPhone confirms saving them. No developer-operated server receives these transfers, and this direct transfer does not require iCloud.
+
+The Watch retains a local recording copy after delivery. Deleting a recording from the iPhone does not erase that Watch copy; acknowledged transfers are not automatically resent. Removing the Watch app can remove its local recordings and unsent transfers.
+
 ## iCloud Sync
 
-ASMR Walk can sync recording metadata and route data through your private iCloud database using Apple's CloudKit service. This lets recordings created on one signed-in device, including Apple Watch GPS recordings, appear on another signed-in device.
+ASMR Walk can sync recording metadata and route data through your private iCloud database using Apple's CloudKit service. This lets recordings on iPhone, including GPS walks received from its paired Apple Watch, appear on other signed-in devices such as the Mac importer. The Watch’s local store no longer uploads recordings directly to iCloud; the iPhone handles that step after receiving a walk.
 
 iCloud sync can include walk titles, descriptions, dates, durations, distances, route points, recording source, generated place metadata, route thumbnail references, and export-related metadata. For Watch routes paired with footage from a separate camera, export-related metadata can include an external clip label and timing values used to align the route with that separate footage. Full video files are not synced by ASMR Walk. Video walks remain stored in app-managed local storage on the device where they were recorded unless you choose to save or share a copy.
 
@@ -50,6 +56,12 @@ ASMR Walk can create exports when you choose to share them:
 
 Sharing is user-initiated through the iOS share sheet. The destination you choose may receive the exported data and apply its own privacy practices.
 
+## Mac Importer And Route Overlay
+
+The separate Mac importer can read recordings through your private iCloud database or import a GPX file you select. You can choose a video from Photos or a local file for pairing; route sync does not transfer the iPhone video. The importer uses Apple MapKit to prepare Light and Dark map images before export.
+
+Exported `.asmrroute` packages contain route coordinates, timing and recording metadata, and any prepared map images. Treat these packages as location history when sharing them. Final Cut Pro and Motion render the prepared package locally without fetching maps, Photos content, or iCloud data during frame rendering.
+
 ## Network Activity
 
 ASMR Walk does not make direct app-owned network requests for analytics, developer-operated accounts, advertising, or developer-operated server storage.
@@ -62,4 +74,4 @@ ASMR Walk does not track users across apps or websites.
 
 ## Contact
 
-For privacy questions, contact `support@bald-traveler.com`.
+For privacy questions, contact `dave@bald-traveler.com`.

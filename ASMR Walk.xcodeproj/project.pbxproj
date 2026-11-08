@@ -16,6 +16,8 @@
 		3A6821202FF06A2A0012C321 /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */; };
 		3AA4BDA9304398A400E5D8A6 /* ASMRWalk Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 3AA4BD89304398A400E5D8A6 /* ASMRWalk Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3AC8940E300431E6003AC68B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */; };
+		AA1090000000000000000010 /* ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1090000000000000000000 /* ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift */; };
+		AA1090000000000000000011 /* ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1090000000000000000001 /* ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -165,6 +167,8 @@
 		3AA4BD95304398A400E5D8A6 /* ASMRWalk Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMRWalk Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AA4BD9F304398A400E5D8A6 /* ASMRWalk Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ASMRWalk Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA1090000000000000000000 /* ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift"; sourceTree = SOURCE_ROOT; };
+		AA1090000000000000000001 /* ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -368,6 +372,8 @@
 		3A3E1F0F2FC3DE3500CFEE4A = {
 			isa = PBXGroup;
 			children = (
+				AA1090000000000000000000 /* ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift */,
+				AA1090000000000000000001 /* ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift */,
 				3AC8940D300431E6003AC68B /* PrivacyInfo.xcprivacy */,
 				3A68211F2FF06A2A0012C321 /* Launch Screen.storyboard */,
 				3A3E1F1A2FC3DE3500CFEE4A /* ASMR Walk */,
@@ -983,6 +989,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA1090000000000000000011 /* ASMR Walk/Features/WatchSync/WatchRouteConnectivity.swift in Sources */,
+				AA1090000000000000000010 /* ASMR Walk/Features/WatchSync/WatchRouteTransfer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -14,7 +14,7 @@ Record walks on iPhone or Apple Watch, choose your Video Walk microphone, and ke
 
 ## What’s New in This Version
 
-- Record GPS-only walks on Apple Watch and sync routes to iPhone through your private iCloud account.
+- Record GPS-only walks on Apple Watch and transfer saved routes directly to your paired iPhone, which can sync them through private iCloud.
 - Choose the iPhone microphone or a supported connected Bluetooth or USB microphone before a Video Walk. See the active input and notices when an accessory disconnects.
 - Add external-camera timing notes to Watch routes for use with separately recorded footage.
 - Improved Video Walk audio-session cleanup when leaving the preview or putting the app in the background.
@@ -29,7 +29,7 @@ ASMR Walk helps you capture quiet walking memories. Record a GPS Walk on iPhone 
 
 Before a Video Walk, choose Automatic, the iPhone microphone, or a supported connected Bluetooth or USB microphone. The app shows the active input and locks microphone selection during recording. Available inputs depend on your connected hardware.
 
-Saved walk metadata and routes can sync through your private iCloud account. Watch recordings appear in iPhone History after sync with an Apple Watch source label. Video walks are stored in ASMR Walk on the device where they were recorded for playback with the saved route, and you can save a copy to Photos from the History detail screen. Full video files do not sync to other devices through ASMR Walk.
+Saved walk metadata and routes can sync through your private iCloud account. Watch recordings transfer directly to the paired iPhone and appear in History with an Apple Watch source label; the iPhone can then sync them through iCloud. Video walks are stored in ASMR Walk on the device where they were recorded for playback with the saved route, and you can save a copy to Photos from the History detail screen. Full video files do not sync to other devices through ASMR Walk.
 
 After a walk is saved, ASMR Walk can generate a route thumbnail and use Apple Maps place information to suggest a useful title and description, which you can edit from the History detail screen. Deleting an ASMR Walk recording removes the route, app metadata, app-managed thumbnail, and app-managed video file on that device, but it does not delete any copy you chose to save to Photos.
 
@@ -56,7 +56,7 @@ Microphone selection (new in 1.1.0):
 6. With a ready preview and no recording underway, put the app in the background: camera/microphone use ends. Return to Video Walk: the authorized preview becomes available again. Background an active Video Walk: recording stops and saves before capture shuts down. Video recording is foreground-only.
 
 Other review paths:
-- On Apple Watch, start and stop a GPS-only walk and allow location access. With the paired iPhone and Watch signed into the same Apple Account, allow private iCloud sync; the recording appears in iPhone History with its Watch source. Watch recording does not use the camera, microphone, or HealthKit workouts.
+- On Apple Watch, start and stop a GPS-only walk and allow location access. Open the updated app on both paired devices. Saved walks transfer directly to iPhone; allow time for delivery, then check History for the Watch source. The Watch confirms receipt only after iPhone saves. Use Retry Transfer on Watch and Settings > Apple Watch Transfers on iPhone if needed. The iPhone then uses private iCloud for other devices. Watch recording does not use the camera, microphone, or HealthKit workouts.
 - External-camera timing fields on Watch routes store timing notes only; they do not import or sync external footage.
 - Optional background location applies only to iPhone GPS Walk. Enable Background GPS Recording in Settings and grant Always location permission before testing a GPS Walk with the screen locked.
 - New Video Walk movies stay in app-managed local storage. In History detail, Save Video to Photos explicitly exports a copy. Deleting a recording removes its app-managed files but leaves any saved Photos copy. Full videos do not sync through ASMR Walk; metadata and routes may sync privately through iCloud.
